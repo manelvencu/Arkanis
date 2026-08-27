@@ -158,9 +158,14 @@ export class TrainingScene extends Phaser.Scene {
     create('tiana-walk-side', [8, 9, 10, 9], 9, -1);
     create('tiana-walk-up', [15, 16, 17, 16], 9, -1);
 
+    // El disparo frontal usa sus frames específicos, que tienen transparencia correcta.
     create('tiana-cast-down', [4, 5, 6], 14, 0);
-    create('tiana-cast-side', [11, 12, 13], 14, 0);
-    create('tiana-cast-up', [18, 19, 20], 14, 0);
+
+    // Los frames específicos de disparo lateral y hacia arriba del PNG original
+    // contienen fondo negro. Hasta sustituirlos por arte limpio, usamos frames
+    // transparentes del propio personaje para conservar su aspecto sin artefactos.
+    create('tiana-cast-side', [7, 8, 7], 14, 0);
+    create('tiana-cast-up', [14, 15, 14], 14, 0);
   }
 
   private playCastAnimation(): void {
