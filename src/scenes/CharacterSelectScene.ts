@@ -18,24 +18,49 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x161326);
 
-    this.add.text(width / 2, 48, 'LAS TIERRAS DE ARKANIS', {
-      fontFamily: 'Arial',
-      fontSize: '34px',
-      color: '#f5e7a1',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    this.add.text(width / 2, 28, 'LAS TIERRAS DE', {
+      fontFamily: 'Georgia, Times New Roman, serif',
+      fontSize: '17px',
+      color: '#d7bd72',
+      fontStyle: 'bold',
+      stroke: '#211507',
+      strokeThickness: 3,
+      shadow: {
+        offsetX: 2,
+        offsetY: 2,
+        color: '#000000',
+        blur: 3,
+        fill: true
+      }
+    }).setOrigin(0.5).setLetterSpacing(3);
 
-    this.add.text(width / 2, 88, 'Elige tu personaje', {
+    this.add.text(width / 2, 63, 'ARKANIS', {
+      fontFamily: 'Georgia, Times New Roman, serif',
+      fontSize: '43px',
+      color: '#e4bd58',
+      fontStyle: 'bold italic',
+      stroke: '#211507',
+      strokeThickness: 7,
+      shadow: {
+        offsetX: 4,
+        offsetY: 5,
+        color: '#000000',
+        blur: 5,
+        fill: true
+      }
+    }).setOrigin(0.5).setLetterSpacing(2);
+
+    this.add.text(width / 2, 101, 'Elige tu personaje', {
       fontFamily: 'Arial',
-      fontSize: '21px',
+      fontSize: '20px',
       color: '#ffffff'
     }).setOrigin(0.5);
 
     const positions = [
-      { x: width / 2 - 125, y: 205 },
-      { x: width / 2 + 125, y: 205 },
-      { x: width / 2 - 125, y: 405 },
-      { x: width / 2 + 125, y: 405 }
+      { x: width / 2 - 125, y: 210 },
+      { x: width / 2 + 125, y: 210 },
+      { x: width / 2 - 125, y: 408 },
+      { x: width / 2 + 125, y: 408 }
     ];
 
     characters.forEach((character, index) => {
@@ -77,7 +102,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       });
     });
 
-    this.add.text(width / 2, height - 18, 'Haz clic sobre un personaje para comenzar', {
+    this.add.text(width / 2, height - 18, 'Haz clic o toca un personaje para comenzar', {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: '#c9c1d2'
