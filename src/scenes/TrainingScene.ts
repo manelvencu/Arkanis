@@ -7,6 +7,8 @@ interface TrainingData {
 
 type TouchDirection = 'left' | 'right' | 'up' | 'down';
 
+type Facing = 'down' | 'up' | 'side';
+
 export class TrainingScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -21,6 +23,8 @@ export class TrainingScene extends Phaser.Scene {
     down: false
   };
   private touchShootRequested = false;
+  private facing: Facing = 'down';
+  private isCasting = false;
 
   constructor() {
     super('TrainingScene');
@@ -28,6 +32,15 @@ export class TrainingScene extends Phaser.Scene {
 
   init(data: TrainingData): void {
     this.characterId = data.characterId ?? 'tiana';
+  }
+
+  preload(): void {
+    if (this.characterId === 'tiana') {
+      this.load.spritesheet('tiana-game', './assets/tiana-spritesheet.png', {
+        frameWidth: 48,
+        frameHeight: 48
+      });
+    }
   }
 
   create(): void {
@@ -47,15 +60,22 @@ export class TrainingScene extends Phaser.Scene {
     this.createSigns();
     this.createExitDoor(worldWidth - 105, worldHeight / 2);
 
-    const textureKey = `player-${character.id}`;
-    const playerGraphic = this.add.graphics();
-    playerGraphic.fillStyle(character.placeholderColor, 1);
-    playerGraphic.fillRoundedRect(0, 0, 30, 38, 6);
-    playerGraphic.generateTexture(textureKey, 30, 38);
-    playerGraphic.destroy();
+    if (this.characterId === 'tiana') {
+      this.createTianaAnimations();
+      this.player = this.physics.add.sprite(95, worldHeight / 2, 'tiana-game', 0);
+      this.player.setDisplaySize(48, 48);
+    } else {
+      const textureKey = `player-${character.id}`;
+      const playerGraphic = this.add.graphics();
+      playerGraphic.fillStyle(character.placeholderColor, 1);
+      playerGraphic.fillRoundedRect(0, 0, 30, 38, 6);
+      playerGraphic.generateTexture(textureKey, 30, 38);
+      playerGraphic.destroy();
+      this.player = this.physics.add.sprite(95, worldHeight / 2, textureKey);
+    }
 
-    this.player = this.physics.add.sprite(95, worldHeight / 2, textureKey);
     this.player.setCollideWorldBounds(true);
+    this.player.setDepth(20);
 
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
 
@@ -92,15 +112,65 @@ export class TrainingScene extends Phaser.Scene {
       const movement = new Phaser.Math.Vector2(x, y).normalize();
       body.setVelocity(movement.x * speed, movement.y * speed);
       this.direction.copy(movement);
+
+      if (Math.abs(movement.x) > Math.abs(movement.y)) {
+        this.facing = 'side';
+        this.player.setFlipX(movement.x < 0);
+      } else if (movement.y < 0) {
+        this.facing = 'up';
+        this.player.setFlipX(false);
+      } else {
+        this.facing = 'down';
+        this.player.setFlipX(false);
+      }
+
+      if (this.characterId === 'tiana' && !this.isCasting) {
+        this.player.anims.play(`tiana-walk-${this.facing}`, true);
+      }
+    } else if (this.characterId === 'tiana' && !this.isCasting) {
+      this.player.anims.stop();
+      const idleFrame = this.facing === 'down' ? 0 : this.facing === 'side' ? 7 : 14;
+      this.player.setFrame(idleFrame);
     }
 
     const keyboardShot = Phaser.Input.Keyboard.JustDown(this.spaceKey);
     if ((keyboardShot || this.touchShootRequested) && time - this.lastShotAt > 250) {
+      this.playCastAnimation();
       this.shootMagicRay();
       this.lastShotAt = time;
     }
 
     this.touchShootRequested = false;
+  }
+
+  private createTianaAnimations(): void {
+    const create = (key: string, frames: number[], frameRate: number, repeat: number): void => {
+      if (this.anims.exists(key)) return;
+      this.anims.create({
+        key,
+        frames: frames.map((frame) => ({ key: 'tiana-game', frame })),
+        frameRate,
+        repeat
+      });
+    };
+
+    create('tiana-walk-down', [1, 2, 3, 2], 9, -1);
+    create('tiana-walk-side', [8, 9, 10, 9], 9, -1);
+    create('tiana-walk-up', [15, 16, 17, 16], 9, -1);
+
+    create('tiana-cast-down', [4, 5, 6], 14, 0);
+    create('tiana-cast-side', [11, 12, 13], 14, 0);
+    create('tiana-cast-up', [18, 19, 20], 14, 0);
+  }
+
+  private playCastAnimation(): void {
+    if (this.characterId !== 'tiana') return;
+
+    this.isCasting = true;
+    this.player.anims.play(`tiana-cast-${this.facing}`, true);
+    this.player.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+      this.isCasting = false;
+    });
   }
 
   private createTouchControls(): void {
@@ -190,7 +260,6 @@ export class TrainingScene extends Phaser.Scene {
     magicButton.on('pointerout', releaseMagic);
     magicButton.on('pointerupoutside', releaseMagic);
 
-    // Si un toque se interrumpe fuera del botón, evita que una dirección quede pulsada.
     this.input.on('gameout', () => {
       this.touchDirections.left = false;
       this.touchDirections.right = false;
