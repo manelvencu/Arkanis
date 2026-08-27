@@ -40,6 +40,11 @@ export class TrainingScene extends Phaser.Scene {
         frameWidth: 48,
         frameHeight: 48
       });
+    } else if (this.characterId === 'lupe') {
+      this.load.spritesheet('lupe-game', './assets/lupe-spritesheet.png', {
+        frameWidth: 48,
+        frameHeight: 48
+      });
     }
   }
 
@@ -60,10 +65,10 @@ export class TrainingScene extends Phaser.Scene {
     this.createSigns();
     this.createExitDoor(worldWidth - 105, worldHeight / 2);
 
-    if (this.characterId === 'tiana') {
-      this.createTianaAnimations();
-      this.player = this.physics.add.sprite(95, worldHeight / 2, 'tiana-game', 0);
-      this.player.setDisplaySize(48, 48);
+    if (this.characterId === 'tiana' || this.characterId === 'lupe') {
+      this.createCharacterAnimations(this.characterId);
+      this.player = this.physics.add.sprite(95, worldHeight / 2, `${this.characterId}-game`, 0);
+      this.player.setDisplaySize(56, 56);
     } else {
       const textureKey = `player-${character.id}`;
       const playerGraphic = this.add.graphics();
@@ -124,10 +129,10 @@ export class TrainingScene extends Phaser.Scene {
         this.player.setFlipX(false);
       }
 
-      if (this.characterId === 'tiana' && !this.isCasting) {
-        this.player.anims.play(`tiana-walk-${this.facing}`, true);
+      if ((this.characterId === 'tiana' || this.characterId === 'lupe') && !this.isCasting) {
+        this.player.anims.play(`${this.characterId}-walk-${this.facing}`, true);
       }
-    } else if (this.characterId === 'tiana' && !this.isCasting) {
+    } else if ((this.characterId === 'tiana' || this.characterId === 'lupe') && !this.isCasting) {
       this.player.anims.stop();
       const idleFrame = this.facing === 'down' ? 0 : this.facing === 'side' ? 7 : 14;
       this.player.setFrame(idleFrame);
@@ -143,36 +148,38 @@ export class TrainingScene extends Phaser.Scene {
     this.touchShootRequested = false;
   }
 
-  private createTianaAnimations(): void {
+  private createCharacterAnimations(characterId: 'tiana' | 'lupe'): void {
+    const textureKey = `${characterId}-game`;
     const create = (key: string, frames: number[], frameRate: number, repeat: number): void => {
       if (this.anims.exists(key)) return;
       this.anims.create({
         key,
-        frames: frames.map((frame) => ({ key: 'tiana-game', frame })),
+        frames: frames.map((frame) => ({ key: textureKey, frame })),
         frameRate,
         repeat
       });
     };
 
-    create('tiana-walk-down', [1, 2, 3, 2], 9, -1);
-    create('tiana-walk-side', [8, 9, 10, 9], 9, -1);
-    create('tiana-walk-up', [15, 16, 17, 16], 9, -1);
+    create(`${characterId}-walk-down`, [1, 2, 3, 2], 9, -1);
+    create(`${characterId}-walk-side`, [8, 9, 10, 9], 9, -1);
+    create(`${characterId}-walk-up`, [15, 16, 17, 16], 9, -1);
 
-    // El disparo frontal usa sus frames específicos, que tienen transparencia correcta.
-    create('tiana-cast-down', [4, 5, 6], 14, 0);
+    create(`${characterId}-cast-down`, [4, 5, 6], 14, 0);
 
-    // Los frames específicos de disparo lateral y hacia arriba del PNG original
-    // contienen fondo negro. Hasta sustituirlos por arte limpio, usamos frames
-    // transparentes del propio personaje para conservar su aspecto sin artefactos.
-    create('tiana-cast-side', [7, 8, 7], 14, 0);
-    create('tiana-cast-up', [14, 15, 14], 14, 0);
+    if (characterId === 'tiana') {
+      create('tiana-cast-side', [7, 8, 7], 14, 0);
+      create('tiana-cast-up', [14, 15, 14], 14, 0);
+    } else {
+      create('lupe-cast-side', [11, 12, 13], 14, 0);
+      create('lupe-cast-up', [18, 19, 20], 14, 0);
+    }
   }
 
   private playCastAnimation(): void {
-    if (this.characterId !== 'tiana') return;
+    if (this.characterId !== 'tiana' && this.characterId !== 'lupe') return;
 
     this.isCasting = true;
-    this.player.anims.play(`tiana-cast-${this.facing}`, true);
+    this.player.anims.play(`${this.characterId}-cast-${this.facing}`, true);
     this.player.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       this.isCasting = false;
     });
