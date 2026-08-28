@@ -138,7 +138,7 @@ export class TrainingScene extends Phaser.Scene {
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.input.addPointer(2);
 
-    this.createHud(character.name);
+    this.createHud();
     this.createTouchControls();
     this.updateHud();
   }
@@ -439,7 +439,7 @@ export class TrainingScene extends Phaser.Scene {
     });
   }
 
-  private createHud(characterName: string): void {
+  private createHud(): void {
     const { width, height } = this.scale;
     const depth = 1000;
 
@@ -448,20 +448,11 @@ export class TrainingScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(depth);
 
-    this.add.text(175, 22, characterName, {
-      fontFamily: 'Georgia, Times New Roman, serif',
-      fontSize: '19px',
-      color: '#2a1808',
-      fontStyle: 'bold',
-      stroke: '#f4e0a8',
-      strokeThickness: 2
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(depth + 5);
-
-    this.energyGold = this.add.image(183, 58, 'training-energyGold')
+    this.energyGold = this.add.image(120, 44, 'training-energyGold')
       .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 3);
-    this.energyRed = this.add.image(183, 58, 'training-energyRed')
+    this.energyRed = this.add.image(120, 44, 'training-energyRed')
       .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 3);
-    this.add.image(288, 58, 'training-energyFrame')
+    this.add.image(225, 44, 'training-energyFrame')
       .setDisplaySize(264, 34).setScrollFactor(0).setDepth(depth + 4);
 
     this.add.image(width - 190, 41, 'training-coin')
