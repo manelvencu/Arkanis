@@ -8,11 +8,13 @@ import { installTrainingGameOverHook } from './gameOverHook';
 import { installTrainingGridDebugOverlay } from './gridDebugOverlay';
 import { installTrainingTerrainRefinement } from './trainingTerrainRefinement';
 import { installTianaSideWalkRefinement } from './tianaSideWalkRefinement';
+import { installTianaPhysicsRefinement } from './tianaPhysicsRefinement';
 
 installTrainingGameOverHook();
 installTrainingGridDebugOverlay();
 installTrainingTerrainRefinement();
 installTianaSideWalkRefinement();
+installTianaPhysicsRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
