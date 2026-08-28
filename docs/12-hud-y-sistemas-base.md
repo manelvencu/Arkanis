@@ -4,11 +4,11 @@
 
 La HUD permanece anclada a la cámara y ocupa casi todo el ancho visible. A la izquierda muestra el nombre del personaje y una barra de energía; en el centro muestra exclusivamente el progreso de cofres y vasijas; a la derecha muestra la moneda, su contador y el icono de menú. El estado de la salida se comunica visualmente mediante el parpadeo de la barrera cuando queda desbloqueada, sin añadir texto de estado a la HUD.
 
-Para asegurar la legibilidad, el marco decorativo superior se apoya sobre un fondo claro tipo pergamino, prácticamente opaco, que evita que el escenario interfiera visualmente con la energía, los textos y el contador.
+`hud-frame.png` incorpora ya su propio fondo interior, por lo que no se añade ningún rectángulo de color adicional detrás. El marco es la base visual de la HUD y todos los elementos funcionales —nombre del jugador, barra de energía, progreso, moneda, contador e icono de menú— se dibujan por delante mediante profundidades superiores.
 
 El bloque izquierdo se ajusta para respetar la ornamentación del marco: el nombre del personaje se desplaza hacia el interior y se refuerza con tipografía de estilo clásico y contorno claro, evitando que quede oculto por el remate decorativo. La barra de energía se reduce y centra dentro de `energy-bar-frame.png`, dejando margen interior visible en los cuatro lados para que el relleno no se superponga al marco.
 
-El icono de menú ofrece respuesta visual al puntero, pero abrir un menú completo queda como `TODO`. La caja de mensajes también está fija a cámara en la zona inferior y aparece únicamente mientras el personaje está frente a un cofre.
+El icono de menú se monta en la zona derecha de la HUD, por delante del marco y ligeramente separado del remate ornamental. Ofrece respuesta visual al puntero, pero abrir un menú completo queda como `TODO`. La caja de mensajes también está fija a cámara en la zona inferior y aparece únicamente mientras el personaje está frente a un cofre.
 
 ## Energía
 
