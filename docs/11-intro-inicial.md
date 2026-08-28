@@ -15,4 +15,6 @@ La composición imita un logo de aventura fantástica mediante tipografía serif
 
 El logo comienza centrado y legible. Durante 4,2 segundos aumenta progresivamente de tamaño hasta rebasar los límites de la pantalla, como si las letras abrieran paso al juego. Al terminar el zoom, la escena inicia automáticamente `CharacterSelectScene`.
 
+La duración total de la intro se mantiene por debajo del máximo definido de 5 segundos.
+
 La escena se registra en primer lugar dentro de la configuración de Phaser, antes de la selección de personaje y del área de entrenamiento.
