@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import './style.css';
+import { IntroScene } from './scenes/IntroScene';
 import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { TrainingScene } from './scenes/TrainingScene';
 
@@ -20,7 +21,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [CharacterSelectScene, TrainingScene]
+  scene: [IntroScene, CharacterSelectScene, TrainingScene]
 };
 
 new Phaser.Game(config);
