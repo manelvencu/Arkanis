@@ -34,35 +34,46 @@ const names = [
 
 const COLS = 4;
 const ROWS = 4;
+const SHEET_WIDTH = 1280;
+const SHEET_HEIGHT = 1280;
+const CELL_WIDTH = 320;
+const CELL_HEIGHT = 320;
 
-fs.mkdirSync(outputDir, { recursive: true });
+if (!fs.existsSync(input)) {
+  throw new Error(`No existe la lámina de origen: ${input}`);
+}
 
-const image = sharp(input);
-const metadata = await image.metadata();
+const metadata = await sharp(input).metadata();
 
 if (!metadata.width || !metadata.height) {
   throw new Error("No se pudo leer el tamaño de la lámina.");
 }
 
-const cellWidth = Math.floor(metadata.width / COLS);
-const cellHeight = Math.floor(metadata.height / ROWS);
+if (metadata.width !== SHEET_WIDTH || metadata.height !== SHEET_HEIGHT) {
+  throw new Error(
+    `Tamaño de lámina incorrecto: ${metadata.width}x${metadata.height}. ` +
+      `El estándar de Arkanis exige exactamente ${SHEET_WIDTH}x${SHEET_HEIGHT} px.`
+  );
+}
 
-console.log(`Lámina: ${metadata.width}x${metadata.height}`);
-console.log(`Celda: ${cellWidth}x${cellHeight}`);
+fs.mkdirSync(outputDir, { recursive: true });
+
+console.log(`Lámina validada: ${metadata.width}x${metadata.height}`);
+console.log(`Grid: ${COLS}x${ROWS}`);
+console.log(`Celda: ${CELL_WIDTH}x${CELL_HEIGHT}`);
 
 for (let row = 0; row < ROWS; row++) {
   for (let col = 0; col < COLS; col++) {
     const index = row * COLS + col;
-
-    const left = col * cellWidth;
-    const top = row * cellHeight;
+    const left = col * CELL_WIDTH;
+    const top = row * CELL_HEIGHT;
 
     await sharp(input)
       .extract({
         left,
         top,
-        width: cellWidth,
-        height: cellHeight,
+        width: CELL_WIDTH,
+        height: CELL_HEIGHT,
       })
       .png()
       .toFile(path.join(outputDir, names[index]));
