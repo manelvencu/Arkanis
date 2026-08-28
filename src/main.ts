@@ -5,8 +5,10 @@ import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { TrainingScene } from './scenes/TrainingScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { installTrainingGameOverHook } from './gameOverHook';
+import { installTrainingGridDebugOverlay } from './gridDebugOverlay';
 
 installTrainingGameOverHook();
+installTrainingGridDebugOverlay();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
