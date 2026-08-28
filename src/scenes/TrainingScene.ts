@@ -231,7 +231,7 @@ export class TrainingScene extends Phaser.Scene {
       this.addSolidImage(x, y, 'training-cabin', 270, 205, 220, 92, 0, 52);
     });
 
-    [[370, 350], [700, 330], [995, 345]].forEach(([x, y], index) => {
+    [[442, 350], [772, 330], [1067, 345]].forEach(([x, y], index) => {
       const chest = this.physics.add.staticImage(x, y, 'training-chestClosed')
         .setDisplaySize(54, 48)
         .setDepth(12);
@@ -456,16 +456,16 @@ export class TrainingScene extends Phaser.Scene {
       fontFamily: 'Arial', fontSize: '18px', color: '#2a1808', fontStyle: 'bold'
     }).setScrollFactor(0).setDepth(depth + 3);
 
-    this.energyGold = this.add.image(176, 58, 'training-energyGold')
+    this.energyGold = this.add.image(176, 52, 'training-energyGold')
       .setOrigin(0, 0.5).setDisplaySize(245, 20).setScrollFactor(0).setDepth(depth + 1);
-    this.energyRed = this.add.image(176, 58, 'training-energyRed')
+    this.energyRed = this.add.image(176, 52, 'training-energyRed')
       .setOrigin(0, 0.5).setDisplaySize(245, 20).setScrollFactor(0).setDepth(depth + 1);
-    this.add.image(298, 58, 'training-energyFrame')
+    this.add.image(298, 52, 'training-energyFrame')
       .setDisplaySize(264, 34).setScrollFactor(0).setDepth(depth + 2);
 
-    this.add.image(width - 190, 44, 'training-coin')
+    this.add.image(width - 190, 41, 'training-coin')
       .setDisplaySize(25, 25).setScrollFactor(0).setDepth(depth + 2);
-    this.coinCounter = this.add.text(width - 165, 44, '0', {
+    this.coinCounter = this.add.text(width - 165, 41, '0', {
       fontFamily: 'Arial', fontSize: '20px', color: '#2a1808', fontStyle: 'bold'
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 3);
 
@@ -497,8 +497,7 @@ export class TrainingScene extends Phaser.Scene {
     this.energyGold.setDisplaySize(fillWidth, 20).setVisible(this.energy >= 30);
     this.energyRed.setDisplaySize(fillWidth, 20).setVisible(this.energy < 30);
     this.coinCounter.setText(String(this.coinsCollected));
-    const exitState = this.exitUnlocked ? 'SALIDA ABIERTA' : 'SALIDA CERRADA';
-    this.progressText.setText(`Cofres ${this.chestsRead}/3   Vasijas ${this.potsDestroyed}/10\n${exitState}`);
+    this.progressText.setText(`Cofres ${this.chestsRead}/3   Vasijas ${this.potsDestroyed}/10`);
   }
 
   private shootMagicRay(): void {
