@@ -40,19 +40,8 @@ export function installTrainingTerrainRefinement(): void {
   prototype.create = function createWithTerrainRefinement(this: TrainingScene): void {
     originalCreate.call(this);
 
-    removeTreesFromTopGrassBand(this);
     addTerrainGrid(this);
   };
-}
-
-function removeTreesFromTopGrassBand(scene: Phaser.Scene): void {
-  scene.children.list
-    .filter((child): child is Phaser.Physics.Arcade.Image =>
-      child instanceof Phaser.Physics.Arcade.Image
-      && child.texture.key === 'training-tree'
-      && child.y < TOP_GRASS_HEIGHT
-    )
-    .forEach((tree) => tree.destroy());
 }
 
 function addTerrainGrid(scene: Phaser.Scene): void {
