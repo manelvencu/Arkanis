@@ -3,6 +3,10 @@ import './style.css';
 import { IntroScene } from './scenes/IntroScene';
 import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { TrainingScene } from './scenes/TrainingScene';
+import { GameOverScene } from './scenes/GameOverScene';
+import { installTrainingGameOverHook } from './gameOverHook';
+
+installTrainingGameOverHook();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -21,7 +25,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [IntroScene, CharacterSelectScene, TrainingScene]
+  scene: [IntroScene, CharacterSelectScene, TrainingScene, GameOverScene]
 };
 
 new Phaser.Game(config);
