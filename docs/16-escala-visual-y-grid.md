@@ -44,15 +44,23 @@ La profundidad se ordenará principalmente por la posición vertical del punto d
 
 ## Composición de mapas por celdas
 
-Los mapas nuevos podrán describirse usando coordenadas de grid, por ejemplo `columna 12, fila 8`, que se transformarán a píxeles con:
+Las coordenadas de grid serán **1-based**: la primera celda es `C01/F01`.
 
-`x = columna × 32`
+Para obtener la esquina superior izquierda de una celda:
 
-`y = fila × 32`
+`x = (columna - 1) × 32`
 
-Cuando convenga centrar un sprite en una celda se añadirá media celda al cálculo.
+`y = (fila - 1) × 32`
 
-Esto permitirá definir mapas mediante instrucciones como «árbol en C12/F8», «piedra en C16/F10» o «camino desde C4/F12 hasta C20/F12» y mantener coherencia espacial.
+Para obtener el centro de esa celda:
+
+`xCentro = (columna - 1) × 32 + 16`
+
+`yCentro = (fila - 1) × 32 + 16`
+
+Esto permitirá definir mapas mediante instrucciones como «árbol en C12/F08», «piedra en C16/F10» o «camino desde C04/F12 hasta C20/F12» y mantener coherencia espacial.
+
+La Zona de entrenamiento adopta como primera referencia completa un mundo lógico de **45×28 celdas**, es decir, **1440×896 px**.
 
 ## Tiles de terreno
 
