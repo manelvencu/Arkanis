@@ -443,11 +443,6 @@ export class TrainingScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const depth = 1000;
 
-    this.add.rectangle(width / 2, 45, width - 24, 78, 0xf3e3b5, 0.97)
-      .setStrokeStyle(1, 0x9f7732, 0.65)
-      .setScrollFactor(0)
-      .setDepth(depth - 1);
-
     this.add.image(width / 2, 45, 'training-hudFrame')
       .setDisplaySize(width - 20, 82)
       .setScrollFactor(0)
@@ -460,26 +455,26 @@ export class TrainingScene extends Phaser.Scene {
       fontStyle: 'bold',
       stroke: '#f4e0a8',
       strokeThickness: 2
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(depth + 4);
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(depth + 5);
 
     this.energyGold = this.add.image(183, 58, 'training-energyGold')
-      .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 1);
+      .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 3);
     this.energyRed = this.add.image(183, 58, 'training-energyRed')
-      .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 1);
+      .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 3);
     this.add.image(288, 58, 'training-energyFrame')
-      .setDisplaySize(264, 34).setScrollFactor(0).setDepth(depth + 2);
+      .setDisplaySize(264, 34).setScrollFactor(0).setDepth(depth + 4);
 
     this.add.image(width - 190, 41, 'training-coin')
-      .setDisplaySize(25, 25).setScrollFactor(0).setDepth(depth + 2);
+      .setDisplaySize(25, 25).setScrollFactor(0).setDepth(depth + 4);
     this.coinCounter = this.add.text(width - 165, 41, '0', {
       fontFamily: 'Arial', fontSize: '20px', color: '#2a1808', fontStyle: 'bold'
-    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 3);
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(depth + 5);
 
-    const menu = this.add.image(width - 55, 44, 'training-menu')
-      .setDisplaySize(42, 42).setScrollFactor(0).setDepth(depth + 3)
+    const menu = this.add.image(width - 80, 44, 'training-menu')
+      .setDisplaySize(40, 40).setScrollFactor(0).setDepth(depth + 5)
       .setInteractive({ useHandCursor: true });
-    menu.on('pointerover', () => menu.setDisplaySize(45, 45));
-    menu.on('pointerout', () => menu.setDisplaySize(42, 42));
+    menu.on('pointerover', () => menu.setDisplaySize(43, 43));
+    menu.on('pointerout', () => menu.setDisplaySize(40, 40));
     menu.on('pointerdown', () => {
       // TODO: abrir el menú de opciones cuando se implemente.
       this.cameras.main.flash(100, 245, 200, 95);
@@ -487,7 +482,7 @@ export class TrainingScene extends Phaser.Scene {
 
     this.progressText = this.add.text(width / 2, 44, '', {
       fontFamily: 'Arial', fontSize: '15px', color: '#2a1808', fontStyle: 'bold', align: 'center'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 3);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 4);
 
     const messageFrame = this.add.image(0, 0, 'training-messageFrame').setDisplaySize(820, 112);
     this.messageText = this.add.text(0, 0, '', {
