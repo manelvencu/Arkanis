@@ -6,9 +6,11 @@ import { TrainingScene } from './scenes/TrainingScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { installTrainingGameOverHook } from './gameOverHook';
 import { installTrainingGridDebugOverlay } from './gridDebugOverlay';
+import { installTrainingTerrainRefinement } from './trainingTerrainRefinement';
 
 installTrainingGameOverHook();
 installTrainingGridDebugOverlay();
+installTrainingTerrainRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
