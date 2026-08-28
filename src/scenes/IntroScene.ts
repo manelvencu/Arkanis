@@ -8,40 +8,52 @@ export class IntroScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
 
-    this.add.rectangle(width / 2, height / 2, width, height, 0x100b1b);
-    this.add.circle(width / 2, height / 2, 235, 0x6f3515, 0.18);
-    this.add.circle(width / 2, height / 2, 175, 0xd29a37, 0.08)
-      .setStrokeStyle(2, 0xd8a744, 0.35);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x080711);
 
     const logo = this.add.container(width / 2, height / 2);
 
-    const title = this.add.text(0, -26, 'LAS TIERRAS DE ARKANIS', {
+    const overline = this.add.text(0, -78, 'LAS TIERRAS DE', {
       fontFamily: 'Georgia, Times New Roman, serif',
-      fontSize: '50px',
-      color: '#f4c85f',
-      fontStyle: 'bold italic',
-      stroke: '#2b1609',
-      strokeThickness: 8,
+      fontSize: '27px',
+      color: '#e1af48',
+      fontStyle: 'bold',
+      stroke: '#1b0e06',
+      strokeThickness: 5,
       align: 'center',
       shadow: {
-        offsetX: 5,
-        offsetY: 7,
+        offsetX: 3,
+        offsetY: 4,
         color: '#000000',
-        blur: 8,
+        blur: 5,
         fill: true,
         stroke: true
       }
-    }).setOrigin(0.5).setLetterSpacing(2);
+    }).setOrigin(0.5).setLetterSpacing(6);
 
-    const ornament = this.add.rectangle(0, 25, 520, 3, 0xd39a36)
-      .setStrokeStyle(1, 0x3b210d);
-
-    const subtitle = this.add.text(0, 58, 'Creado por: Los Macanos', {
+    const title = this.add.text(0, 0, 'ARKANIS', {
       fontFamily: 'Georgia, Times New Roman, serif',
-      fontSize: '22px',
-      color: '#ffe5a1',
+      fontSize: '104px',
+      color: '#f6c95c',
+      fontStyle: 'bold italic',
+      stroke: '#241205',
+      strokeThickness: 11,
+      align: 'center',
+      shadow: {
+        offsetX: 7,
+        offsetY: 10,
+        color: '#000000',
+        blur: 10,
+        fill: true,
+        stroke: true
+      }
+    }).setOrigin(0.5).setLetterSpacing(3);
+
+    const subtitle = this.add.text(0, 82, 'Creado por: Los Macanos', {
+      fontFamily: 'Georgia, Times New Roman, serif',
+      fontSize: '21px',
+      color: '#e8c474',
       fontStyle: 'italic',
-      stroke: '#241307',
+      stroke: '#1b0e06',
       strokeThickness: 4,
       shadow: {
         offsetX: 3,
@@ -52,7 +64,7 @@ export class IntroScene extends Phaser.Scene {
       }
     }).setOrigin(0.5);
 
-    logo.add([title, ornament, subtitle]);
+    logo.add([overline, title, subtitle]);
 
     this.tweens.add({
       targets: logo,
