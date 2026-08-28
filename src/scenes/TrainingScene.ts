@@ -263,8 +263,8 @@ export class TrainingScene extends Phaser.Scene {
     ];
     positions.forEach(([x, y], index) => {
       const pot = this.pots.create(x, y, 'training-potIntact') as Phaser.Physics.Arcade.Image;
-      pot.setDisplaySize(34, 36).setDepth(11).refreshBody();
-      (pot.body as Phaser.Physics.Arcade.StaticBody).setSize(28, 30).setOffset(3, 6);
+      pot.setDisplaySize(44, 47).setDepth(11).refreshBody();
+      (pot.body as Phaser.Physics.Arcade.StaticBody).setSize(36, 39).setOffset(4, 8);
       pot.setData('broken', false);
       pot.setData('potIndex', index);
     });
@@ -354,7 +354,7 @@ export class TrainingScene extends Phaser.Scene {
 
     pot.setData('broken', true);
     pot.disableBody(true, false);
-    pot.setTexture('training-potBroken').setDisplaySize(36, 30).setVisible(true);
+    pot.setTexture('training-potBroken').setDisplaySize(47, 39).setVisible(true);
     this.potsDestroyed += 1;
     this.updateHud();
     this.checkUnlock();
@@ -435,6 +435,10 @@ export class TrainingScene extends Phaser.Scene {
   private createHud(characterName: string): void {
     const { width, height } = this.scale;
     const depth = 1000;
+
+    this.add.rectangle(width / 2, 45, width - 24, 78, 0xf3e1b8, 0.96)
+      .setScrollFactor(0)
+      .setDepth(depth - 1);
 
     this.add.image(width / 2, 45, 'training-hudFrame')
       .setDisplaySize(width - 20, 82)
