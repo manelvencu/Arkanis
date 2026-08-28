@@ -2,13 +2,16 @@
 
 ## HUD fija
 
-La HUD permanece anclada a la cámara y ocupa casi todo el ancho visible. A la izquierda muestra únicamente la barra de energía; en el centro muestra exclusivamente el progreso de cofres y vasijas; a la derecha muestra la moneda, su contador y el icono de menú. El nombre del personaje deja de mostrarse en la HUD para simplificar la composición. El estado de la salida se comunica visualmente mediante el parpadeo de la barrera cuando queda desbloqueada, sin añadir texto de estado a la HUD.
+La HUD permanece anclada a la cámara y ocupa casi todo el ancho visible. `hud-frame.png` incorpora su propio fondo interior y no se añade ningún rectángulo de color adicional detrás.
 
-`hud-frame.png` incorpora ya su propio fondo interior, por lo que no se añade ningún rectángulo de color adicional detrás. El marco es la base visual de la HUD y todos los elementos funcionales —barra de energía, progreso, moneda, contador e icono de menú— se dibujan por delante mediante profundidades superiores.
+La distribución queda así:
 
-La barra de energía se sitúa dentro del área interior izquierda de `hud-frame.png`, centrada verticalmente y con margen respecto al remate ornamental. `energy-bar-frame.png` conserva su relleno dorado o rojo en el interior, con margen visible para evitar que el relleno se superponga al marco.
+- **Izquierda dentro de `hud-frame`:** nombre del personaje.
+- **Centro:** progreso de vasijas.
+- **Derecha:** moneda, contador e icono de menú.
+- **Debajo de `hud-frame`, zona inferior izquierda:** barra de energía completa, separada del borde izquierdo por más de 50 px.
 
-El icono de menú se monta en la zona derecha de la HUD, por delante del marco y ligeramente separado del remate ornamental. Ofrece respuesta visual al puntero, pero abrir un menú completo queda como `TODO`. La caja de mensajes también está fija a cámara en la zona inferior y aparece únicamente mientras el personaje está frente a un cofre.
+El marco decorativo es la base visual de la HUD y los elementos funcionales se dibujan por delante mediante profundidades superiores. El icono de menú ofrece respuesta visual al puntero, pero abrir un menú completo queda como `TODO`.
 
 ## Energía
 
@@ -19,11 +22,19 @@ El icono de menú se monta en la zona derecha de la HUD, por delante del marco y
 - Por debajo de 30 puntos se usa el relleno rojo.
 - El ancho del relleno se calcula dinámicamente a partir del porcentaje actual.
 
-Si la energía llega a cero, el prototipo devuelve al personaje al centro del entrenamiento y restaura la energía a 100. Cuando se conecte la escena del primer mundo, su entrada deberá inicializar también la energía a 100.
+La barra se presenta fuera del marco principal para no competir con la ornamentación del `hud-frame`, pero permanece fija a cámara.
+
+## Game Over
+
+El comportamiento previsto al llegar a energía 0 es mostrar el asset `public/assets/ui/game-over.png` centrado en pantalla, con un efecto continuo de flameo/pulsación. La pantalla de Game Over permanecerá como máximo **60 segundos** o hasta que el jugador pulse la barra espaciadora. Después se reiniciará la propia escena de entrenamiento desde su estado inicial.
+
+Este comportamiento se conectará al código cuando el asset `game-over.png` esté presente en el repositorio.
 
 ## Monedas y progreso
 
-Cada moneda solo puede recogerse una vez, desaparece y suma una unidad al contador. No se implementan tienda ni compras. La salida se desbloquea únicamente con los tres cofres leídos y las diez vasijas destruidas.
+Cada moneda solo puede recogerse una vez, desaparece y suma una unidad al contador. En la zona inferior las monedas marcan un recorrido seguro en zigzag entre los pinchos. No se implementan tienda ni compras.
+
+Los cofres han sido eliminados del entrenamiento. La salida se desbloquea únicamente al destruir las diez vasijas, y la HUD central muestra solo `Vasijas x/10`.
 
 ## Rayo mágico
 
