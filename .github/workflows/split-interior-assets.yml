@@ -1,0 +1,42 @@
+name: Split interior assets
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/split-interior-assets.yml'
+      - 'public/assets/environment/interiors/source/cabin-interior-sheet-01.png'
+      - 'scripts/split-interior-sheet.mjs'
+
+permissions:
+  contents: write
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Split sheet
+        run: node scripts/split-interior-sheet.mjs
+
+      - name: Commit generated assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/assets/environment/interiors/cabin
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Generate cabin interior assets"
+            git push
+          fi
