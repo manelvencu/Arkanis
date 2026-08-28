@@ -4,22 +4,30 @@
 
 El entrenamiento utiliza un mundo lógico de **1440×896 px**, equivalente exactamente a **45 columnas × 28 filas** de un grid de 32×32 px. La vista continúa siendo de 960×540 px, con cámara limitada al mundo y seguimiento suave del personaje. Una explanada de tierra ocupa el centro y queda rodeada por hierba, árboles, arbustos y rocas que forman límites naturales.
 
-- **Norte:** tres cabañas medievales sin cofres tutoriales.
+- **Norte:** tres cabañas medievales. Cada una tendrá más adelante una escena interior propia con un cofre de lectura.
 - **Sur:** recorrido en zigzag delimitado por pinchos. El camino seguro queda marcado visualmente por una secuencia de monedas.
-- **Nordeste:** camino de tierra que asciende hasta una barrera mágica.
+- **Centro-derecha:** el portal de salida aparecerá en `C35/F15` únicamente cuando se complete todo el entrenamiento.
 - **Resto del mapa:** diez vasijas separadas entre sí para practicar el disparo.
 
 ## Grid de revisión visual
 
 Durante la fase actual de reorganización se superpone temporalmente un grid numerado de 32×32 px sobre todo el mapa. Cada celda se identifica como `Cxx/Fxx`, por ejemplo `C21/F15`.
 
-El grid se dibuja únicamente como herramienta de diseño y revisión. No cambia todavía las posiciones existentes de los objetos: sirve para observar cómo cae el escenario actual sobre la nueva retícula y decidir, elemento por elemento, qué debe recolocarse o redimensionarse.
+El grid se dibuja únicamente como herramienta de diseño y revisión. Los elementos que ya han sido refinados utilizan coordenadas exactas del grid; los que aún no se han revisado mantienen temporalmente su colocación anterior.
 
 ## Progreso
 
-Los cofres se eliminan de esta pantalla. Los rayos rompen exactamente diez vasijas; cada una muestra brevemente su estado roto antes de desaparecer y nunca puede contabilizarse dos veces.
+Los rayos rompen exactamente diez vasijas; cada una muestra brevemente su estado roto antes de desaparecer y nunca puede contabilizarse dos veces. Las monedas del zigzag deben recogerse todas.
 
-La barrera permanece sólida hasta romper las **10 vasijas**. Cuando se completa el objetivo, pierde su colisión y muestra un pulso de transparencia. Entrar desde abajo hacia arriba inicia un fundido. Como todavía no existe la escena del primer mundo, el flujo termina en un mensaje mínimo de «Entrenamiento completado» y deja un `TODO` en `TrainingScene` para conectar las ruinas de Arkanis.
+El portal de salida permanece completamente invisible hasta cumplir simultáneamente los tres objetivos del entrenamiento:
+
+- romper las **10 vasijas**;
+- recoger las **17 monedas** del recorrido;
+- leer los **3 cofres**, uno dentro de cada cabaña.
+
+Al cumplirse los tres objetivos el portal aparece en `C35/F15` con un pulso visual. Entrar desde abajo hacia arriba inicia el fundido de salida. Mientras no existan todavía las tres escenas interiores de las cabañas, el tercer requisito no puede completarse y el portal no aparecerá.
+
+La lectura de cofres se registra como progreso persistente para que, al entrar en una escena interior y volver a la Zona de entrenamiento, el juego recuerde qué cofres ya fueron leídos.
 
 ## Riesgos y recompensas
 
