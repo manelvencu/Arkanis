@@ -3,18 +3,21 @@ import './style.css';
 import { IntroScene } from './scenes/IntroScene';
 import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { TrainingScene } from './scenes/TrainingScene';
+import { CabinOneScene } from './scenes/CabinOneScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { installTrainingGameOverHook } from './gameOverHook';
 import { installTrainingTerrainRefinement } from './trainingTerrainRefinement';
 import { installTianaSideWalkRefinement } from './tianaSideWalkRefinement';
 import { installTianaPhysicsRefinement } from './tianaPhysicsRefinement';
 import { installLupeCharacterRefinement } from './lupeCharacterRefinement';
+import { installCabinOneTransitionRefinement } from './cabinOneTransitionRefinement';
 
 installTrainingGameOverHook();
 installTrainingTerrainRefinement();
 installTianaSideWalkRefinement();
 installTianaPhysicsRefinement();
 installLupeCharacterRefinement();
+installCabinOneTransitionRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -33,7 +36,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [IntroScene, CharacterSelectScene, TrainingScene, GameOverScene]
+  scene: [IntroScene, CharacterSelectScene, TrainingScene, CabinOneScene, GameOverScene]
 };
 
 new Phaser.Game(config);
