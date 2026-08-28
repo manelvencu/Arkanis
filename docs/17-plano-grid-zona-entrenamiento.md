@@ -6,23 +6,25 @@ La Zona de entrenamiento se revisa sobre un grid de **45 columnas × 28 filas**,
 
 La superposición visible identifica cada celda con el formato `Cxx/Fxx`.
 
-Este documento registra dónde cae actualmente el **centro** de cada objeto existente. Todavía no significa que el objeto esté correctamente alineado al grid: árboles, cabañas y otros sprites grandes ocupan visualmente varias celdas alrededor de su centro. Precisamente utilizaremos este plano para decidir después sus huellas y posiciones definitivas.
+Para los elementos todavía no refinados, este documento sigue registrando la celda aproximada en la que cae su centro visual. Para objetos grandes ya refinados, como árboles y cabañas, la referencia pasa a ser su **punto de apoyo físico** sobre el grid.
 
 ## Terreno actual
 
-- Césped: cubre el mundo completo.
-- Explanada de tierra: aproximadamente desde `C05/F06` hasta `C38/F25`.
+- Césped superior: `C01/F01` a `C45/F05`.
+- Explanada de tierra: `C05/F06` a `C37/F24`.
 - Camino hacia la barrera: aproximadamente desde `C34/F04` hasta `C39/F15`.
 
 ## Puntos principales
 
-| Elemento | Celda actual aproximada |
+| Elemento | Celda de referencia |
 | --- | --- |
 | Spawn del jugador | `C21/F15` |
 | Barrera mágica | `C37/F05` |
-| Cabaña 1 | `C12/F08` |
-| Cabaña 2 | `C22/F07` |
-| Cabaña 3 | `C32/F07` |
+| Cabaña 1 — punto de apoyo | `C12/F09` |
+| Cabaña 2 — punto de apoyo | `C22/F09` |
+| Cabaña 3 — punto de apoyo | `C32/F09` |
+
+Las tres cabañas mantienen su tamaño visual de **270×205 px** y su cuerpo de colisión de **220×92 px**. Solo se reajustan ligeramente para que el centro de su base física quede alineado con el grid. Sus puntos de apoyo exactos son `(368,272)`, `(688,272)` y `(1008,272)`.
 
 ## Vasijas
 
@@ -38,11 +40,9 @@ Este documento registra dónde cae actualmente el **centro** de cada objeto exis
 
 ## Árboles
 
-Borde superior: `C03/F04`, `C08/F03`, `C13/F03`, `C18/F03`, `C23/F03`, `C29/F03`, `C43/F04`.
+Los cinco árboles refinados utilizan punto de apoyo en:
 
-Borde inferior: `C03/F26`, `C08/F26`, `C14/F26`, `C20/F26`, `C26/F26`, `C31/F26`, `C38/F26`, `C43/F26`.
-
-Laterales: `C03/F09`, `C03/F15`, `C03/F21`, `C43/F09`, `C43/F15`, `C43/F21`.
+`C05/F05`, `C13/F05`, `C21/F05`, `C29/F05`, `C37/F05`.
 
 ## Recorrido de pinchos
 
