@@ -6,7 +6,7 @@ La Zona de entrenamiento se revisa sobre un grid de **45 columnas × 28 filas**,
 
 La superposición visible identifica cada celda con el formato `Cxx/Fxx`.
 
-Para los elementos todavía no refinados, este documento sigue registrando la celda aproximada en la que cae su centro visual. Para objetos grandes ya refinados, como árboles y cabañas, la referencia pasa a ser su **punto de apoyo físico** sobre el grid.
+Para los elementos todavía no refinados, este documento sigue registrando la celda aproximada en la que cae su centro visual. Para objetos grandes ya refinados, como árboles y cabañas, la referencia pasa a ser su **punto de apoyo físico** sobre el grid. En elementos pequeños refinados, como pinchos y monedas, la referencia es el centro exacto de su celda.
 
 ## Terreno actual
 
@@ -46,7 +46,7 @@ Los cinco árboles refinados utilizan punto de apoyo en:
 
 ## Recorrido de pinchos
 
-Centros actuales aproximados:
+Centros exactos refinados al grid:
 
 `C11/F21`, `C13/F21`, `C16/F21`, `C18/F21`, `C20/F21`, `C22/F21`, `C24/F21`, `C26/F21`, `C34/F21`,
 `C11/F22`, `C34/F22`,
@@ -55,9 +55,13 @@ Centros actuales aproximados:
 
 ## Monedas del zigzag
 
+Centros base exactos refinados al grid:
+
 `C12/F20`, `C15/F20`, `C19/F20`, `C22/F20`, `C26/F20`, `C29/F20`,
 `C31/F22`, `C29/F22`, `C26/F22`, `C22/F22`, `C19/F22`, `C15/F22`,
 `C13/F24`, `C17/F25`, `C21/F25`, `C25/F25`, `C29/F25`.
+
+La animación de flotación de las monedas puede desplazarlas visualmente unos píxeles en vertical, pero su posición base y su referencia lógica permanecen en el centro de las celdas anteriores.
 
 ## Siguiente fase
 

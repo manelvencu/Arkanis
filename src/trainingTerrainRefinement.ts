@@ -35,9 +35,27 @@ const CABIN_SUPPORT_POINTS: Array<[number, number]> = [
   [1008, 272] // C32/F09
 ];
 
+const SPIKE_GRID_POSITIONS: Array<[number, number]> = [
+  [11, 21], [13, 21], [16, 21], [18, 21], [20, 21], [22, 21], [24, 21], [26, 21], [34, 21],
+  [11, 22], [34, 22],
+  [18, 23], [20, 23], [22, 23], [24, 23], [26, 23], [28, 23], [30, 23], [32, 23],
+  [11, 24], [33, 25]
+];
+
+const COIN_GRID_POSITIONS: Array<[number, number]> = [
+  [12, 20], [15, 20], [19, 20], [22, 20], [26, 20], [29, 20],
+  [31, 22], [29, 22], [26, 22], [22, 22], [19, 22], [15, 22],
+  [13, 24], [17, 25], [21, 25], [25, 25], [29, 25]
+];
+
 type TrainingPrototype = {
   __terrainRefinementInstalled?: boolean;
   create: (this: TrainingScene) => void;
+};
+
+type TrainingZigzagRuntime = {
+  spikes: Phaser.Physics.Arcade.StaticGroup;
+  coins: Phaser.Physics.Arcade.StaticGroup;
 };
 
 export function installTrainingTerrainRefinement(): void {
@@ -52,6 +70,7 @@ export function installTrainingTerrainRefinement(): void {
 
     addTerrainGrid(this);
     alignCabinsToGrid(this);
+    alignZigzagToGrid(this);
   };
 }
 
@@ -82,6 +101,38 @@ function alignCabinsToGrid(scene: Phaser.Scene): void {
         CABIN_DISPLAY_HEIGHT - CABIN_BODY_HEIGHT
       );
   });
+}
+
+function alignZigzagToGrid(scene: Phaser.Scene): void {
+  const runtime = scene as unknown as TrainingZigzagRuntime;
+
+  runtime.spikes.clear(true, true);
+
+  runtime.coins.getChildren().forEach((coin) => {
+    scene.tweens.killTweensOf(coin);
+  });
+  runtime.coins.clear(true, true);
+
+  SPIKE_GRID_POSITIONS.forEach(([column, row]) => {
+    const [x, y] = gridCellCenter(column, row);
+    const spike = runtime.spikes.create(x, y, 'training-spikes') as Phaser.Physics.Arcade.Image;
+    spike.setDisplaySize(58, 48).setDepth(4).refreshBody();
+    (spike.body as Phaser.Physics.Arcade.StaticBody).setSize(48, 30).setOffset(5, 12);
+  });
+
+  COIN_GRID_POSITIONS.forEach(([column, row]) => {
+    const [x, y] = gridCellCenter(column, row);
+    const coin = runtime.coins.create(x, y, 'training-coin') as Phaser.Physics.Arcade.Image;
+    coin.setDisplaySize(23, 23).setDepth(10).refreshBody();
+    scene.tweens.add({ targets: coin, y: y - 5, duration: 800, yoyo: true, repeat: -1 });
+  });
+}
+
+function gridCellCenter(column: number, row: number): [number, number] {
+  return [
+    (column - 1) * GRID_SIZE + GRID_SIZE / 2,
+    (row - 1) * GRID_SIZE + GRID_SIZE / 2
+  ];
 }
 
 function addTerrainGrid(scene: Phaser.Scene): void {
