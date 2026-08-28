@@ -2,20 +2,17 @@
 
 ## Contenido
 
-`IntroScene` es la primera escena del juego y presenta un logo dividido en tres bloques de texto centrados:
+`IntroScene` es la primera escena del juego y presenta en el centro:
 
-- la línea superior **LAS TIERRAS DE**;
-- el título principal **ARKANIS**;
+- el logo oficial `public/assets/ui/logo-arkanis.png`;
 - el subtítulo **Creado por: Los Macanos**.
 
 ## Estilo visual
 
-La composición utiliza un fondo liso azul noche casi negro para que el texto sea el único protagonista. La tipografía serif, los tonos dorados, los contornos oscuros y las sombras marcadas aportan una estética medieval, relieve y presencia de logo épico. **ARKANIS** ocupa el nivel central y tiene un tamaño muy superior al resto. Todos los elementos se dibujan con Phaser, sin imágenes ni recursos externos.
+La composición utiliza un fondo liso azul noche casi negro para que el logo oficial sea el protagonista. El mismo recurso gráfico se reutiliza a menor tamaño en la parte superior de `CharacterSelectScene`. No se utiliza todavía `font-atlas-arkanis.png`.
 
 ## Animación y transición
 
-El logo comienza centrado y legible. Durante 4,2 segundos aumenta progresivamente de tamaño hasta rebasar los límites de la pantalla, como si las letras abrieran paso al juego. Al terminar el zoom, la escena inicia automáticamente `CharacterSelectScene`.
-
-La duración total de la intro se mantiene por debajo del máximo definido de 5 segundos.
+El logo y el subtítulo permanecen visibles indefinidamente con un movimiento ambiental lento de flotación y una variación mínima de escala. La primera pulsación de teclado, clic o toque bloquea nuevas activaciones e inicia un zoom de salida de 1,25 segundos. Al terminar, la escena inicia `CharacterSelectScene`.
 
 La escena se registra en primer lugar dentro de la configuración de Phaser, antes de la selección de personaje y del área de entrenamiento.
