@@ -11,6 +11,9 @@ type Facing = 'down' | 'up' | 'side';
 const WORLD_WIDTH = 1440;
 const WORLD_HEIGHT = 900;
 const PLAYER_START = { x: 650, y: 455 };
+const MAGIC_RAY_SPEED = 430;
+const MAGIC_RAY_SPAWN_OFFSET = 36;
+const MAGIC_RAY_LIFETIME = 900;
 const CHEST_MESSAGES = [
   'En este juego tendrás vistas cenitales y laterales, te puedes mover o saltar con las flechas del teclado o con el mando táctil',
   'Para defenderte, puedes lanzar rayos y hechizos con la barra espaciadora o el botón táctil',
@@ -124,6 +127,9 @@ export class TrainingScene extends Phaser.Scene {
     });
     this.physics.add.overlap(this.projectiles, this.pots, (projectile, pot) => {
       this.breakPot(projectile as Phaser.GameObjects.GameObject, pot as Phaser.Physics.Arcade.Image);
+    });
+    this.physics.add.collider(this.projectiles, this.solids, (projectile) => {
+      projectile.destroy();
     });
 
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
@@ -436,7 +442,8 @@ export class TrainingScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const depth = 1000;
 
-    this.add.rectangle(width / 2, 45, width - 24, 78, 0xf3e1b8, 0.96)
+    this.add.rectangle(width / 2, 45, width - 24, 78, 0xf3e3b5, 0.97)
+      .setStrokeStyle(1, 0x9f7732, 0.65)
       .setScrollFactor(0)
       .setDepth(depth - 1);
 
@@ -495,16 +502,22 @@ export class TrainingScene extends Phaser.Scene {
   }
 
   private shootMagicRay(): void {
-    const ray = this.add.rectangle(this.player.x, this.player.y, 18, 8, 0x8ee8ff)
+    const shotDirection = this.direction.clone().normalize();
+    const spawnPosition = new Phaser.Math.Vector2(this.player.x, this.player.y)
+      .add(shotDirection.clone().scale(MAGIC_RAY_SPAWN_OFFSET));
+    const ray = this.add.rectangle(spawnPosition.x, spawnPosition.y, 18, 8, 0x8ee8ff)
       .setStrokeStyle(2, 0xffffff)
+      .setRotation(shotDirection.angle())
       .setDepth(45);
     this.physics.add.existing(ray);
-    const body = ray.body as Phaser.Physics.Arcade.Body;
-    const velocity = this.direction.clone().normalize().scale(430);
-    body.setVelocity(velocity.x, velocity.y);
     ray.setData('projectile', true);
     this.projectiles.add(ray);
-    this.time.delayedCall(900, () => {
+
+    const body = ray.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    body.setVelocity(shotDirection.x * MAGIC_RAY_SPEED, shotDirection.y * MAGIC_RAY_SPEED);
+
+    this.time.delayedCall(MAGIC_RAY_LIFETIME, () => {
       if (ray.active) ray.destroy();
     });
   }
