@@ -2,7 +2,7 @@
 
 ## HUD fija
 
-La HUD permanece anclada a la cámara y ocupa casi todo el ancho visible. A la izquierda muestra el nombre del personaje y una barra de energía; en el centro resume cofres, vasijas y estado de la salida; a la derecha muestra la moneda, su contador y el icono de menú.
+La HUD permanece anclada a la cámara y ocupa casi todo el ancho visible. A la izquierda muestra el nombre del personaje y una barra de energía; en el centro muestra exclusivamente el progreso de cofres y vasijas; a la derecha muestra la moneda, su contador y el icono de menú. El estado de la salida se comunica visualmente mediante el parpadeo de la barrera cuando queda desbloqueada, sin añadir texto de estado a la HUD.
 
 Para asegurar la legibilidad, el marco decorativo superior se apoya sobre un fondo claro tipo pergamino, prácticamente opaco, que evita que el escenario interfiera visualmente con la energía, los textos y el contador.
 
