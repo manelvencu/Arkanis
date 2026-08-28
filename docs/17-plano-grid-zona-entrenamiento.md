@@ -6,7 +6,7 @@ La Zona de entrenamiento se revisa sobre un grid de **45 columnas × 28 filas**,
 
 La superposición visible identifica cada celda con el formato `Cxx/Fxx`.
 
-Para los elementos todavía no refinados, este documento sigue registrando la celda aproximada en la que cae su centro visual. Para objetos grandes ya refinados, como árboles y cabañas, la referencia pasa a ser su **punto de apoyo físico** sobre el grid. En elementos pequeños refinados, como pinchos y monedas, la referencia es el centro exacto de su celda.
+Para los elementos todavía no refinados, este documento sigue registrando la celda aproximada en la que cae su centro visual. Para objetos grandes ya refinados, como árboles y cabañas, la referencia pasa a ser su **punto de apoyo físico** sobre el grid. En elementos pequeños refinados, como pinchos, monedas y vasijas, la referencia es el centro exacto de su celda.
 
 ## Terreno actual
 
@@ -19,14 +19,18 @@ Para los elementos todavía no refinados, este documento sigue registrando la ce
 | Elemento | Celda de referencia |
 | --- | --- |
 | Spawn del jugador | `C21/F15` |
-| Barrera mágica | `C37/F05` |
+| Portal de salida | `C35/F15` |
 | Cabaña 1 — punto de apoyo | `C12/F09` |
 | Cabaña 2 — punto de apoyo | `C22/F09` |
 | Cabaña 3 — punto de apoyo | `C32/F09` |
 
+El portal permanece invisible hasta completar todos los objetivos del entrenamiento.
+
 Las tres cabañas mantienen su tamaño visual de **270×205 px** y su cuerpo de colisión de **220×92 px**. Solo se reajustan ligeramente para que el centro de su base física quede alineado con el grid. Sus puntos de apoyo exactos son `(368,272)`, `(688,272)` y `(1008,272)`.
 
 ## Vasijas
+
+Centros exactos refinados al grid:
 
 `C08/F13`, `C14/F16`, `C19/F13`, `C25/F16`, `C30/F14`, `C34/F17`, `C10/F18`, `C31/F19`, `C36/F22`, `C38/F11`.
 
