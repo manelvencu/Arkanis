@@ -8,6 +8,8 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.image('logo-arkanis', './assets/ui/logo-arkanis.png');
+
     characters.forEach((character) => {
       this.load.image(`portrait-${character.id}`, portraitData[character.id]);
     });
@@ -18,39 +20,10 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x161326);
 
-    this.add.text(width / 2, 28, 'LAS TIERRAS DE', {
-      fontFamily: 'Georgia, Times New Roman, serif',
-      fontSize: '17px',
-      color: '#d7bd72',
-      fontStyle: 'bold',
-      stroke: '#211507',
-      strokeThickness: 3,
-      shadow: {
-        offsetX: 2,
-        offsetY: 2,
-        color: '#000000',
-        blur: 3,
-        fill: true
-      }
-    }).setOrigin(0.5).setLetterSpacing(3);
+    const logo = this.add.image(width / 2, 47, 'logo-arkanis');
+    logo.setScale(Math.min(330 / logo.width, 72 / logo.height));
 
-    this.add.text(width / 2, 63, 'ARKANIS', {
-      fontFamily: 'Georgia, Times New Roman, serif',
-      fontSize: '43px',
-      color: '#e4bd58',
-      fontStyle: 'bold italic',
-      stroke: '#211507',
-      strokeThickness: 7,
-      shadow: {
-        offsetX: 4,
-        offsetY: 5,
-        color: '#000000',
-        blur: 5,
-        fill: true
-      }
-    }).setOrigin(0.5).setLetterSpacing(2);
-
-    this.add.text(width / 2, 101, 'Elige tu personaje', {
+    this.add.text(width / 2, 101, 'Selección de jugador', {
       fontFamily: 'Arial',
       fontSize: '20px',
       color: '#ffffff'
