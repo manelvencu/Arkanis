@@ -11,11 +11,13 @@ type TrainingRuntime = TrainingScene & {
   updateHud: () => void;
 };
 
+type TrainingPrototype = {
+  __gameOverHookInstalled?: boolean;
+  hitSpikes: (this: TrainingRuntime) => void;
+};
+
 export function installTrainingGameOverHook(): void {
-  const prototype = TrainingScene.prototype as TrainingScene['prototype'] & {
-    __gameOverHookInstalled?: boolean;
-    hitSpikes: (this: TrainingRuntime) => void;
-  };
+  const prototype = TrainingScene.prototype as unknown as TrainingPrototype;
 
   if (prototype.__gameOverHookInstalled) return;
   prototype.__gameOverHookInstalled = true;
