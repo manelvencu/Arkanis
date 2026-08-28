@@ -4,6 +4,8 @@
 
 La HUD permanece anclada a la cámara y ocupa casi todo el ancho visible. A la izquierda muestra el nombre del personaje y una barra de energía; en el centro resume cofres, vasijas y estado de la salida; a la derecha muestra la moneda, su contador y el icono de menú.
 
+Para asegurar la legibilidad, el marco decorativo superior se apoya sobre un fondo claro tipo pergamino, prácticamente opaco, que evita que el escenario interfiera visualmente con la energía, los textos y el contador.
+
 El icono de menú ofrece respuesta visual al puntero, pero abrir un menú completo queda como `TODO`. La caja de mensajes también está fija a cámara en la zona inferior y aparece únicamente mientras el personaje está frente a un cofre.
 
 ## Energía
