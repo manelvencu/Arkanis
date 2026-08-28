@@ -453,15 +453,20 @@ export class TrainingScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(depth);
 
-    this.add.text(34, 24, characterName, {
-      fontFamily: 'Arial', fontSize: '18px', color: '#2a1808', fontStyle: 'bold'
-    }).setScrollFactor(0).setDepth(depth + 3);
+    this.add.text(185, 20, characterName, {
+      fontFamily: 'Georgia, Times New Roman, serif',
+      fontSize: '19px',
+      color: '#2a1808',
+      fontStyle: 'bold',
+      stroke: '#f4e0a8',
+      strokeThickness: 2
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(depth + 4);
 
-    this.energyGold = this.add.image(176, 52, 'training-energyGold')
-      .setOrigin(0, 0.5).setDisplaySize(245, 20).setScrollFactor(0).setDepth(depth + 1);
-    this.energyRed = this.add.image(176, 52, 'training-energyRed')
-      .setOrigin(0, 0.5).setDisplaySize(245, 20).setScrollFactor(0).setDepth(depth + 1);
-    this.add.image(298, 52, 'training-energyFrame')
+    this.energyGold = this.add.image(193, 58, 'training-energyGold')
+      .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 1);
+    this.energyRed = this.add.image(193, 58, 'training-energyRed')
+      .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 1);
+    this.add.image(298, 58, 'training-energyFrame')
       .setDisplaySize(264, 34).setScrollFactor(0).setDepth(depth + 2);
 
     this.add.image(width - 190, 41, 'training-coin')
@@ -494,9 +499,9 @@ export class TrainingScene extends Phaser.Scene {
   }
 
   private updateHud(): void {
-    const fillWidth = 245 * (this.energy / 100);
-    this.energyGold.setDisplaySize(fillWidth, 20).setVisible(this.energy >= 30);
-    this.energyRed.setDisplaySize(fillWidth, 20).setVisible(this.energy < 30);
+    const fillWidth = 210 * (this.energy / 100);
+    this.energyGold.setDisplaySize(fillWidth, 12).setVisible(this.energy >= 30);
+    this.energyRed.setDisplaySize(fillWidth, 12).setVisible(this.energy < 30);
     this.coinCounter.setText(String(this.coinsCollected));
     this.progressText.setText(`Cofres ${this.chestsRead}/3   Vasijas ${this.potsDestroyed}/10`);
   }

@@ -6,6 +6,8 @@ La HUD permanece anclada a la cámara y ocupa casi todo el ancho visible. A la i
 
 Para asegurar la legibilidad, el marco decorativo superior se apoya sobre un fondo claro tipo pergamino, prácticamente opaco, que evita que el escenario interfiera visualmente con la energía, los textos y el contador.
 
+El bloque izquierdo se ajusta para respetar la ornamentación del marco: el nombre del personaje se desplaza hacia el interior y se refuerza con tipografía de estilo clásico y contorno claro, evitando que quede oculto por el remate decorativo. La barra de energía se reduce y centra dentro de `energy-bar-frame.png`, dejando margen interior visible en los cuatro lados para que el relleno no se superponga al marco.
+
 El icono de menú ofrece respuesta visual al puntero, pero abrir un menú completo queda como `TODO`. La caja de mensajes también está fija a cámara en la zona inferior y aparece únicamente mientras el personaje está frente a un cofre.
 
 ## Energía
