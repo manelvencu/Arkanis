@@ -35,6 +35,18 @@ const ENVIRONMENT_ASSETS = {
   menu: './assets/environment/menu-icon-01.png'
 } as const;
 
+const TIANA_ASSETS = {
+  'idle-down': './assets/characters/tiana/walk-down/tiana-idle-down.png',
+  'walk-down-01': './assets/characters/tiana/walk-down/tiana-walk-down-01.png',
+  'walk-down-02': './assets/characters/tiana/walk-down/tiana-walk-down-02.png',
+  'idle-right': './assets/characters/tiana/walk-right/tiana-idle-right.png',
+  'walk-right-01': './assets/characters/tiana/walk-right/tiana-walk-right-01.png',
+  'walk-right-02': './assets/characters/tiana/walk-right/tiana-walk-right-02.png',
+  'idle-up': './assets/characters/tiana/walk-up/tiana-idle-up.png',
+  'walk-up-01': './assets/characters/tiana/walk-up/tiana-walk-up-01.png',
+  'walk-up-02': './assets/characters/tiana/walk-up/tiana-walk-up-02.png'
+} as const;
+
 export class TrainingScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -90,9 +102,8 @@ export class TrainingScene extends Phaser.Scene {
     this.load.image('training-magicRayGold', './assets/effects/magic-ray-gold-01.png');
 
     if (this.characterId === 'tiana') {
-      this.load.spritesheet('tiana-game', './assets/tiana-spritesheet.png', {
-        frameWidth: 48,
-        frameHeight: 48
+      Object.entries(TIANA_ASSETS).forEach(([key, path]) => {
+        this.load.image(`tiana-${key}`, path);
       });
     }
   }
@@ -164,8 +175,12 @@ export class TrainingScene extends Phaser.Scene {
       }
     } else if (this.hasAnimatedCharacter() && !this.isCasting) {
       this.player.anims.stop();
-      const idleFrame = this.facing === 'down' ? 0 : this.facing === 'side' ? 7 : 14;
-      this.player.setFrame(idleFrame);
+      const idleTexture = this.facing === 'down'
+        ? 'tiana-idle-down'
+        : this.facing === 'side'
+          ? 'tiana-idle-right'
+          : 'tiana-idle-up';
+      this.player.setTexture(idleTexture);
     }
 
     this.checkExit();
@@ -309,7 +324,7 @@ export class TrainingScene extends Phaser.Scene {
   private createPlayer(placeholderColor: number): void {
     if (this.hasAnimatedCharacter()) {
       this.createTianaAnimations();
-      this.player = this.physics.add.sprite(PLAYER_START.x, PLAYER_START.y, 'tiana-game', 0);
+      this.player = this.physics.add.sprite(PLAYER_START.x, PLAYER_START.y, 'tiana-idle-down');
       this.player.setDisplaySize(68, 68);
     } else {
       const textureKey = `player-${this.characterId}`;
@@ -487,22 +502,25 @@ export class TrainingScene extends Phaser.Scene {
   }
 
   private createTianaAnimations(): void {
-    const create = (key: string, frames: number[], frameRate: number, repeat: number): void => {
+    const create = (key: string, textureKeys: string[], frameRate: number, repeat: number): void => {
       if (this.anims.exists(key)) return;
       this.anims.create({
         key,
-        frames: frames.map((frame) => ({ key: 'tiana-game', frame })),
+        frames: textureKeys.map((textureKey) => ({ key: textureKey })),
         frameRate,
         repeat
       });
     };
 
-    create('tiana-walk-down', [1, 2, 3, 2], 9, -1);
-    create('tiana-walk-side', [8, 9, 10, 9], 9, -1);
-    create('tiana-walk-up', [15, 16, 17, 16], 9, -1);
-    create('tiana-cast-down', [4, 5, 6], 14, 0);
-    create('tiana-cast-side', [7, 8, 7], 14, 0);
-    create('tiana-cast-up', [14, 15, 14], 14, 0);
+    create('tiana-walk-down', ['tiana-walk-down-01', 'tiana-walk-down-02'], 6, -1);
+    create('tiana-walk-side', ['tiana-walk-right-01', 'tiana-walk-right-02'], 6, -1);
+    create('tiana-walk-up', ['tiana-walk-up-01', 'tiana-walk-up-02'], 6, -1);
+
+    // Las poses de disparo definitivas se crearán más adelante. Mientras tanto,
+    // el rayo utiliza el idle de la dirección actual para no depender del spritesheet antiguo.
+    create('tiana-cast-down', ['tiana-idle-down'], 14, 0);
+    create('tiana-cast-side', ['tiana-idle-right'], 14, 0);
+    create('tiana-cast-up', ['tiana-idle-up'], 14, 0);
   }
 
   private playCastAnimation(): void {
