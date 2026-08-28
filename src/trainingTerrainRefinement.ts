@@ -25,6 +25,16 @@ const INTERIOR_Y = TOP_GRASS_HEIGHT;
 const INTERIOR_WIDTH = RIGHT_GRASS_X - INTERIOR_X;
 const INTERIOR_HEIGHT = BOTTOM_GRASS_Y - INTERIOR_Y;
 
+const CABIN_DISPLAY_WIDTH = 270;
+const CABIN_DISPLAY_HEIGHT = 205;
+const CABIN_BODY_WIDTH = 220;
+const CABIN_BODY_HEIGHT = 92;
+const CABIN_SUPPORT_POINTS: Array<[number, number]> = [
+  [368, 272], // C12/F09
+  [688, 272], // C22/F09
+  [1008, 272] // C32/F09
+];
+
 type TrainingPrototype = {
   __terrainRefinementInstalled?: boolean;
   create: (this: TrainingScene) => void;
@@ -41,7 +51,37 @@ export function installTrainingTerrainRefinement(): void {
     originalCreate.call(this);
 
     addTerrainGrid(this);
+    alignCabinsToGrid(this);
   };
+}
+
+function alignCabinsToGrid(scene: Phaser.Scene): void {
+  const cabins = scene.children.list
+    .filter((child): child is Phaser.Physics.Arcade.Image =>
+      child instanceof Phaser.Physics.Arcade.Image
+      && child.texture.key === 'training-cabin'
+    )
+    .sort((a, b) => a.x - b.x);
+
+  cabins.forEach((cabin, index) => {
+    const supportPoint = CABIN_SUPPORT_POINTS[index];
+    if (!supportPoint) return;
+
+    const [supportX, supportY] = supportPoint;
+    const visualCenterY = supportY - (CABIN_DISPLAY_HEIGHT - CABIN_BODY_HEIGHT) / 2;
+
+    cabin
+      .setPosition(supportX, visualCenterY)
+      .setDisplaySize(CABIN_DISPLAY_WIDTH, CABIN_DISPLAY_HEIGHT)
+      .refreshBody();
+
+    (cabin.body as Phaser.Physics.Arcade.StaticBody)
+      .setSize(CABIN_BODY_WIDTH, CABIN_BODY_HEIGHT)
+      .setOffset(
+        (CABIN_DISPLAY_WIDTH - CABIN_BODY_WIDTH) / 2,
+        CABIN_DISPLAY_HEIGHT - CABIN_BODY_HEIGHT
+      );
+  });
 }
 
 function addTerrainGrid(scene: Phaser.Scene): void {
