@@ -2,7 +2,7 @@ import type * as Phaser from 'phaser';
 import type { CharacterId } from './gameData';
 import { TrainingScene } from './scenes/TrainingScene';
 
-type TrainingRuntime = TrainingScene & {
+type TrainingRuntime = Phaser.Scene & {
   energy: number;
   lastSpikeHitAt: number;
   isExiting: boolean;
