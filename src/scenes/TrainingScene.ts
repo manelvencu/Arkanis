@@ -14,11 +14,6 @@ const PLAYER_START = { x: 650, y: 455 };
 const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
-const CHEST_MESSAGES = [
-  'En este juego tendrás vistas cenitales y laterales, te puedes mover o saltar con las flechas del teclado o con el mando táctil',
-  'Para defenderte, puedes lanzar rayos y hechizos con la barra espaciadora o el botón táctil',
-  'Debes llegar a las ruinas de Arkanis como sea, pero cuidado porque tienes una energía limitada, cuídala'
-] as const;
 
 const ENVIRONMENT_ASSETS = {
   grass: './assets/environment/grass-tile-01.png',
@@ -28,8 +23,6 @@ const ENVIRONMENT_ASSETS = {
   bush: './assets/environment/bush-small-01.png',
   rock: './assets/environment/rock-small-01.png',
   cabin: './assets/environment/cabin-stone-thatch-01.png',
-  chestClosed: './assets/environment/chest-closed-01.png',
-  chestOpen: './assets/environment/chest-open-01.png',
   potIntact: './assets/environment/pot-intact-01.png',
   potBroken: './assets/environment/pot-broken-01.png',
   spikes: './assets/environment/spikes-01.png',
@@ -39,7 +32,6 @@ const ENVIRONMENT_ASSETS = {
   energyFrame: './assets/environment/energy-bar-frame.png',
   energyGold: './assets/environment/energy-bar-fill-gold.png',
   energyRed: './assets/environment/energy-bar-fill-red.png',
-  messageFrame: './assets/environment/message-box-frame.png',
   menu: './assets/environment/menu-icon-01.png'
 } as const;
 
@@ -62,7 +54,6 @@ export class TrainingScene extends Phaser.Scene {
   private energy = 100;
   private coinsCollected = 0;
   private potsDestroyed = 0;
-  private chestsRead = 0;
   private lastSpikeHitAt = -2000;
   private exitUnlocked = false;
   private isExiting = false;
@@ -71,15 +62,12 @@ export class TrainingScene extends Phaser.Scene {
   private spikes!: Phaser.Physics.Arcade.StaticGroup;
   private coins!: Phaser.Physics.Arcade.StaticGroup;
   private projectiles!: Phaser.Physics.Arcade.Group;
-  private chests: Phaser.Physics.Arcade.Image[] = [];
   private barrier!: Phaser.Physics.Arcade.Image;
   private barrierCollider?: Phaser.Physics.Arcade.Collider;
   private energyGold!: Phaser.GameObjects.Image;
   private energyRed!: Phaser.GameObjects.Image;
   private coinCounter!: Phaser.GameObjects.Text;
   private progressText!: Phaser.GameObjects.Text;
-  private messagePanel!: Phaser.GameObjects.Container;
-  private messageText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('TrainingScene');
@@ -90,11 +78,9 @@ export class TrainingScene extends Phaser.Scene {
     this.energy = 100;
     this.coinsCollected = 0;
     this.potsDestroyed = 0;
-    this.chestsRead = 0;
     this.lastSpikeHitAt = -2000;
     this.exitUnlocked = false;
     this.isExiting = false;
-    this.chests = [];
   }
 
   preload(): void {
@@ -138,7 +124,7 @@ export class TrainingScene extends Phaser.Scene {
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.input.addPointer(2);
 
-    this.createHud();
+    this.createHud(character.name);
     this.createTouchControls();
     this.updateHud();
   }
@@ -182,7 +168,6 @@ export class TrainingScene extends Phaser.Scene {
       this.player.setFrame(idleFrame);
     }
 
-    this.updateChestInteraction();
     this.checkExit();
 
     const keyboardShot = Phaser.Input.Keyboard.JustDown(this.spaceKey);
@@ -206,8 +191,8 @@ export class TrainingScene extends Phaser.Scene {
     this.projectiles = this.physics.add.group({ allowGravity: false });
 
     this.createNaturalBorders();
-    this.createCabinsAndChests();
-    this.createSpikeCourse();
+    this.createCabins();
+    this.createZigzagCourse();
     this.createPots();
     this.createExit();
   }
@@ -227,36 +212,39 @@ export class TrainingScene extends Phaser.Scene {
     rocks.forEach(([x, y]) => this.addSolidImage(x, y, 'training-rock', 52, 40, 42, 28, 0, 5));
   }
 
-  private createCabinsAndChests(): void {
+  private createCabins(): void {
     [[370, 225], [700, 205], [995, 220]].forEach(([x, y]) => {
       this.addSolidImage(x, y, 'training-cabin', 270, 205, 220, 92, 0, 52);
     });
-
-    [[442, 350], [772, 330], [1067, 345]].forEach(([x, y], index) => {
-      const chest = this.physics.add.staticImage(x, y, 'training-chestClosed')
-        .setDisplaySize(54, 48)
-        .setDepth(12);
-      chest.refreshBody();
-      (chest.body as Phaser.Physics.Arcade.StaticBody).setSize(48, 32).setOffset(3, 14);
-      chest.setData('messageIndex', index);
-      chest.setData('read', false);
-      this.chests.push(chest);
-      this.solids.add(chest);
-    });
   }
 
-  private createSpikeCourse(): void {
-    const spikePositions = [
-      [470, 660], [550, 660], [630, 660], [710, 660], [790, 660], [870, 660],
-      [510, 735], [590, 735], [670, 735], [750, 735], [830, 735]
-    ];
+  private createZigzagCourse(): void {
+    const spikePositions: Array<[number, number]> = [];
+
+    for (let x = 350; x <= 850; x += 65) spikePositions.push([x, 655]);
+    for (let x = 545; x <= 1035; x += 65) spikePositions.push([x, 735]);
+
+    spikePositions.push(
+      [325, 695], [325, 745],
+      [1060, 650], [1060, 700],
+      [1035, 785]
+    );
+
     spikePositions.forEach(([x, y]) => {
       const spike = this.spikes.create(x, y, 'training-spikes') as Phaser.Physics.Arcade.Image;
       spike.setDisplaySize(58, 48).setDepth(4).refreshBody();
       (spike.body as Phaser.Physics.Arcade.StaticBody).setSize(48, 30).setOffset(5, 12);
     });
 
-    [[510, 620], [630, 705], [750, 620], [830, 705], [910, 620]].forEach(([x, y]) => {
+    const coinPath = [
+      [360, 610], [470, 610], [580, 610], [690, 610], [800, 610], [920, 610],
+      [985, 675],
+      [920, 700], [810, 700], [700, 700], [590, 700], [470, 700],
+      [410, 765],
+      [520, 785], [650, 785], [780, 785], [910, 785]
+    ];
+
+    coinPath.forEach(([x, y]) => {
       const coin = this.coins.create(x, y, 'training-coin') as Phaser.Physics.Arcade.Image;
       coin.setDisplaySize(23, 23).setDepth(10).refreshBody();
       this.tweens.add({ targets: coin, y: y - 5, duration: 800, yoyo: true, repeat: -1 });
@@ -324,37 +312,6 @@ export class TrainingScene extends Phaser.Scene {
     (this.player.body as Phaser.Physics.Arcade.Body).setSize(30, 28).setOffset(9, 28);
   }
 
-  private updateChestInteraction(): void {
-    let activeChest: Phaser.Physics.Arcade.Image | undefined;
-    let activeDistance = Number.POSITIVE_INFINITY;
-
-    this.chests.forEach((chest) => {
-      const toChest = new Phaser.Math.Vector2(chest.x - this.player.x, chest.y - this.player.y);
-      const distance = toChest.length();
-      const isInFront = distance < 92 && toChest.normalize().dot(this.direction) > 0.15;
-      if (isInFront && distance < activeDistance) {
-        activeChest = chest;
-        activeDistance = distance;
-      }
-    });
-
-    if (!activeChest) {
-      this.messagePanel.setVisible(false);
-      return;
-    }
-
-    const messageIndex = activeChest.getData('messageIndex') as number;
-    if (!activeChest.getData('read')) {
-      activeChest.setData('read', true);
-      activeChest.setTexture('training-chestOpen').setDisplaySize(54, 48).refreshBody();
-      this.chestsRead += 1;
-      this.updateHud();
-      this.checkUnlock();
-    }
-    this.messageText.setText(CHEST_MESSAGES[messageIndex]);
-    this.messagePanel.setVisible(true);
-  }
-
   private breakPot(projectile: Phaser.GameObjects.GameObject, pot: Phaser.Physics.Arcade.Image): void {
     projectile.destroy();
     if (pot.getData('broken')) return;
@@ -394,7 +351,7 @@ export class TrainingScene extends Phaser.Scene {
   }
 
   private checkUnlock(): void {
-    if (this.exitUnlocked || this.chestsRead !== 3 || this.potsDestroyed !== 10) return;
+    if (this.exitUnlocked || this.potsDestroyed !== 10) return;
     this.exitUnlocked = true;
     this.barrierCollider?.destroy();
     (this.barrier.body as Phaser.Physics.Arcade.StaticBody).enable = false;
@@ -424,7 +381,6 @@ export class TrainingScene extends Phaser.Scene {
     this.player.anims.stop();
     this.cameras.main.fadeOut(700, 8, 7, 17);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      // TODO: sustituir este cierre por la escena del primer mundo cuando exista.
       this.physics.pause();
       this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x080711)
         .setScrollFactor(0)
@@ -439,8 +395,8 @@ export class TrainingScene extends Phaser.Scene {
     });
   }
 
-  private createHud(): void {
-    const { width, height } = this.scale;
+  private createHud(characterName: string): void {
+    const { width } = this.scale;
     const depth = 1000;
 
     this.add.image(width / 2, 45, 'training-hudFrame')
@@ -448,11 +404,20 @@ export class TrainingScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(depth);
 
-    this.energyGold = this.add.image(120, 44, 'training-energyGold')
+    this.add.text(185, 44, characterName, {
+      fontFamily: 'Georgia, Times New Roman, serif',
+      fontSize: '19px',
+      color: '#2a1808',
+      fontStyle: 'bold',
+      stroke: '#f4e0a8',
+      strokeThickness: 2
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 5);
+
+    this.energyGold = this.add.image(85, 105, 'training-energyGold')
       .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 3);
-    this.energyRed = this.add.image(120, 44, 'training-energyRed')
+    this.energyRed = this.add.image(85, 105, 'training-energyRed')
       .setOrigin(0, 0.5).setDisplaySize(210, 12).setScrollFactor(0).setDepth(depth + 3);
-    this.add.image(225, 44, 'training-energyFrame')
+    this.add.image(190, 105, 'training-energyFrame')
       .setDisplaySize(264, 34).setScrollFactor(0).setDepth(depth + 4);
 
     this.add.image(width - 190, 41, 'training-coin')
@@ -467,21 +432,12 @@ export class TrainingScene extends Phaser.Scene {
     menu.on('pointerover', () => menu.setDisplaySize(43, 43));
     menu.on('pointerout', () => menu.setDisplaySize(40, 40));
     menu.on('pointerdown', () => {
-      // TODO: abrir el menú de opciones cuando se implemente.
       this.cameras.main.flash(100, 245, 200, 95);
     });
 
     this.progressText = this.add.text(width / 2, 44, '', {
       fontFamily: 'Arial', fontSize: '15px', color: '#2a1808', fontStyle: 'bold', align: 'center'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(depth + 4);
-
-    const messageFrame = this.add.image(0, 0, 'training-messageFrame').setDisplaySize(820, 112);
-    this.messageText = this.add.text(0, 0, '', {
-      fontFamily: 'Arial', fontSize: '17px', color: '#17110b', align: 'center',
-      wordWrap: { width: 735, useAdvancedWrap: true }
-    }).setOrigin(0.5);
-    this.messagePanel = this.add.container(width / 2, height - 66, [messageFrame, this.messageText])
-      .setScrollFactor(0).setDepth(depth + 10).setVisible(false);
   }
 
   private updateHud(): void {
@@ -489,7 +445,7 @@ export class TrainingScene extends Phaser.Scene {
     this.energyGold.setDisplaySize(fillWidth, 12).setVisible(this.energy >= 30);
     this.energyRed.setDisplaySize(fillWidth, 12).setVisible(this.energy < 30);
     this.coinCounter.setText(String(this.coinsCollected));
-    this.progressText.setText(`Cofres ${this.chestsRead}/3   Vasijas ${this.potsDestroyed}/10`);
+    this.progressText.setText(`Vasijas ${this.potsDestroyed}/10`);
   }
 
   private shootMagicRay(): void {
