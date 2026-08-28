@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { TrainingScene } from './scenes/TrainingScene';
+import { getTrainingReadChestCount } from './trainingProgress';
 
 const GRID_SIZE = 32;
 const TERRAIN_TILE_CELLS = 4;
@@ -48,14 +49,32 @@ const COIN_GRID_POSITIONS: Array<[number, number]> = [
   [13, 25], [17, 26], [21, 26], [25, 26], [29, 26]
 ];
 
+const POT_GRID_POSITIONS: Array<[number, number]> = [
+  [8, 13], [14, 16], [19, 13], [25, 16], [30, 14],
+  [34, 17], [10, 18], [31, 19], [36, 22], [38, 11]
+];
+
+const PORTAL_GRID_POSITION: [number, number] = [35, 15];
+const REQUIRED_CHESTS = 3;
+
 type TrainingPrototype = {
   __terrainRefinementInstalled?: boolean;
   create: (this: TrainingScene) => void;
+  collectCoin: (this: TrainingScene, coin: Phaser.Physics.Arcade.Image) => void;
+  checkUnlock: (this: TrainingScene) => void;
 };
 
-type TrainingZigzagRuntime = {
+type TrainingRuntime = {
   spikes: Phaser.Physics.Arcade.StaticGroup;
   coins: Phaser.Physics.Arcade.StaticGroup;
+  pots: Phaser.Physics.Arcade.StaticGroup;
+  barrier: Phaser.Physics.Arcade.Image;
+  barrierCollider?: Phaser.Physics.Arcade.Collider;
+  potsDestroyed: number;
+  coinsCollected: number;
+  exitUnlocked: boolean;
+  updateHud: () => void;
+  checkUnlock: () => void;
 };
 
 export function installTrainingTerrainRefinement(): void {
@@ -63,7 +82,40 @@ export function installTrainingTerrainRefinement(): void {
   if (prototype.__terrainRefinementInstalled) return;
 
   const originalCreate = prototype.create;
+  const originalCollectCoin = prototype.collectCoin;
   prototype.__terrainRefinementInstalled = true;
+
+  prototype.checkUnlock = function checkUnlockWithFullProgress(this: TrainingScene): void {
+    const runtime = this as unknown as TrainingRuntime;
+    const allPotsDestroyed = runtime.potsDestroyed === POT_GRID_POSITIONS.length;
+    const allCoinsCollected = runtime.coinsCollected === COIN_GRID_POSITIONS.length;
+    const allChestsRead = getTrainingReadChestCount() >= REQUIRED_CHESTS;
+
+    if (runtime.exitUnlocked || !allPotsDestroyed || !allCoinsCollected || !allChestsRead) return;
+
+    runtime.exitUnlocked = true;
+    runtime.barrierCollider?.destroy();
+    runtime.barrierCollider = undefined;
+    (runtime.barrier.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+    runtime.barrier.setVisible(true).setAlpha(1);
+    this.tweens.add({
+      targets: runtime.barrier,
+      alpha: 0.55,
+      duration: 750,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    runtime.updateHud();
+  };
+
+  prototype.collectCoin = function collectCoinWithUnlockCheck(
+    this: TrainingScene,
+    coin: Phaser.Physics.Arcade.Image
+  ): void {
+    originalCollectCoin.call(this, coin);
+    (this as unknown as TrainingRuntime).checkUnlock();
+  };
 
   prototype.create = function createWithTerrainRefinement(this: TrainingScene): void {
     originalCreate.call(this);
@@ -71,6 +123,8 @@ export function installTrainingTerrainRefinement(): void {
     addTerrainGrid(this);
     alignCabinsToGrid(this);
     alignZigzagToGrid(this);
+    alignPotsToGrid(this);
+    configurePortal(this);
   };
 }
 
@@ -104,7 +158,7 @@ function alignCabinsToGrid(scene: Phaser.Scene): void {
 }
 
 function alignZigzagToGrid(scene: Phaser.Scene): void {
-  const runtime = scene as unknown as TrainingZigzagRuntime;
+  const runtime = scene as unknown as TrainingRuntime;
 
   runtime.spikes.clear(true, true);
 
@@ -126,6 +180,38 @@ function alignZigzagToGrid(scene: Phaser.Scene): void {
     coin.setDisplaySize(23, 23).setDepth(10).refreshBody();
     scene.tweens.add({ targets: coin, y: y - 5, duration: 800, yoyo: true, repeat: -1 });
   });
+}
+
+function alignPotsToGrid(scene: Phaser.Scene): void {
+  const runtime = scene as unknown as TrainingRuntime;
+  runtime.pots.clear(true, true);
+
+  POT_GRID_POSITIONS.forEach(([column, row], index) => {
+    const [x, y] = gridCellCenter(column, row);
+    const pot = runtime.pots.create(x, y, 'training-potIntact') as Phaser.Physics.Arcade.Image;
+    pot.setDisplaySize(44, 47).setDepth(11).refreshBody();
+    (pot.body as Phaser.Physics.Arcade.StaticBody).setSize(36, 39).setOffset(4, 8);
+    pot.setData('broken', false);
+    pot.setData('potIndex', index);
+  });
+}
+
+function configurePortal(scene: Phaser.Scene): void {
+  const runtime = scene as unknown as TrainingRuntime;
+  const [x, y] = gridCellCenter(...PORTAL_GRID_POSITION);
+
+  runtime.barrierCollider?.destroy();
+  runtime.barrierCollider = undefined;
+  runtime.barrier
+    .setPosition(x, y)
+    .setVisible(false)
+    .setAlpha(0)
+    .refreshBody();
+  (runtime.barrier.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+
+  runtime.checkUnlock();
+  scene.events.on(Phaser.Scenes.Events.WAKE, runtime.checkUnlock, scene);
+  scene.events.on(Phaser.Scenes.Events.RESUME, runtime.checkUnlock, scene);
 }
 
 function gridCellCenter(column: number, row: number): [number, number] {
