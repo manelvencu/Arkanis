@@ -40,12 +40,13 @@ No se duplican imágenes para la izquierda. Phaser reutiliza los tres frames de 
 
 ## Cadencia de animación
 
-Cada dirección usa:
+Down y up mantienen la alternancia directa entre sus dos frames de caminar porque visualmente funciona correctamente.
 
-- 1 frame idle cuando el personaje está parado;
-- 2 frames alternos mientras camina.
+Para right y left se utiliza una cadencia más marcada para hacer visible la zancada al reducir el personaje a tamaño de juego:
 
-Las animaciones de caminar reproducen `01 -> 02 -> 01 -> 02` de forma continua y vuelven al idle correspondiente al detenerse.
+`walk-right-01 -> idle-right -> walk-right-02 -> idle-right -> ...`
+
+La izquierda reutiliza exactamente esta misma secuencia mediante espejo horizontal. Al detenerse, el personaje vuelve al idle correspondiente.
 
 ## Tamaño in-game
 
