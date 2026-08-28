@@ -2,14 +2,15 @@
 
 ## Contenido
 
-`IntroScene` es la primera escena del juego y presenta, en el centro de la pantalla:
+`IntroScene` es la primera escena del juego y presenta un logo dividido en tres bloques de texto centrados:
 
-- el título **LAS TIERRAS DE ARKANIS**;
+- la línea superior **LAS TIERRAS DE**;
+- el título principal **ARKANIS**;
 - el subtítulo **Creado por: Los Macanos**.
 
 ## Estilo visual
 
-La composición imita un logo de aventura fantástica mediante tipografía serif grande, tonos dorados y cálidos, contorno oscuro, sombras y ornamentos geométricos. Todos los elementos se dibujan con Phaser, sin imágenes ni recursos externos.
+La composición utiliza un fondo liso azul noche casi negro para que el texto sea el único protagonista. La tipografía serif, los tonos dorados, los contornos oscuros y las sombras marcadas aportan una estética medieval, relieve y presencia de logo épico. **ARKANIS** ocupa el nivel central y tiene un tamaño muy superior al resto. Todos los elementos se dibujan con Phaser, sin imágenes ni recursos externos.
 
 ## Animación y transición
 
