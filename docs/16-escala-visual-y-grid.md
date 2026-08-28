@@ -4,6 +4,8 @@
 
 Arkanis utilizará un grid lógico para mantener coherencia visual, facilitar la composición de mapas y permitir definir posiciones por celdas sin obligar a que todos los sprites sean tiles estrictos.
 
+El grid continúa siendo una referencia interna de diseño y posicionamiento, pero **la cuadrícula visual de depuración ya no se muestra durante el juego normal**. Las coordenadas por celdas siguen vigentes aunque el jugador no vea las líneas ni las etiquetas.
+
 ## Unidad base
 
 La celda lógica base será de **32×32 px**.

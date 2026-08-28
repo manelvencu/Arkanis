@@ -5,16 +5,16 @@ import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { TrainingScene } from './scenes/TrainingScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { installTrainingGameOverHook } from './gameOverHook';
-import { installTrainingGridDebugOverlay } from './gridDebugOverlay';
 import { installTrainingTerrainRefinement } from './trainingTerrainRefinement';
 import { installTianaSideWalkRefinement } from './tianaSideWalkRefinement';
 import { installTianaPhysicsRefinement } from './tianaPhysicsRefinement';
+import { installLupeCharacterRefinement } from './lupeCharacterRefinement';
 
 installTrainingGameOverHook();
-installTrainingGridDebugOverlay();
 installTrainingTerrainRefinement();
 installTianaSideWalkRefinement();
 installTianaPhysicsRefinement();
+installLupeCharacterRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
