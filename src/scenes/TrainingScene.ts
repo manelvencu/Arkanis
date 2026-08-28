@@ -101,6 +101,7 @@ export class TrainingScene extends Phaser.Scene {
     Object.entries(ENVIRONMENT_ASSETS).forEach(([key, path]) => {
       this.load.image(`training-${key}`, path);
     });
+    this.load.image('training-magicRayGold', './assets/effects/magic-ray-gold-01.png');
 
     if (this.characterId === 'tiana') {
       this.load.spritesheet('tiana-game', './assets/tiana-spritesheet.png', {
@@ -504,16 +505,16 @@ export class TrainingScene extends Phaser.Scene {
     const shotDirection = this.direction.clone().normalize();
     const spawnPosition = new Phaser.Math.Vector2(this.player.x, this.player.y)
       .add(shotDirection.clone().scale(MAGIC_RAY_SPAWN_OFFSET));
-    const ray = this.add.rectangle(spawnPosition.x, spawnPosition.y, 18, 8, 0x8ee8ff)
-      .setStrokeStyle(2, 0xffffff)
+    const ray = this.physics.add.image(spawnPosition.x, spawnPosition.y, 'training-magicRayGold')
+      .setDisplaySize(64, 24)
       .setRotation(shotDirection.angle())
-      .setDepth(45);
-    this.physics.add.existing(ray);
+      .setDepth(60);
     ray.setData('projectile', true);
     this.projectiles.add(ray);
 
     const body = ray.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
+    body.setSize(22, 22, true);
     body.setVelocity(shotDirection.x * MAGIC_RAY_SPEED, shotDirection.y * MAGIC_RAY_SPEED);
 
     this.time.delayedCall(MAGIC_RAY_LIFETIME, () => {
