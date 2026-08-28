@@ -46,20 +46,20 @@ Los cinco árboles refinados utilizan punto de apoyo en:
 
 ## Recorrido de pinchos
 
-Centros exactos refinados al grid:
+Centros exactos refinados al grid. Las dos barreras horizontales principales quedan ahora en `F21` y `F24`, con `F22` y `F23` libres entre ambas para dar más espacio de paso al personaje:
 
 `C11/F21`, `C13/F21`, `C16/F21`, `C18/F21`, `C20/F21`, `C22/F21`, `C24/F21`, `C26/F21`, `C34/F21`,
 `C11/F22`, `C34/F22`,
-`C18/F23`, `C20/F23`, `C22/F23`, `C24/F23`, `C26/F23`, `C28/F23`, `C30/F23`, `C32/F23`,
-`C11/F24`, `C33/F25`.
+`C18/F24`, `C20/F24`, `C22/F24`, `C24/F24`, `C26/F24`, `C28/F24`, `C30/F24`, `C32/F24`,
+`C11/F25`, `C33/F26`.
 
 ## Monedas del zigzag
 
 Centros base exactos refinados al grid:
 
 `C12/F20`, `C15/F20`, `C19/F20`, `C22/F20`, `C26/F20`, `C29/F20`,
-`C31/F22`, `C29/F22`, `C26/F22`, `C22/F22`, `C19/F22`, `C15/F22`,
-`C13/F24`, `C17/F25`, `C21/F25`, `C25/F25`, `C29/F25`.
+`C31/F23`, `C29/F23`, `C26/F23`, `C22/F23`, `C19/F23`, `C15/F23`,
+`C13/F25`, `C17/F26`, `C21/F26`, `C25/F26`, `C29/F26`.
 
 La animación de flotación de las monedas puede desplazarlas visualmente unos píxeles en vertical, pero su posición base y su referencia lógica permanecen en el centro de las celdas anteriores.
 
