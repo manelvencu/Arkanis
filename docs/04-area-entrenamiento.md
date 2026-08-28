@@ -2,12 +2,18 @@
 
 ## Distribución cenital
 
-El entrenamiento utiliza un mundo de 1440×900 px, mayor que la vista de 960×540 px, con cámara limitada al mundo y seguimiento suave del personaje. Una explanada de tierra ocupa el centro y queda rodeada por hierba, árboles, arbustos y rocas que forman límites naturales.
+El entrenamiento utiliza un mundo lógico de **1440×896 px**, equivalente exactamente a **45 columnas × 28 filas** de un grid de 32×32 px. La vista continúa siendo de 960×540 px, con cámara limitada al mundo y seguimiento suave del personaje. Una explanada de tierra ocupa el centro y queda rodeada por hierba, árboles, arbustos y rocas que forman límites naturales.
 
 - **Norte:** tres cabañas medievales sin cofres tutoriales.
 - **Sur:** recorrido en zigzag delimitado por pinchos. El camino seguro queda marcado visualmente por una secuencia de monedas.
 - **Nordeste:** camino de tierra que asciende hasta una barrera mágica.
 - **Resto del mapa:** diez vasijas separadas entre sí para practicar el disparo.
+
+## Grid de revisión visual
+
+Durante la fase actual de reorganización se superpone temporalmente un grid numerado de 32×32 px sobre todo el mapa. Cada celda se identifica como `Cxx/Fxx`, por ejemplo `C21/F15`.
+
+El grid se dibuja únicamente como herramienta de diseño y revisión. No cambia todavía las posiciones existentes de los objetos: sirve para observar cómo cae el escenario actual sobre la nueva retícula y decidir, elemento por elemento, qué debe recolocarse o redimensionarse.
 
 ## Progreso
 
@@ -23,6 +29,6 @@ Las monedas desaparecen al recogerlas y aumentan el contador de la HUD; todavía
 
 Se mantienen el teclado, la barra espaciadora, la cruceta táctil y el botón táctil de rayo. La selección previa continúa enviando `characterId`; Tiana usa su spritesheet actual y Lupe, Manel y Cintia conservan temporalmente la representación provisional hasta disponer de sus sprites definitivos.
 
-## Game Over previsto
+## Game Over
 
-Cuando la energía llegue a cero, el flujo definitivo mostrará una imagen `GAME OVER` centrada con efecto de flameo. Permanecerá como máximo 60 segundos o hasta pulsar la barra espaciadora y, después, reiniciará esta misma pantalla desde su estado inicial. El asset se alojará en `public/assets/ui/game-over.png`.
+Cuando la energía llega a cero, el entrenamiento se pausa y se muestra la imagen `public/assets/ui/game-over.png` centrada con efecto de flameo/pulsación. Permanece como máximo 60 segundos o hasta pulsar la barra espaciadora y, después, reinicia esta misma pantalla con el mismo personaje seleccionado.
