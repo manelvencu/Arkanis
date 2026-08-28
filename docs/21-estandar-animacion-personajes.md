@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Tiana establece el patrón visual y técnico que deberán seguir Lupe, Manel, Cintia y cualquier personaje jugable nuevo.
+Tiana establece el patrón visual y técnico que deberán seguir Lupe, Manel, Cintia y cualquier personaje jugable nuevo. Lupe es el segundo personaje integrado siguiendo exactamente este estándar, por lo que este patrón queda validado como norma general del juego.
 
 ## Movimiento cenital
 
@@ -50,6 +50,8 @@ Los PNG deben utilizar fondo transparente y mantener un lienzo consistente entre
 
 La imagen visible y el cuerpo físico son conceptos independientes. El personaje puede usar PNG de alta resolución reducidos al tamaño de juego, pero la colisión debe configurarse en coordenadas de mundo y concentrarse en la zona inferior del personaje.
 
+Tiana y Lupe se muestran actualmente a **68×68 px** en la Zona de entrenamiento y utilizan el mismo criterio físico de referencia: cuerpo concentrado en la base del personaje, independiente de la resolución interna del PNG.
+
 Cambiar la resolución del PNG no debe reducir accidentalmente la caja física. El cuerpo del jugador debe seguir permitiendo:
 
 - colisión con árboles, edificios, vasijas y demás sólidos;
@@ -57,3 +59,7 @@ Cambiar la resolución del PNG no debe reducir accidentalmente la caja física. 
 - una sensación de desplazamiento natural sin bloquear por la cabeza o los brazos del sprite.
 
 Este criterio es obligatorio para todos los personajes jugables.
+
+## Paridad jugable
+
+Mientras no se defina expresamente una habilidad propia de un personaje, todos los protagonistas comparten velocidad, controles, física, recogida de objetos, daño y sistema de disparo. La identidad de cada personaje cambia visualmente, no las reglas básicas de movimiento.
