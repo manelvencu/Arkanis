@@ -4,6 +4,8 @@ import { IntroScene } from './scenes/IntroScene';
 import { CharacterSelectScene } from './scenes/CharacterSelectScene';
 import { TrainingScene } from './scenes/TrainingScene';
 import { CabinOneScene } from './scenes/CabinOneScene';
+import { CabinTwoScene } from './scenes/CabinTwoScene';
+import { CabinThreeScene } from './scenes/CabinThreeScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { installTrainingGameOverHook } from './gameOverHook';
 import { installTrainingTerrainRefinement } from './trainingTerrainRefinement';
@@ -36,7 +38,15 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
   },
-  scene: [IntroScene, CharacterSelectScene, TrainingScene, CabinOneScene, GameOverScene]
+  scene: [
+    IntroScene,
+    CharacterSelectScene,
+    TrainingScene,
+    CabinOneScene,
+    CabinTwoScene,
+    CabinThreeScene,
+    GameOverScene
+  ]
 };
 
 new Phaser.Game(config);
