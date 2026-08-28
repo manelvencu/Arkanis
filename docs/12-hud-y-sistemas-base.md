@@ -23,6 +23,10 @@ Si la energía llega a cero, el prototipo devuelve al personaje al centro del en
 
 Cada moneda solo puede recogerse una vez, desaparece y suma una unidad al contador. No se implementan tienda ni compras. La salida se desbloquea únicamente con los tres cofres leídos y las diez vasijas destruidas.
 
+## Rayo mágico
+
+El proyectil usa el asset `public/assets/effects/magic-ray-gold-01.png`. Se mantiene una única imagen base orientada hacia la derecha y Phaser la rota según la dirección de disparo, por lo que el mismo recurso sirve para derecha, izquierda, arriba y abajo. El proyectil conserva su física independiente, velocidad, colisiones con vasijas y sólidos y tiempo de vida.
+
 ## Capas y controles
 
 La HUD y los controles táctiles usan profundidades fijas superiores a los elementos del mundo, por lo que el personaje, la barrera y el decorado no pueden taparlos. El mapa conserva movimiento por teclado y tacto, además del disparo mediante espacio o botón táctil.
