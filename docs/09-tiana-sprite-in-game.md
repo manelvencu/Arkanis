@@ -2,13 +2,15 @@
 
 ## Estado actual de integración
 
-La versión antigua de Tiana sigue integrada temporalmente en `TrainingScene` mediante `public/assets/tiana-spritesheet.png`. Esa hoja se mantiene solo hasta completar el nuevo set definitivo y sustituirla de una vez en Phaser.
+La nueva versión de Tiana ya está integrada en `TrainingScene` mediante PNG independientes. `public/assets/tiana-spritesheet.png` deja de utilizarse para el movimiento normal del personaje y queda únicamente como recurso antiguo pendiente de retirada cuando se complete también el resto de acciones.
 
 ## Nuevo sistema de assets
 
 La nueva Tiana se construye con imágenes PNG independientes, sin fondo, en lugar de una única hoja de sprites. El objetivo es ganar nitidez, consistencia visual y facilitar la ampliación de animaciones.
 
-Para simplificar la estructura, cada dirección de movimiento agrupa en su propia carpeta el frame idle y los dos frames de caminar correspondientes. Ejemplo actual:
+Cada dirección de movimiento agrupa en su propia carpeta el frame idle y los dos frames de caminar correspondientes.
+
+### Down
 
 `public/assets/characters/tiana/walk-down/`
 
@@ -16,16 +18,44 @@ Para simplificar la estructura, cada dirección de movimiento agrupa en su propi
 - `tiana-walk-down-01.png`
 - `tiana-walk-down-02.png`
 
-La misma convención se repetirá con `walk-up`, `walk-left` y `walk-right`.
+### Right
+
+`public/assets/characters/tiana/walk-right/`
+
+- `tiana-idle-right.png`
+- `tiana-walk-right-01.png`
+- `tiana-walk-right-02.png`
+
+### Up
+
+`public/assets/characters/tiana/walk-up/`
+
+- `tiana-idle-up.png`
+- `tiana-walk-up-01.png`
+- `tiana-walk-up-02.png`
+
+### Left
+
+No se duplican imágenes para la izquierda. Phaser reutiliza los tres frames de `walk-right` aplicando espejo horizontal (`flipX`) cuando Tiana se desplaza o queda mirando hacia la izquierda.
 
 ## Cadencia de animación
 
-Cada dirección de caminar usará inicialmente:
+Cada dirección usa:
 
-- 1 frame idle;
-- 2 frames de caminar alternos.
+- 1 frame idle cuando el personaje está parado;
+- 2 frames alternos mientras camina.
 
-La secuencia de movimiento podrá reproducirse como `01 -> 02 -> 01 -> 02`, regresando al idle cuando el personaje se detenga.
+Las animaciones de caminar reproducen `01 -> 02 -> 01 -> 02` de forma continua y vuelven al idle correspondiente al detenerse.
+
+## Tamaño in-game
+
+En la Zona de entrenamiento Tiana mantiene actualmente un tamaño visual de **68×68 px**, equivalente al tamaño de juego que ya tenía antes del cambio de assets. El cuerpo físico se mantiene separado del tamaño visual para que la colisión siga concentrada en la zona inferior del personaje.
+
+## Disparo de rayo
+
+El proyectil mágico sigue siendo una entidad independiente del sprite de Tiana.
+
+Las poses de disparo definitivas todavía no están creadas. Hasta entonces, al lanzar el rayo se utiliza temporalmente el idle de la dirección correspondiente para que `TrainingScene` ya no dependa de frames de disparo del spritesheet antiguo.
 
 ## Acciones previstas
 
@@ -54,12 +84,6 @@ Rasgos visuales obligatorios:
 
 Todas las imágenes de una misma animación deben conservar exactamente el mismo rostro, proporciones, ropa, peinado, paleta y nivel de detalle. Solo cambian la pose y el movimiento necesarios para cada frame.
 
-## Proyectil mágico
+## Estado de los otros personajes
 
-El rayo seguirá siendo una entidad independiente del sprite de Tiana. La pose de disparo pertenece al personaje, mientras que el proyectil se desplazará, colisionará y podrá evolucionar visualmente de forma independiente.
-
-## Pendiente de integración
-
-Cuando estén terminadas las imágenes principales de Tiana se actualizará `TrainingScene` para dejar de cargar `public/assets/tiana-spritesheet.png` y utilizar este nuevo sistema de frames individuales.
-
-Los otros tres personajes continúan con su representación provisional hasta que se creen sus sprites definitivos.
+Lupe, Manel y Cintia continúan con su representación provisional hasta disponer de sus sprites definitivos.
