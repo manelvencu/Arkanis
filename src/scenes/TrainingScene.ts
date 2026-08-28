@@ -199,11 +199,24 @@ export class TrainingScene extends Phaser.Scene {
 
   private createNaturalBorders(): void {
     const trees = [
-      [80, 100], [230, 90], [390, 90], [550, 90], [720, 85], [900, 90], [1360, 100],
-      [85, 800], [250, 820], [430, 815], [610, 820], [800, 815], [990, 820], [1190, 820], [1360, 800],
-      [75, 270], [70, 470], [75, 650], [1370, 280], [1370, 470], [1370, 650]
+      [144, 144], [400, 144], [656, 144], [912, 144], [1168, 144]
     ];
-    trees.forEach(([x, y]) => this.addSolidImage(x, y, 'training-tree', 150, 176, 58, 50, 0, 52));
+    const treeDisplayHeight = 160;
+    const treeBodyHeight = 40;
+    trees.forEach(([supportX, supportY]) => {
+      const visualCenterY = supportY - (treeDisplayHeight - treeBodyHeight) / 2;
+      this.addSolidImage(
+        supportX,
+        visualCenterY,
+        'training-tree',
+        144,
+        treeDisplayHeight,
+        56,
+        treeBodyHeight,
+        0,
+        treeDisplayHeight - treeBodyHeight
+      );
+    });
 
     const bushes = [[165, 170], [310, 165], [1010, 135], [1290, 185], [155, 705], [1100, 730], [1280, 690]];
     bushes.forEach(([x, y]) => this.addSolidImage(x, y, 'training-bush', 68, 48, 50, 24, 0, 10));

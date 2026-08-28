@@ -42,6 +42,12 @@ Ejemplos:
 
 La profundidad se ordenará principalmente por la posición vertical del punto de apoyo del objeto para que personajes y decorado puedan solaparse de forma natural.
 
+## Punto de apoyo de objetos grandes
+
+La coordenada de grid de árboles, edificios, estatuas y otros objetos grandes representa su **punto de apoyo físico**, no el centro visual del sprite. El sprite se desplaza desde esa referencia según sus dimensiones, mientras que la colisión se concentra alrededor de la base que entra en contacto con el suelo.
+
+En los árboles, el punto de apoyo corresponde al centro de la base o tronco. En edificios, estatuas y elementos equivalentes corresponde al centro de su base transitable o de contacto. Esta referencia común debe utilizarse tanto para colocar el objeto como para ordenar su profundidad.
+
 ## Composición de mapas por celdas
 
 Las coordenadas de grid serán **1-based**: la primera celda es `C01/F01`.
