@@ -7,10 +7,12 @@ import { GameOverScene } from './scenes/GameOverScene';
 import { installTrainingGameOverHook } from './gameOverHook';
 import { installTrainingGridDebugOverlay } from './gridDebugOverlay';
 import { installTrainingTerrainRefinement } from './trainingTerrainRefinement';
+import { installTianaSideWalkRefinement } from './tianaSideWalkRefinement';
 
 installTrainingGameOverHook();
 installTrainingGridDebugOverlay();
 installTrainingTerrainRefinement();
+installTianaSideWalkRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
