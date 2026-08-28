@@ -1,15 +1,47 @@
 # Tiana - sprite in-game
 
-## Formato
+## Estado actual de integración
 
-- Tamaño de cada frame: 48x48 px.
-- Spritesheet técnico: 336x144 px.
-- Distribución: 7 columnas x 3 filas.
-- Vista lateral izquierda: se obtiene espejando horizontalmente la vista lateral derecha.
+La versión antigua de Tiana sigue integrada temporalmente en `TrainingScene` mediante `public/assets/tiana-spritesheet.png`. Esa hoja se mantiene solo hasta completar el nuevo set definitivo y sustituirla de una vez en Phaser.
 
-## Rasgos visuales validados
+## Nuevo sistema de assets
 
-Tiana debe conservar en el modo juego:
+La nueva Tiana se construye con imágenes PNG independientes, sin fondo, en lugar de una única hoja de sprites. El objetivo es ganar nitidez, consistencia visual y facilitar la ampliación de animaciones.
+
+Para simplificar la estructura, cada dirección de movimiento agrupa en su propia carpeta el frame idle y los dos frames de caminar correspondientes. Ejemplo actual:
+
+`public/assets/characters/tiana/walk-down/`
+
+- `tiana-idle-down.png`
+- `tiana-walk-down-01.png`
+- `tiana-walk-down-02.png`
+
+La misma convención se repetirá con `walk-up`, `walk-left` y `walk-right`.
+
+## Cadencia de animación
+
+Cada dirección de caminar usará inicialmente:
+
+- 1 frame idle;
+- 2 frames de caminar alternos.
+
+La secuencia de movimiento podrá reproducirse como `01 -> 02 -> 01 -> 02`, regresando al idle cuando el personaje se detenga.
+
+## Acciones previstas
+
+Además de caminar en las cuatro direcciones, Tiana deberá disponer de imágenes separadas para:
+
+- salto, destinado principalmente a las secciones de vista lateral/plataformas;
+- disparo de rayo;
+- empuje de elementos.
+
+Estas acciones se crearán como assets independientes manteniendo la misma identidad visual.
+
+## Dirección artística definitiva
+
+La nueva versión abandona el aspecto pixel-art estricto. Tiana debe representarse con ilustración 2D nítida, detallada y limpia, de fantasía aventurera clásica-moderna, manteniendo una lectura clara al reducirse al tamaño de juego.
+
+Rasgos visuales obligatorios:
 
 - piel caucásica;
 - cabello rubio;
@@ -20,31 +52,14 @@ Tiana debe conservar en el modo juego:
 - pulsera azul claro;
 - zapatos negros con cordones rosas.
 
-## Filas del spritesheet
+Todas las imágenes de una misma animación deben conservar exactamente el mismo rostro, proporciones, ropa, peinado, paleta y nivel de detalle. Solo cambian la pose y el movimiento necesarios para cada frame.
 
-1. Fila 0: abajo / frente.
-2. Fila 1: lateral derecho.
-3. Fila 2: arriba / espalda.
+## Proyectil mágico
 
-## Columnas
+El rayo seguirá siendo una entidad independiente del sprite de Tiana. La pose de disparo pertenece al personaje, mientras que el proyectil se desplazará, colisionará y podrá evolucionar visualmente de forma independiente.
 
-- Columna 0: quieta.
-- Columnas 1-3: caminar.
-- Columnas 4-6: lanzar rayo.
+## Pendiente de integración
 
-## Integración en Phaser
-
-Al seleccionar a Tiana, `TrainingScene` carga `public/assets/tiana-spritesheet.png` como spritesheet de 48x48.
-
-Animaciones implementadas:
-
-- `tiana-walk-down`
-- `tiana-walk-side`
-- `tiana-walk-up`
-- `tiana-cast-down`
-- `tiana-cast-side`
-- `tiana-cast-up`
-
-El proyectil mágico continúa siendo una entidad independiente del sprite del personaje, de forma que pueda desplazarse, colisionar y evolucionar de forma independiente.
+Cuando estén terminadas las imágenes principales de Tiana se actualizará `TrainingScene` para dejar de cargar `public/assets/tiana-spritesheet.png` y utilizar este nuevo sistema de frames individuales.
 
 Los otros tres personajes continúan con su representación provisional hasta que se creen sus sprites definitivos.
