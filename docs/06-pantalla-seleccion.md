@@ -28,7 +28,7 @@ Los retratos se muestran como imagen principal de cada tarjeta de selección.
 
 La interfaz está pensada prioritariamente para PC y utiliza una composición 2×2 centrada en pantalla.
 
-El título mostrado es **Las Tierras de Arkanis** y debajo aparece la indicación **Elige tu personaje**.
+La parte superior reutiliza el logo oficial `public/assets/ui/logo-arkanis.png` a un tamaño que no invade las tarjetas. Debajo aparece la indicación **Selección de jugador**.
 
 ## Estado actual
 
