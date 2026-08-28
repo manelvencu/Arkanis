@@ -9,8 +9,15 @@ type TrainingPrototype = {
 type TrainingRuntime = {
   characterId: 'tiana' | 'lupe';
   player: Phaser.Physics.Arcade.Sprite;
+  __cabinTransitioning?: boolean;
   __cabin1Transitioning?: boolean;
 };
+
+const CABINS = [
+  { x: 368, sceneKey: 'CabinOneScene' },
+  { x: 688, sceneKey: 'CabinTwoScene' },
+  { x: 1008, sceneKey: 'CabinThreeScene' }
+] as const;
 
 export function installCabinOneTransitionRefinement(): void {
   const prototype = TrainingScene.prototype as unknown as TrainingPrototype;
@@ -23,23 +30,20 @@ export function installCabinOneTransitionRefinement(): void {
     originalUpdate.call(this, time);
 
     const runtime = this as unknown as TrainingRuntime;
-    if (!runtime.player?.active || runtime.__cabin1Transitioning) return;
+    if (!runtime.player?.active || runtime.__cabinTransitioning || runtime.__cabin1Transitioning) return;
 
     const body = runtime.player.body as Phaser.Physics.Arcade.Body;
-    const atFirstCabinDoor =
-      runtime.player.x >= 330 &&
-      runtime.player.x <= 410 &&
-      runtime.player.y >= 300 &&
-      runtime.player.y <= 365 &&
-      body.velocity.y < -1;
+    if (body.velocity.y >= -1 || runtime.player.y < 300 || runtime.player.y > 365) return;
 
-    if (!atFirstCabinDoor) return;
+    const cabin = CABINS.find(({ x }) => Math.abs(runtime.player.x - x) <= 42);
+    if (!cabin) return;
 
+    runtime.__cabinTransitioning = true;
     runtime.__cabin1Transitioning = true;
     body.setVelocity(0);
     this.cameras.main.fadeOut(240, 18, 12, 8);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.launch('CabinOneScene', { characterId: runtime.characterId });
+      this.scene.launch(cabin.sceneKey, { characterId: runtime.characterId });
       this.scene.sleep();
     });
   };
