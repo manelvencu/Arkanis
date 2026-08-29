@@ -13,10 +13,11 @@ type TrainingRuntime = {
   __cabin1Transitioning?: boolean;
 };
 
+const GRID_SIZE = 32;
 const CABINS = [
-  { x: 368, sceneKey: 'CabinOneScene' },
-  { x: 688, sceneKey: 'CabinTwoScene' },
-  { x: 1008, sceneKey: 'CabinThreeScene' }
+  { column: 12, row: 10, sceneKey: 'CabinOneScene' },
+  { column: 22, row: 10, sceneKey: 'CabinTwoScene' },
+  { column: 32, row: 10, sceneKey: 'CabinThreeScene' }
 ] as const;
 
 export function installCabinOneTransitionRefinement(): void {
@@ -33,9 +34,19 @@ export function installCabinOneTransitionRefinement(): void {
     if (!runtime.player?.active || runtime.__cabinTransitioning || runtime.__cabin1Transitioning) return;
 
     const body = runtime.player.body as Phaser.Physics.Arcade.Body;
-    if (body.velocity.y >= -1 || runtime.player.y < 300 || runtime.player.y > 365) return;
+    if (body.velocity.y >= -1) return;
 
-    const cabin = CABINS.find(({ x }) => Math.abs(runtime.player.x - x) <= 42);
+    const cabin = CABINS.find(({ column, row }) => {
+      const left = (column - 1) * GRID_SIZE;
+      const right = left + GRID_SIZE;
+      const top = (row - 1) * GRID_SIZE;
+      const bottom = top + GRID_SIZE;
+
+      return runtime.player.x >= left
+        && runtime.player.x < right
+        && runtime.player.y >= top
+        && runtime.player.y < bottom;
+    });
     if (!cabin) return;
 
     runtime.__cabinTransitioning = true;
