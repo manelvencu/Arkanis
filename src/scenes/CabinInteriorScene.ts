@@ -21,6 +21,9 @@ const ROOM_WIDTH = 384;
 const ROOM_HEIGHT = 320;
 const WALL = 24;
 const PLAYER_SIZE = 64;
+const TRAINING_RETURN_ROW = 12;
+const TRAINING_GRID_SIZE = 32;
+const TRAINING_RETURN_Y = (TRAINING_RETURN_ROW - 1) * TRAINING_GRID_SIZE + TRAINING_GRID_SIZE / 2;
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -57,6 +60,7 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
   private facing: Facing = 'up';
   private messageOpen = false;
   private chestOpened = false;
+  private chestInRange = false;
   private exiting = false;
   private touchDirections: Record<TouchDirection, boolean> = {
     left: false,
@@ -73,6 +77,7 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
   init(data: CabinInteriorData): void {
     this.characterId = data.characterId ?? 'tiana';
     this.messageOpen = false;
+    this.chestInRange = false;
     this.exiting = false;
     this.chestOpened = getTrainingProgress().readChestIds.includes(this.cabinConfig.chestId);
   }
@@ -222,13 +227,28 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
   }
 
   private checkChest(): void {
-    if (this.messageOpen || this.chestOpened) return;
-    if (Phaser.Math.Distance.Between(this.player.x, this.player.y, this.chest.x, this.chest.y) > 72) return;
+    const isNearChest = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      this.chest.x,
+      this.chest.y
+    ) <= 72;
 
-    const p = this.cabinConfig.assetPrefix;
-    this.chestOpened = true;
-    this.chest.setTexture(`${p}-chest-open`);
-    markTrainingChestRead(this.cabinConfig.chestId);
+    if (!isNearChest) {
+      this.chestInRange = false;
+      return;
+    }
+
+    if (this.messageOpen || this.chestInRange) return;
+    this.chestInRange = true;
+
+    if (!this.chestOpened) {
+      const p = this.cabinConfig.assetPrefix;
+      this.chestOpened = true;
+      this.chest.setTexture(`${p}-chest-open`);
+      markTrainingChestRead(this.cabinConfig.chestId);
+    }
+
     this.showMessage(this.cabinConfig.chestMessage);
   }
 
@@ -279,7 +299,7 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
         __cabinTransitioning?: boolean;
         __cabin1Transitioning?: boolean;
       };
-      training.player?.setPosition(this.cabinConfig.returnX, 390);
+      training.player?.setPosition(this.cabinConfig.returnX, TRAINING_RETURN_Y);
       training.__cabinTransitioning = false;
       training.__cabin1Transitioning = false;
       this.scene.wake('TrainingScene');
