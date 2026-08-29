@@ -51,7 +51,7 @@ Los interiores reutilizan los sprites de movimiento existentes de Tiana y Lupe.
 
 La lógica común vive en:
 
-- `src/scenes/BaseTrainingCabinScene.ts`
+- `src/scenes/CabinInteriorScene.ts`
 
 Escenas concretas:
 
@@ -65,7 +65,7 @@ Esto permite mantener idénticos el aspecto, las colisiones y el comportamiento 
 
 ## Cofres
 
-Cada cofre se abre automáticamente al aproximarse suficientemente el personaje. En ese momento:
+Cada cofre se abre automáticamente al aproximarse suficientemente el personaje. En la primera lectura:
 
 1. cambia de textura cerrada a abierta;
 2. se registra su identificador con `markTrainingChestRead()`;
@@ -73,6 +73,8 @@ Cada cofre se abre automáticamente al aproximarse suficientemente el personaje.
 4. el movimiento queda detenido mientras el cuadro está abierto.
 
 Si el identificador ya existe en `localStorage`, el cofre aparece abierto desde el inicio de la escena y no vuelve a incrementar el progreso.
+
+El mensaje, sin embargo, es siempre reutilizable. Si el jugador se aleja del cofre y vuelve a acercarse, el texto vuelve a mostrarse aunque el cofre ya esté abierto. Permanecer junto al cofre después de cerrar el mensaje no lo vuelve a abrir continuamente: es necesario salir de su zona de proximidad y entrar de nuevo.
 
 Identificadores:
 
@@ -104,7 +106,17 @@ La Zona de entrenamiento mantiene tres cabañas colocadas sobre la cuadrícula e
 
 La transición se controla mediante `src/cabinOneTransitionRefinement.ts`, que pese a conservar su nombre histórico gestiona actualmente las tres cabañas.
 
-Al entrar se duerme `TrainingScene` y se lanza la escena interior correspondiente. Al salir se detiene el interior, se despierta `TrainingScene` y el personaje reaparece delante de la cabaña desde la que entró.
+La entrada ya no se activa antes de alcanzar visualmente la puerta. Para entrar, el personaje debe avanzar hacia arriba dentro de la celda de puerta correspondiente:
+
+- Cabaña 1: `C12/F10`;
+- Cabaña 2: `C22/F10`;
+- Cabaña 3: `C32/F10`.
+
+Al entrar se duerme `TrainingScene` y se lanza la escena interior correspondiente. Al salir se detiene el interior, se despierta `TrainingScene` y el personaje reaparece centrado en la fila `F12`, manteniendo la columna de su cabaña:
+
+- Cabaña 1: `C12/F12`;
+- Cabaña 2: `C22/F12`;
+- Cabaña 3: `C32/F12`.
 
 ## Relación con el portal
 
