@@ -2,25 +2,76 @@
 
 ## Objetivo
 
-La Zona de entrenamiento debe poder enviar al jugador a tres escenas interiores independientes, una por cabaña, y recuperar después el estado del entrenamiento sin perder qué cofres se han leído.
+La Zona de entrenamiento dispone de tres cabañas accesibles. Cada una abre una escena interior independiente y, al salir, el jugador vuelve a la Zona de entrenamiento conservando el estado temporal de la visita.
 
 ## Cofres de las cabañas
 
-Cada cabaña tendrá un identificador estable de cofre. La lectura de un cofre se registrará mediante `src/trainingProgress.ts` en `localStorage`, utilizando una lista de identificadores ya leídos.
+Cada cabaña tiene un identificador estable de cofre:
 
-La función `markTrainingChestRead(chestId)` será el punto de entrada que utilizarán las futuras escenas interiores cuando el jugador complete la lectura de su cofre. La lectura es idempotente: volver a leer el mismo cofre no aumenta el progreso dos veces.
+- `training-cabin-1`
+- `training-cabin-2`
+- `training-cabin-3`
 
-## Regreso a la Zona de entrenamiento
+La lectura de un cofre se registra mediante `src/trainingProgress.ts` en `localStorage`, utilizando una lista de identificadores ya leídos.
 
-Para conservar también el estado temporal de las vasijas destruidas y las monedas recogidas durante una visita a una cabaña, la transición prevista será dormir o pausar `TrainingScene` mientras se abre la escena interior y despertarla o reanudarla al salir.
+La función `markTrainingChestRead(chestId)` es el punto de entrada utilizado por las escenas interiores cuando el jugador abre un cofre. La lectura es idempotente: volver a visitar una cabaña o volver a consultar un cofre ya leído no aumenta el progreso dos veces.
 
-De este modo:
+Los cofres utilizan los assets generales:
 
-- las vasijas destruidas y monedas recogidas permanecen en memoria durante la visita interior;
-- los cofres leídos quedan además persistidos en `localStorage`;
-- al volver a la Zona de entrenamiento se vuelve a comprobar si ya se cumplen todos los requisitos del portal.
+- `public/assets/environment/chest-closed-01.png`
+- `public/assets/environment/chest-open-01.png`
 
-Si en el futuro se decide que vasijas y monedas también deban sobrevivir a una recarga completa del navegador, se ampliará el mismo estado persistente para incluirlas.
+Al volver a entrar en una cabaña cuyo cofre ya fue leído, el cofre aparece directamente abierto.
+
+## Interiores implementados
+
+Las tres cabañas comparten la misma distribución base en una habitación de 12 × 10 celdas lógicas (384 × 320 px):
+
+- cama en la zona superior izquierda;
+- cofre centrado en la zona superior;
+- mesa en la zona superior derecha;
+- puerta/salida centrada en la parte inferior;
+- suelo y paredes dibujados directamente con Phaser;
+- colisiones con paredes, cama, mesa y cofre;
+- movimiento del personaje y controles táctiles.
+
+Las escenas son:
+
+- `src/scenes/CabinOneScene.ts`
+- `src/scenes/CabinTwoScene.ts`
+- `src/scenes/CabinThreeScene.ts`
+
+La implementación visual y de movimiento compartida se concentra en `src/scenes/BaseTrainingCabinScene.ts` para que los ajustes futuros se propaguen a las tres cabañas.
+
+## Textos de los cofres
+
+### Cabaña 1
+
+> En las tierras de Arkanis deberás ir pasando retos a los que debes enfrentarte sin miedo, para ello podrás disparar rayos, hechizos, podrás moverte, saltar y empujar objetos. Que tengas suerte!
+
+### Cabaña 2
+
+> Vas a iniciar un viaje por ocho mundos, cada cual más peligroso. En cada uno debes conseguir una pieza de la gran joya de Arkanis o no podrás continuar el viaje. Recuerda que tienes energía limitada, aléjate de los peligros.
+
+### Cabaña 3
+
+> Debes ser agradecido a los habitantes de los diferentes mundos y serás recompensado... O no.
+
+## Transición entre exterior e interior
+
+`src/cabinOneTransitionRefinement.ts` gestiona actualmente las tres entradas de las cabañas de la Zona de entrenamiento.
+
+Al entrar:
+
+- se detecta la puerta correspondiente por su posición exterior;
+- se lanza `CabinOneScene`, `CabinTwoScene` o `CabinThreeScene`;
+- `TrainingScene` queda dormida para conservar vasijas destruidas, monedas recogidas y el resto de estado temporal.
+
+Al salir:
+
+- se despierta `TrainingScene`;
+- el personaje reaparece frente a la cabaña correspondiente;
+- se vuelve a comprobar el progreso necesario para activar el portal.
 
 ## Condiciones del portal
 
@@ -31,3 +82,7 @@ El portal de salida está situado en `C35/F15` y permanece completamente invisib
 - 3 de 3 cofres leídos.
 
 Cuando se cumplen las tres condiciones, el portal se hace visible y pasa a funcionar como salida del entrenamiento.
+
+## Persistencia
+
+Actualmente los cofres leídos se persisten en `localStorage`. Las vasijas destruidas y monedas recogidas se conservan mientras `TrainingScene` permanece dormida durante la visita a una cabaña, pero no están diseñadas todavía para sobrevivir a una recarga completa del navegador.
