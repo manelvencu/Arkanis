@@ -13,6 +13,7 @@ import { installTianaSideWalkRefinement } from './tianaSideWalkRefinement';
 import { installTianaPhysicsRefinement } from './tianaPhysicsRefinement';
 import { installLupeCharacterRefinement } from './lupeCharacterRefinement';
 import { installCabinOneTransitionRefinement } from './cabinOneTransitionRefinement';
+import { installTrainingTouchControlsVisualRefinement } from './trainingControlsRefinement';
 import { installArkanisTypography, waitForArkanisFont } from './arkanisTypography';
 
 installArkanisTypography();
@@ -22,6 +23,7 @@ installTianaSideWalkRefinement();
 installTianaPhysicsRefinement();
 installLupeCharacterRefinement();
 installCabinOneTransitionRefinement();
+installTrainingTouchControlsVisualRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
