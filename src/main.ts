@@ -14,6 +14,7 @@ import { installTianaPhysicsRefinement } from './tianaPhysicsRefinement';
 import { installLupeCharacterRefinement } from './lupeCharacterRefinement';
 import { installCabinOneTransitionRefinement } from './cabinOneTransitionRefinement';
 import { installTrainingTouchControlsVisualRefinement } from './trainingControlsRefinement';
+import { installHdRenderingRefinement } from './hdRenderingRefinement';
 import { installArkanisTypography, waitForArkanisFont } from './arkanisTypography';
 
 installArkanisTypography();
@@ -24,12 +25,13 @@ installTianaPhysicsRefinement();
 installLupeCharacterRefinement();
 installCabinOneTransitionRefinement();
 installTrainingTouchControlsVisualRefinement();
+installHdRenderingRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
   parent: 'game',
-  width: 960,
-  height: 540,
+  width: 1920,
+  height: 1080,
   backgroundColor: '#111111',
   pixelArt: false,
   render: {
