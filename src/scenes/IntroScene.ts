@@ -1,5 +1,9 @@
 import * as Phaser from 'phaser';
 
+const LOGICAL_WIDTH = 960;
+const LOGICAL_HEIGHT = 540;
+const HD_SCALE = 2;
+
 export class IntroScene extends Phaser.Scene {
   constructor() {
     super('IntroScene');
@@ -10,7 +14,9 @@ export class IntroScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { width, height } = this.scale;
+    const width = LOGICAL_WIDTH;
+    const height = LOGICAL_HEIGHT;
+    this.cameras.main.setZoom(HD_SCALE);
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x080711);
 
