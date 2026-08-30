@@ -15,6 +15,7 @@ const DPAD_CENTER_Y = (LOGICAL_HEIGHT - 108) * HD_SCALE;
 const DPAD_SPACING = 56 * HD_SCALE;
 const MAGIC_X = (LOGICAL_WIDTH - 105) * HD_SCALE;
 const MAGIC_Y = (LOGICAL_HEIGHT - 105) * HD_SCALE;
+const CONTROL_DEPTH = 1200;
 
 type TouchDirection = 'left' | 'right' | 'up' | 'down';
 
@@ -32,6 +33,7 @@ type TrainingRuntime = {
   coinCounter: Phaser.GameObjects.Text;
   progressText: Phaser.GameObjects.Text;
   touchDirections: Record<TouchDirection, boolean>;
+  touchShootRequested: boolean;
 };
 
 type CabinPrototype = {
@@ -52,88 +54,59 @@ function scaleTextToHd(text: Phaser.GameObjects.Text | undefined): void {
   text.setScale(HD_SCALE).setScrollFactor(0);
 }
 
-function layoutTouchControls(scene: TrainingScene): void {
+function createCleanTouchControls(scene: TrainingScene): void {
   const runtime = scene as unknown as TrainingRuntime;
-  const labels: Array<{ label: string; x: number; y: number }> = [
-    { label: '◀', x: DPAD_CENTER_X - DPAD_SPACING, y: DPAD_CENTER_Y },
-    { label: '▶', x: DPAD_CENTER_X + DPAD_SPACING, y: DPAD_CENTER_Y },
-    { label: '▲', x: DPAD_CENTER_X, y: DPAD_CENTER_Y - DPAD_SPACING },
-    { label: '▼', x: DPAD_CENTER_X, y: DPAD_CENTER_Y + DPAD_SPACING }
+
+  // Elimina por completo los controles creados por TrainingScene antes de construir
+  // la versión HD. Así evitamos restos, botones duplicados y posiciones mezcladas.
+  scene.children.list
+    .filter((child) => depthOf(child) >= CONTROL_DEPTH)
+    .slice()
+    .forEach((child) => child.destroy());
+
+  const directions: Array<{ direction: TouchDirection; label: string; x: number; y: number }> = [
+    { direction: 'left', label: '◀', x: DPAD_CENTER_X - DPAD_SPACING, y: DPAD_CENTER_Y },
+    { direction: 'right', label: '▶', x: DPAD_CENTER_X + DPAD_SPACING, y: DPAD_CENTER_Y },
+    { direction: 'up', label: '▲', x: DPAD_CENTER_X, y: DPAD_CENTER_Y - DPAD_SPACING },
+    { direction: 'down', label: '▼', x: DPAD_CENTER_X, y: DPAD_CENTER_Y + DPAD_SPACING }
   ];
 
-  const directionTexts = labels.map(({ label, x, y }) => {
-    const text = scene.children.list.find((child) =>
-      child instanceof Phaser.GameObjects.Text && child.text === label
-    ) as Phaser.GameObjects.Text | undefined;
-    text?.setPosition(x, y).setScale(HD_SCALE).setScrollFactor(0);
-    return text;
-  });
-
-  const directionButtons = scene.children.list.filter((child) =>
-    child instanceof Phaser.GameObjects.Arc && child.radius <= 30
-  ) as Phaser.GameObjects.Arc[];
-
-  const originalTargets = [
-    { x: 112 - 56, y: PHYSICAL_HEIGHT - 108 },
-    { x: 112 + 56, y: PHYSICAL_HEIGHT - 108 },
-    { x: 112, y: PHYSICAL_HEIGHT - 108 - 56 },
-    { x: 112, y: PHYSICAL_HEIGHT - 108 + 56 }
-  ];
-  const physicalTargets = labels.map(({ x, y }) => ({ x, y }));
-
-  directionButtons.forEach((button) => {
-    let bestIndex = 0;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    originalTargets.forEach((target, index) => {
-      const distance = Phaser.Math.Distance.Between(button.x, button.y, target.x, target.y);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = index;
-      }
-    });
-    const target = physicalTargets[bestIndex];
-    button
-      .setPosition(target.x, target.y)
-      .setRadius(25 * HD_SCALE)
-      .setStrokeStyle(3 * HD_SCALE, 0xf1d16a, 0.9)
+  directions.forEach(({ label, x, y }) => {
+    scene.add.circle(x, y, 50, 0x171421, 0.68)
+      .setStrokeStyle(6, 0xf1d16a, 0.9)
       .setScrollFactor(0)
-      .disableInteractive();
+      .setDepth(CONTROL_DEPTH);
+    scene.add.text(x, y, label, {
+      fontFamily: 'Arial',
+      fontSize: '50px',
+      color: '#fff1ad',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(CONTROL_DEPTH + 1);
   });
 
-  const rayLabel = scene.children.list.find((child) =>
-    child instanceof Phaser.GameObjects.Text && child.text === 'RAYO'
-  ) as Phaser.GameObjects.Text | undefined;
-  rayLabel?.destroy();
+  const magicButton = scene.add.circle(MAGIC_X, MAGIC_Y, 68, 0x7a302d, 0.84)
+    .setStrokeStyle(6, 0xf0a08c, 0.98)
+    .setScrollFactor(0)
+    .setDepth(CONTROL_DEPTH)
+    .setInteractive({ useHandCursor: true });
 
-  const rayIcon = scene.children.list.find((child) =>
-    child instanceof Phaser.GameObjects.Text && child.text === '✦'
-  ) as Phaser.GameObjects.Text | undefined;
-  rayIcon?.setPosition(MAGIC_X, MAGIC_Y)
-    .setScale(HD_SCALE)
-    .setFontSize(31)
-    .setColor('#ffe9df')
-    .setScrollFactor(0);
+  scene.add.text(MAGIC_X, MAGIC_Y, '✦', {
+    fontFamily: 'Arial',
+    fontSize: '62px',
+    color: '#ffe9df',
+    fontStyle: 'bold'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(CONTROL_DEPTH + 1);
 
-  const rayButton = scene.children.list.find((child) =>
-    child instanceof Phaser.GameObjects.Arc && child.radius >= 40
-  ) as Phaser.GameObjects.Arc | undefined;
-  rayButton?.setPosition(MAGIC_X, MAGIC_Y)
-    .setRadius(34 * HD_SCALE)
-    .setFillStyle(0x7a302d, 0.84)
-    .setStrokeStyle(3 * HD_SCALE, 0xf0a08c, 0.98)
-    .setScrollFactor(0);
-
-  if (rayButton) {
-    rayButton.on('pointerdown', () => {
-      rayButton.setFillStyle(0xa9473b, 0.96);
-    });
-    const restore = (): void => {
-      rayButton.setFillStyle(0x7a302d, 0.84);
-    };
-    rayButton.on('pointerup', restore);
-    rayButton.on('pointerout', restore);
-    rayButton.on('pointerupoutside', restore);
-  }
+  magicButton.on('pointerdown', () => {
+    runtime.touchShootRequested = true;
+    magicButton.setFillStyle(0xa9473b, 0.96);
+  });
+  const restoreMagic = (): void => {
+    magicButton.setFillStyle(0x7a302d, 0.84);
+  };
+  magicButton.on('pointerup', restoreMagic);
+  magicButton.on('pointerout', restoreMagic);
+  magicButton.on('pointerupoutside', restoreMagic);
 
   let dpadPointerId: number | null = null;
 
@@ -174,9 +147,6 @@ function layoutTouchControls(scene: TrainingScene): void {
 
   scene.input.on('pointerup', releaseDpad);
   scene.input.on('pointerupoutside', releaseDpad);
-
-  // Silence unused-array lint/type concerns while keeping explicit references grouped here.
-  void directionTexts;
 }
 
 function layoutTrainingUi(scene: TrainingScene): Phaser.GameObjects.GameObject[] {
@@ -229,7 +199,7 @@ function layoutTrainingUi(scene: TrainingScene): Phaser.GameObjects.GameObject[]
   characterName?.setPosition(185 * HD_SCALE, 44 * HD_SCALE);
   scaleTextToHd(characterName);
 
-  layoutTouchControls(scene);
+  createCleanTouchControls(scene);
 
   return scene.children.list.filter((child) => depthOf(child) >= 1000);
 }
