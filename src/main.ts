@@ -24,7 +24,7 @@ installLupeCharacterRefinement();
 installCabinOneTransitionRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
+  type: Phaser.WEBGL,
   parent: 'game',
   width: 960,
   height: 540,
@@ -33,7 +33,9 @@ const config: Phaser.Types.Core.GameConfig = {
   render: {
     antialias: true,
     antialiasGL: true,
-    roundPixels: false
+    roundPixels: false,
+    powerPreference: 'high-performance',
+    mipmapFilter: 'LINEAR_MIPMAP_LINEAR'
   },
   physics: {
     default: 'arcade',
