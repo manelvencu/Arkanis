@@ -14,7 +14,9 @@ import { installTianaPhysicsRefinement } from './tianaPhysicsRefinement';
 import { installLupeCharacterRefinement } from './lupeCharacterRefinement';
 import { installCabinOneTransitionRefinement } from './cabinOneTransitionRefinement';
 import { installTrainingGridDebugOverlay } from './gridDebugOverlay';
+import { installArkanisTypography, waitForArkanisFont } from './arkanisTypography';
 
+installArkanisTypography();
 installTrainingGameOverHook();
 installTrainingTerrainRefinement();
 installTianaSideWalkRefinement();
@@ -51,4 +53,9 @@ const config: Phaser.Types.Core.GameConfig = {
   ]
 };
 
-new Phaser.Game(config);
+async function bootGame(): Promise<void> {
+  await waitForArkanisFont();
+  new Phaser.Game(config);
+}
+
+void bootGame();
