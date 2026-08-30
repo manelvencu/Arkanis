@@ -7,10 +7,12 @@ const ALDEA_TARGET = { x: 510 / 1220, y: 907 / 1567 };
 
 interface WorldMapData {
   characterId?: string;
+  startAtMap?: boolean;
 }
 
 export class WorldMapScene extends Phaser.Scene {
   private characterId = 'tiana';
+  private startAtMap = false;
   private mapContainer?: Phaser.GameObjects.Container;
   private mapImage?: Phaser.GameObjects.Image;
   private mapTimeout?: Phaser.Time.TimerEvent;
@@ -23,6 +25,7 @@ export class WorldMapScene extends Phaser.Scene {
 
   init(data: WorldMapData): void {
     this.characterId = data.characterId ?? 'tiana';
+    this.startAtMap = data.startAtMap ?? false;
     this.canContinue = false;
     this.transitioning = false;
   }
@@ -36,6 +39,11 @@ export class WorldMapScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#05040a');
+
+    if (this.startAtMap) {
+      this.showWorldMap();
+      return;
+    }
 
     const title = this.add.text(width / 2, height / 2,
       'El viaje por las Tierras de Arkanis\ncomienza ahora.', {
@@ -53,7 +61,7 @@ export class WorldMapScene extends Phaser.Scene {
       targets: title,
       alpha: 1,
       duration: 900,
-      hold: 1200,
+      hold: 3000,
       yoyo: true,
       onComplete: () => {
         title.destroy();
@@ -210,7 +218,7 @@ export class WorldMapScene extends Phaser.Scene {
 
     const { width, height } = this.scale;
     const local = this.aldeaLocalPoint();
-    const targetScale = 2.7;
+    const targetScale = 5.6;
 
     const flash = this.add.circle(
       this.mapContainer.x + local.x,
@@ -227,7 +235,7 @@ export class WorldMapScene extends Phaser.Scene {
       scaleY: targetScale,
       x: width / 2 - local.x * targetScale,
       y: height / 2 - local.y * targetScale,
-      duration: 2200,
+      duration: 3200,
       ease: 'Sine.easeInOut',
       onComplete: () => {
         this.cameras.main.fadeOut(850, 3, 2, 8);
