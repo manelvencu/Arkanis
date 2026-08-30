@@ -105,8 +105,12 @@ export function installTrainingTouchControlsVisualRefinement(): void {
         .setFillStyle(0x7a302d, 0.84)
         .setStrokeStyle(3, 0xf0a08c, 0.98);
 
-      rayButton.on('pointerdown', () => rayButton.setFillStyle(0xa9473b, 0.96));
-      const restore = (): void => rayButton.setFillStyle(0x7a302d, 0.84);
+      rayButton.on('pointerdown', () => {
+        rayButton.setFillStyle(0xa9473b, 0.96);
+      });
+      const restore = (): void => {
+        rayButton.setFillStyle(0x7a302d, 0.84);
+      };
       rayButton.on('pointerup', restore);
       rayButton.on('pointerout', restore);
       rayButton.on('pointerupoutside', restore);
