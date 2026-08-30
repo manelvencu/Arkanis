@@ -8,6 +8,10 @@ type TextFactoryPrototype = Phaser.GameObjects.GameObjectFactory & {
   __arkanisTypographyInstalled?: boolean;
 };
 
+function getTextResolution(): number {
+  return Math.min(window.devicePixelRatio || 1, 2);
+}
+
 export function installArkanisTypography(): void {
   const prototype = Phaser.GameObjects.GameObjectFactory.prototype as TextFactoryPrototype;
   if (prototype.__arkanisTypographyInstalled) return;
@@ -22,10 +26,13 @@ export function installArkanisTypography(): void {
     text: string | string[],
     style?: Phaser.Types.GameObjects.Text.TextStyle
   ): Phaser.GameObjects.Text {
-    return originalText.call(this, x, y, text, {
+    const gameText = originalText.call(this, x, y, text, {
       ...(style ?? {}),
       fontFamily: ARKANIS_FONT_FAMILY
     });
+
+    gameText.setResolution(getTextResolution());
+    return gameText;
   } as TextFactory;
 }
 
