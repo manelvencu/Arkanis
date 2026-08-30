@@ -12,8 +12,9 @@ type TrainingRuntime = {
   touchDirections: Record<TouchDirection, boolean>;
 };
 
-const LOGICAL_HEIGHT = 540;
 const HD_SCALE = 2;
+const LOGICAL_WIDTH = 960;
+const LOGICAL_HEIGHT = 540;
 
 export function installTrainingTouchControlsVisualRefinement(): void {
   const prototype = TrainingScene.prototype as unknown as TrainingPrototype;
@@ -26,56 +27,47 @@ export function installTrainingTouchControlsVisualRefinement(): void {
     originalCreate.call(this);
 
     const runtime = this as unknown as TrainingRuntime;
-    const originalCenterX = 112;
-    const originalCenterY = this.scale.height - 108;
     const logicalCenterX = 112;
     const logicalCenterY = LOGICAL_HEIGHT - 108;
     const spacing = 56;
+    const centerX = logicalCenterX * HD_SCALE;
+    const centerY = logicalCenterY * HD_SCALE;
+    const spacingHd = spacing * HD_SCALE;
 
     const directionLayout: Array<{ label: string; x: number; y: number }> = [
-      { label: '◀', x: logicalCenterX - spacing, y: logicalCenterY },
-      { label: '▶', x: logicalCenterX + spacing, y: logicalCenterY },
-      { label: '▲', x: logicalCenterX, y: logicalCenterY - spacing },
-      { label: '▼', x: logicalCenterX, y: logicalCenterY + spacing }
+      { label: '◀', x: centerX - spacingHd, y: centerY },
+      { label: '▶', x: centerX + spacingHd, y: centerY },
+      { label: '▲', x: centerX, y: centerY - spacingHd },
+      { label: '▼', x: centerX, y: centerY + spacingHd }
     ];
 
     directionLayout.forEach(({ label, x, y }) => {
       const text = this.children.list.find((child) =>
         child instanceof Phaser.GameObjects.Text && child.text === label
       ) as Phaser.GameObjects.Text | undefined;
-      text?.setPosition(x, y);
+      text?.setPosition(x, y).setScale(HD_SCALE).setScrollFactor(0);
     });
 
     const directionButtons = this.children.list.filter((child) =>
       child instanceof Phaser.GameObjects.Arc &&
-      child.radius <= 30 &&
-      Math.abs(child.x - originalCenterX) <= spacing + 5 &&
-      Math.abs(child.y - originalCenterY) <= spacing + 5
+      child.radius <= 30
     ) as Phaser.GameObjects.Arc[];
 
     const buttonTargets = [
-      { x: logicalCenterX - spacing, y: logicalCenterY },
-      { x: logicalCenterX + spacing, y: logicalCenterY },
-      { x: logicalCenterX, y: logicalCenterY - spacing },
-      { x: logicalCenterX, y: logicalCenterY + spacing }
+      { x: centerX - spacingHd, y: centerY },
+      { x: centerX + spacingHd, y: centerY },
+      { x: centerX, y: centerY - spacingHd },
+      { x: centerX, y: centerY + spacingHd }
     ];
 
-    directionButtons.forEach((button) => {
-      const nearest = buttonTargets.reduce((best, target) => {
-        const originalTarget = {
-          x: target.x,
-          y: target.y + (originalCenterY - logicalCenterY)
-        };
-        const distance = Phaser.Math.Distance.Between(button.x, button.y, originalTarget.x, originalTarget.y);
-        return distance < best.distance ? { target, distance } : best;
-      }, { target: buttonTargets[0], distance: Number.POSITIVE_INFINITY });
-      button.setPosition(nearest.target.x, nearest.target.y);
+    directionButtons.slice(0, 4).forEach((button, index) => {
+      const target = buttonTargets[index];
+      button.setPosition(target.x, target.y).setRadius(25 * HD_SCALE).setScrollFactor(0);
+      button.setStrokeStyle(3 * HD_SCALE, 0xf1d16a, 0.9);
     });
 
-    const originalMagicX = this.scale.width - 105;
-    const originalMagicY = this.scale.height - 105;
-    const magicX = 960 - 105;
-    const magicY = LOGICAL_HEIGHT - 105;
+    const magicX = (LOGICAL_WIDTH - 105) * HD_SCALE;
+    const magicY = (LOGICAL_HEIGHT - 105) * HD_SCALE;
 
     const rayLabel = this.children.list.find((child) =>
       child instanceof Phaser.GameObjects.Text && child.text === 'RAYO'
@@ -83,27 +75,21 @@ export function installTrainingTouchControlsVisualRefinement(): void {
     rayLabel?.destroy();
 
     const rayIcon = this.children.list.find((child) =>
-      child instanceof Phaser.GameObjects.Text &&
-      child.text === '✦' &&
-      Math.abs(child.x - originalMagicX) < 8 &&
-      Math.abs(child.y - originalMagicY) < 16
+      child instanceof Phaser.GameObjects.Text && child.text === '✦'
     ) as Phaser.GameObjects.Text | undefined;
-
-    rayIcon?.setPosition(magicX, magicY).setFontSize(31).setColor('#ffe9df');
+    rayIcon?.setPosition(magicX, magicY).setFontSize(31).setScale(HD_SCALE).setColor('#ffe9df').setScrollFactor(0);
 
     const rayButton = this.children.list.find((child) =>
-      child instanceof Phaser.GameObjects.Arc &&
-      Math.abs(child.x - originalMagicX) < 8 &&
-      Math.abs(child.y - originalMagicY) < 8 &&
-      child.radius >= 40
+      child instanceof Phaser.GameObjects.Arc && child.radius >= 40
     ) as Phaser.GameObjects.Arc | undefined;
 
     if (rayButton) {
       rayButton
         .setPosition(magicX, magicY)
-        .setRadius(34)
+        .setRadius(34 * HD_SCALE)
         .setFillStyle(0x7a302d, 0.84)
-        .setStrokeStyle(3, 0xf0a08c, 0.98);
+        .setStrokeStyle(3 * HD_SCALE, 0xf0a08c, 0.98)
+        .setScrollFactor(0);
 
       rayButton.on('pointerdown', () => {
         rayButton.setFillStyle(0xa9473b, 0.96);
@@ -126,11 +112,9 @@ export function installTrainingTouchControlsVisualRefinement(): void {
     };
 
     const updateDirectionFromPointer = (pointer: Phaser.Input.Pointer): void => {
-      const x = pointer.x / HD_SCALE;
-      const y = pointer.y / HD_SCALE;
-      const dx = x - logicalCenterX;
-      const dy = y - logicalCenterY;
-      const deadZone = 18;
+      const dx = pointer.x - centerX;
+      const dy = pointer.y - centerY;
+      const deadZone = 18 * HD_SCALE;
 
       clearDirections();
       if (Math.abs(dx) > deadZone) runtime.touchDirections[dx < 0 ? 'left' : 'right'] = true;
@@ -138,9 +122,7 @@ export function installTrainingTouchControlsVisualRefinement(): void {
     };
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      const x = pointer.x / HD_SCALE;
-      const y = pointer.y / HD_SCALE;
-      if (Phaser.Math.Distance.Between(x, y, logicalCenterX, logicalCenterY) <= 100) {
+      if (Phaser.Math.Distance.Between(pointer.x, pointer.y, centerX, centerY) <= 100 * HD_SCALE) {
         dpadPointerId = pointer.id;
         updateDirectionFromPointer(pointer);
       }
