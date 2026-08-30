@@ -150,7 +150,9 @@ export function createPlayableUi(
     shootRequested = true;
     magicButton.setFillStyle(0xa9473b, 0.96);
   });
-  const restoreMagic = (): void => magicButton.setFillStyle(0x7a302d, 0.84);
+  const restoreMagic = (): void => {
+    magicButton.setFillStyle(0x7a302d, 0.84);
+  };
   magicButton.on('pointerup', restoreMagic);
   magicButton.on('pointerout', restoreMagic);
   magicButton.on('pointerupoutside', restoreMagic);
