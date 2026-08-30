@@ -2,6 +2,10 @@ import * as Phaser from 'phaser';
 import { characters } from '../gameData';
 import { portraitData } from '../assets/portraits';
 
+const LOGICAL_WIDTH = 960;
+const LOGICAL_HEIGHT = 540;
+const HD_SCALE = 2;
+
 export class CharacterSelectScene extends Phaser.Scene {
   constructor() {
     super('CharacterSelectScene');
@@ -16,7 +20,9 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { width, height } = this.scale;
+    const width = LOGICAL_WIDTH;
+    const height = LOGICAL_HEIGHT;
+    this.cameras.main.setZoom(HD_SCALE);
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x161326);
 
