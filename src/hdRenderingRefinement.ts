@@ -31,6 +31,10 @@ function textureKey(child: Phaser.GameObjects.GameObject): string | undefined {
   return child instanceof Phaser.GameObjects.Image ? child.texture.key : undefined;
 }
 
+function getDepth(child: Phaser.GameObjects.GameObject): number {
+  return (child as unknown as { depth?: number }).depth ?? 0;
+}
+
 function layoutTrainingUi(scene: TrainingScene): void {
   const runtime = scene as unknown as TrainingRuntime;
 
@@ -65,6 +69,19 @@ function layoutTrainingUi(scene: TrainingScene): void {
   characterName?.setPosition(185, 44);
 }
 
+function createTrainingUiCamera(scene: TrainingScene): void {
+  const uiObjects = scene.children.list.filter((child) => getDepth(child) >= 1000);
+  const worldObjects = scene.children.list.filter((child) => getDepth(child) < 1000);
+
+  const uiCamera = scene.cameras.add(0, 0, 1920, 1080, false, 'TrainingUICamera');
+  uiCamera.setZoom(HD_SCALE);
+  uiCamera.centerOn(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+  uiCamera.setRoundPixels(false);
+
+  scene.cameras.main.ignore(uiObjects);
+  uiCamera.ignore(worldObjects);
+}
+
 export function installHdRenderingRefinement(): void {
   const trainingPrototype = TrainingScene.prototype as unknown as TrainingPrototype;
   if (!trainingPrototype.__hdRenderingInstalled) {
@@ -77,6 +94,7 @@ export function installHdRenderingRefinement(): void {
       this.cameras.main.setZoom(HD_SCALE);
       layoutTrainingUi(this);
       originalUpdateHud.call(this);
+      createTrainingUiCamera(this);
     };
 
     trainingPrototype.updateHud = function updateHdHud(this: TrainingScene): void {
