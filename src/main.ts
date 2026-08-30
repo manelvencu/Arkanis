@@ -9,6 +9,7 @@ import { CabinThreeScene } from './scenes/CabinThreeScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { AldeaScene } from './scenes/AldeaScene';
+import { DevMenuScene } from './scenes/DevMenuScene';
 import { installTrainingGameOverHook } from './gameOverHook';
 import { installTrainingTerrainRefinement } from './trainingTerrainRefinement';
 import { installTianaSideWalkRefinement } from './tianaSideWalkRefinement';
@@ -17,6 +18,7 @@ import { installLupeCharacterRefinement } from './lupeCharacterRefinement';
 import { installCabinOneTransitionRefinement } from './cabinOneTransitionRefinement';
 import { installWorldMapTransitionRefinement } from './worldMapTransitionRefinement';
 import { installHdRenderingRefinement } from './hdRenderingRefinement';
+import { installDevMenuRefinement } from './devMenuRefinement';
 import { installArkanisTypography, waitForArkanisFont } from './arkanisTypography';
 
 installArkanisTypography();
@@ -28,6 +30,7 @@ installLupeCharacterRefinement();
 installCabinOneTransitionRefinement();
 installWorldMapTransitionRefinement();
 installHdRenderingRefinement();
+installDevMenuRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
@@ -62,6 +65,7 @@ const config: Phaser.Types.Core.GameConfig = {
     CabinThreeScene,
     WorldMapScene,
     AldeaScene,
+    DevMenuScene,
     GameOverScene
   ]
 };
