@@ -16,7 +16,9 @@ export class IntroScene extends Phaser.Scene {
   create(): void {
     const width = LOGICAL_WIDTH;
     const height = LOGICAL_HEIGHT;
+    this.cameras.main.setBounds(0, 0, width, height);
     this.cameras.main.setZoom(HD_SCALE);
+    this.cameras.main.centerOn(width / 2, height / 2);
 
     this.add.rectangle(width / 2, height / 2, width, height, 0x080711);
 
