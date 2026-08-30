@@ -1,7 +1,9 @@
 import * as Phaser from 'phaser';
 
 const MAP_TIMEOUT_MS = 60_000;
-const ALDEA_TARGET = { x: 0.50, y: 0.58 };
+// Punto central del rótulo «La Aldea» en arkanis-world-map.png.
+// Imagen de referencia: 1220×1567; centro aproximado del rótulo: x=510, y=907.
+const ALDEA_TARGET = { x: 510 / 1220, y: 907 / 1567 };
 
 interface WorldMapData {
   characterId?: string;
