@@ -43,7 +43,11 @@ function layoutTrainingUi(scene: TrainingScene): void {
   runtime.energyGold?.setPosition(80, 105).setOrigin(0, 0.5).setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT);
   runtime.energyRed?.setPosition(80, 105).setOrigin(0, 0.5).setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT);
 
-  const coinIcon = scene.children.list.find((child) => textureKey(child) === 'training-coin' && child.scrollFactorX === 0) as Phaser.GameObjects.Image | undefined;
+  const coinIcon = scene.children.list.find((child) =>
+    child instanceof Phaser.GameObjects.Image &&
+    child.texture.key === 'training-coin' &&
+    child.scrollFactorX === 0
+  ) as Phaser.GameObjects.Image | undefined;
   coinIcon?.setPosition(LOGICAL_WIDTH - 190, 41).setDisplaySize(25, 25);
 
   const menu = scene.children.list.find((child) => textureKey(child) === 'training-menu') as Phaser.GameObjects.Image | undefined;
