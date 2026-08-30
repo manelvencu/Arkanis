@@ -4,7 +4,6 @@ import { CabinInteriorScene } from './scenes/CabinInteriorScene';
 
 const HD_SCALE = 2;
 const LOGICAL_WIDTH = 960;
-const LOGICAL_HEIGHT = 540;
 const ENERGY_FULL_WIDTH = 220;
 const ENERGY_FILL_HEIGHT = 16;
 
@@ -31,34 +30,30 @@ function textureKey(child: Phaser.GameObjects.GameObject): string | undefined {
   return child instanceof Phaser.GameObjects.Image ? child.texture.key : undefined;
 }
 
-function getDepth(child: Phaser.GameObjects.GameObject): number {
-  return (child as unknown as { depth?: number }).depth ?? 0;
-}
-
 function layoutTrainingUi(scene: TrainingScene): void {
   const runtime = scene as unknown as TrainingRuntime;
 
   const hudFrame = scene.children.list.find((child) => textureKey(child) === 'training-hudFrame') as Phaser.GameObjects.Image | undefined;
-  hudFrame?.setPosition(LOGICAL_WIDTH / 2, 45).setDisplaySize(LOGICAL_WIDTH - 20, 82);
+  hudFrame?.setPosition(LOGICAL_WIDTH / 2, 45).setDisplaySize(LOGICAL_WIDTH - 20, 82).setScrollFactor(0);
 
   const energyFrame = scene.children.list.find((child) => textureKey(child) === 'training-energyFrame') as Phaser.GameObjects.Image | undefined;
-  energyFrame?.setPosition(190, 105).setDisplaySize(264, 34);
+  energyFrame?.setPosition(190, 105).setDisplaySize(264, 34).setScrollFactor(0);
 
-  runtime.energyGold?.setPosition(80, 105).setOrigin(0, 0.5).setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT);
-  runtime.energyRed?.setPosition(80, 105).setOrigin(0, 0.5).setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT);
+  runtime.energyGold?.setPosition(80, 105).setOrigin(0, 0.5).setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT).setScrollFactor(0);
+  runtime.energyRed?.setPosition(80, 105).setOrigin(0, 0.5).setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT).setScrollFactor(0);
 
   const coinIcon = scene.children.list.find((child) =>
     child instanceof Phaser.GameObjects.Image &&
     child.texture.key === 'training-coin' &&
     child.scrollFactorX === 0
   ) as Phaser.GameObjects.Image | undefined;
-  coinIcon?.setPosition(LOGICAL_WIDTH - 190, 41).setDisplaySize(25, 25);
+  coinIcon?.setPosition(LOGICAL_WIDTH - 190, 41).setDisplaySize(25, 25).setScrollFactor(0);
 
   const menu = scene.children.list.find((child) => textureKey(child) === 'training-menu') as Phaser.GameObjects.Image | undefined;
-  menu?.setPosition(LOGICAL_WIDTH - 80, 44).setDisplaySize(40, 40);
+  menu?.setPosition(LOGICAL_WIDTH - 80, 44).setDisplaySize(40, 40).setScrollFactor(0);
 
-  runtime.coinCounter?.setPosition(LOGICAL_WIDTH - 165, 41);
-  runtime.progressText?.setPosition(LOGICAL_WIDTH / 2, 44);
+  runtime.coinCounter?.setPosition(LOGICAL_WIDTH - 165, 41).setScrollFactor(0);
+  runtime.progressText?.setPosition(LOGICAL_WIDTH / 2, 44).setScrollFactor(0);
 
   const characterName = scene.children.list.find((child) =>
     child instanceof Phaser.GameObjects.Text &&
@@ -66,20 +61,7 @@ function layoutTrainingUi(scene: TrainingScene): void {
     child.x < 400 &&
     child !== runtime.progressText
   ) as Phaser.GameObjects.Text | undefined;
-  characterName?.setPosition(185, 44);
-}
-
-function createTrainingUiCamera(scene: TrainingScene): void {
-  const uiObjects = scene.children.list.filter((child) => getDepth(child) >= 1000);
-  const worldObjects = scene.children.list.filter((child) => getDepth(child) < 1000);
-
-  const uiCamera = scene.cameras.add(0, 0, 1920, 1080, false, 'TrainingUICamera');
-  uiCamera.setZoom(HD_SCALE);
-  uiCamera.centerOn(LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-  uiCamera.setRoundPixels(false);
-
-  scene.cameras.main.ignore(uiObjects);
-  uiCamera.ignore(worldObjects);
+  characterName?.setPosition(185, 44).setScrollFactor(0);
 }
 
 export function installHdRenderingRefinement(): void {
@@ -94,7 +76,6 @@ export function installHdRenderingRefinement(): void {
       this.cameras.main.setZoom(HD_SCALE);
       layoutTrainingUi(this);
       originalUpdateHud.call(this);
-      createTrainingUiCamera(this);
     };
 
     trainingPrototype.updateHud = function updateHdHud(this: TrainingScene): void {
@@ -106,11 +87,13 @@ export function installHdRenderingRefinement(): void {
       runtime.energyGold
         .setPosition(80, 105)
         .setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT)
-        .setVisible(!isCritical);
+        .setVisible(!isCritical)
+        .setScrollFactor(0);
       runtime.energyRed
         .setPosition(80, 105)
         .setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT)
-        .setVisible(isCritical);
+        .setVisible(isCritical)
+        .setScrollFactor(0);
     };
   }
 
