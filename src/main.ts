@@ -25,15 +25,19 @@ installLupeCharacterRefinement();
 installCabinOneTransitionRefinement();
 installTrainingGridDebugOverlay();
 
+const renderResolution = Math.min(window.devicePixelRatio || 1, 2);
+
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
   width: 960,
   height: 540,
+  resolution: renderResolution,
   backgroundColor: '#111111',
   pixelArt: false,
   render: {
     antialias: true,
+    antialiasGL: true,
     roundPixels: false
   },
   physics: {
