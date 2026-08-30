@@ -13,7 +13,6 @@ import { installTianaSideWalkRefinement } from './tianaSideWalkRefinement';
 import { installTianaPhysicsRefinement } from './tianaPhysicsRefinement';
 import { installLupeCharacterRefinement } from './lupeCharacterRefinement';
 import { installCabinOneTransitionRefinement } from './cabinOneTransitionRefinement';
-import { installTrainingTouchControlsVisualRefinement } from './trainingControlsRefinement';
 import { installHdRenderingRefinement } from './hdRenderingRefinement';
 import { installArkanisTypography, waitForArkanisFont } from './arkanisTypography';
 
@@ -24,7 +23,6 @@ installTianaSideWalkRefinement();
 installTianaPhysicsRefinement();
 installLupeCharacterRefinement();
 installCabinOneTransitionRefinement();
-installTrainingTouchControlsVisualRefinement();
 installHdRenderingRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
