@@ -31,6 +31,16 @@ const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
 
+// Plaza rectangular: desde C11/F8 hasta C21/F14, ambas incluidas.
+const PLAZA = {
+  left: (11 - 1) * GRID,
+  top: (8 - 1) * GRID,
+  width: 11 * GRID,
+  height: 7 * GRID
+} as const;
+const PLAZA_RIGHT = PLAZA.left + PLAZA.width;
+const PLAZA_BOTTOM = PLAZA.top + PLAZA.height;
+
 const CABIN_ONE: CabinConfig = {
   x: (5 - 0.5) * GRID,
   baseY: 18 * GRID,
@@ -63,14 +73,10 @@ const CABIN_FOUR: CabinConfig = {
   texture: 'aldea-cabin-ivory'
 };
 
-const CABIN_FOUR_PATH_START = new Phaser.Math.Vector2(
-  (17 - 0.5) * GRID,
-  (16 - 0.5) * GRID
-);
-
 const ENVIRONMENT_ASSETS = {
   grass: './assets/environment/grass-tile-01.png',
   dirt: './assets/environment/dirt-ground-01.png',
+  stoneFloor: './assets/environment/stone-floor-tile-01.png',
   cabin: './assets/environment/cabin-stone-thatch-01.png',
   cabinIvory: './assets/environment/cabin-ivory-redtile-01.png'
 } as const;
@@ -211,56 +217,67 @@ export class AldeaScene extends Phaser.Scene {
     const grassSource = grass.texture.getSourceImage() as { width: number; height: number };
     grass.setTileScale(128 / grassSource.width, 128 / grassSource.height);
 
-    const roadPoints = [
-      new Phaser.Math.Vector2(-20, 660),
-      new Phaser.Math.Vector2(92, 626),
-      new Phaser.Math.Vector2(175, 646),
-      new Phaser.Math.Vector2(245, 590),
-      new Phaser.Math.Vector2(318, 605),
-      new Phaser.Math.Vector2(370, 535),
-      new Phaser.Math.Vector2(430, 500),
-      new Phaser.Math.Vector2(405, 445),
-      new Phaser.Math.Vector2(470, 405),
-      new Phaser.Math.Vector2(535, 370),
-      new Phaser.Math.Vector2(590, 315),
-      new Phaser.Math.Vector2(565, 265),
-      new Phaser.Math.Vector2(650, 230),
-      new Phaser.Math.Vector2(705, 170),
-      new Phaser.Math.Vector2(780, 185),
-      new Phaser.Math.Vector2(845, 120),
-      new Phaser.Math.Vector2(925, 95),
-      new Phaser.Math.Vector2(985, 45)
-    ];
+    const dirtPaths = this.add.graphics().setDepth(1);
+    const drawRoundedPath = (points: Phaser.Math.Vector2[], width: number): void => {
+      dirtPaths.lineStyle(width, 0xb68b55, 1);
+      dirtPaths.beginPath();
+      dirtPaths.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i += 1) {
+        dirtPaths.lineTo(points[i].x, points[i].y);
+      }
+      dirtPaths.strokePath();
 
-    const road = this.add.graphics().setDepth(1);
-    road.lineStyle(ROAD_WIDTH, 0xb68b55, 1);
-    road.beginPath();
-    road.moveTo(roadPoints[0].x, roadPoints[0].y);
-    for (let i = 1; i < roadPoints.length; i += 1) {
-      road.lineTo(roadPoints[i].x, roadPoints[i].y);
-    }
-    road.strokePath();
+      dirtPaths.fillStyle(0xb68b55, 1);
+      points.forEach((point) => dirtPaths.fillCircle(point.x, point.y, width / 2));
+    };
 
-    const plazaCenter = new Phaser.Math.Vector2(500, 375);
-    this.add.circle(plazaCenter.x, plazaCenter.y, 150, 0xb68b55, 1).setDepth(1);
+    // Camino principal desde la esquina inferior izquierda hasta la plaza.
+    drawRoundedPath([
+      new Phaser.Math.Vector2(-ROAD_WIDTH / 2, 656),
+      new Phaser.Math.Vector2(240, 656),
+      new Phaser.Math.Vector2(240, PLAZA_BOTTOM),
+      new Phaser.Math.Vector2(384, PLAZA_BOTTOM)
+    ], ROAD_WIDTH);
 
-    const cabinPaths = this.add.graphics().setDepth(1);
-    cabinPaths.lineStyle(CABIN_PATH_WIDTH, 0xb68b55, 1);
+    // Continuación principal desde la plaza hacia la esquina superior derecha.
+    drawRoundedPath([
+      new Phaser.Math.Vector2(608, PLAZA.top),
+      new Phaser.Math.Vector2(608, 128),
+      new Phaser.Math.Vector2(WORLD_WIDTH + ROAD_WIDTH / 2, 128)
+    ], ROAD_WIDTH);
 
-    cabinPaths.beginPath();
-    cabinPaths.moveTo(plazaCenter.x, plazaCenter.y);
-    cabinPaths.lineTo(CABIN_TWO.x, CABIN_TWO.baseY - CABIN_PATH_OVERLAP);
-    cabinPaths.strokePath();
+    // Cabaña 1 (C5/F18): acceso ortogonal a la zona inferior de la plaza.
+    drawRoundedPath([
+      new Phaser.Math.Vector2(CABIN_ONE.x, CABIN_ONE.baseY - CABIN_PATH_OVERLAP),
+      new Phaser.Math.Vector2(CABIN_ONE.x, 496),
+      new Phaser.Math.Vector2(336, 496),
+      new Phaser.Math.Vector2(336, PLAZA_BOTTOM)
+    ], CABIN_PATH_WIDTH);
 
-    cabinPaths.beginPath();
-    cabinPaths.moveTo(plazaCenter.x, plazaCenter.y);
-    cabinPaths.lineTo(CABIN_THREE.x, CABIN_THREE.baseY - CABIN_PATH_OVERLAP);
-    cabinPaths.strokePath();
+    // Cabaña 2 (C6/F10): acceso en L por el lateral izquierdo de la plaza.
+    drawRoundedPath([
+      new Phaser.Math.Vector2(CABIN_TWO.x, CABIN_TWO.baseY - CABIN_PATH_OVERLAP),
+      new Phaser.Math.Vector2(CABIN_TWO.x, 320),
+      new Phaser.Math.Vector2(PLAZA.left, 320)
+    ], CABIN_PATH_WIDTH);
 
-    cabinPaths.beginPath();
-    cabinPaths.moveTo(CABIN_FOUR_PATH_START.x, CABIN_FOUR_PATH_START.y);
-    cabinPaths.lineTo(CABIN_FOUR.x, CABIN_FOUR.baseY - CABIN_PATH_OVERLAP);
-    cabinPaths.strokePath();
+    // Cabaña 3 (C12/F6): acceso vertical directo al borde superior.
+    drawRoundedPath([
+      new Phaser.Math.Vector2(CABIN_THREE.x, CABIN_THREE.baseY - CABIN_PATH_OVERLAP),
+      new Phaser.Math.Vector2(CABIN_THREE.x, PLAZA.top)
+    ], CABIN_PATH_WIDTH);
+
+    // Cabaña 4 (C22/F19): conserva el paso por C17/F16 y llega a la plaza en U/L.
+    const cabinFourJunction = new Phaser.Math.Vector2(
+      (17 - 0.5) * GRID,
+      (16 - 0.5) * GRID
+    );
+    drawRoundedPath([
+      new Phaser.Math.Vector2(CABIN_FOUR.x, CABIN_FOUR.baseY - CABIN_PATH_OVERLAP),
+      new Phaser.Math.Vector2(CABIN_FOUR.x, cabinFourJunction.y),
+      cabinFourJunction,
+      new Phaser.Math.Vector2(cabinFourJunction.x, PLAZA_BOTTOM)
+    ], CABIN_PATH_WIDTH);
 
     const dirtOverlay = this.add.tileSprite(
       WORLD_WIDTH / 2,
@@ -271,6 +288,18 @@ export class AldeaScene extends Phaser.Scene {
     ).setDepth(2).setAlpha(0.10);
     const dirtSource = dirtOverlay.texture.getSourceImage() as { width: number; height: number };
     dirtOverlay.setTileScale(128 / dirtSource.width, 128 / dirtSource.height);
+
+    // La plaza de piedra queda por encima de los caminos para que estos terminen
+    // limpiamente bajo el pavimento, de C11/F8 a C21/F14.
+    const plaza = this.add.tileSprite(
+      PLAZA.left,
+      PLAZA.top,
+      PLAZA.width,
+      PLAZA.height,
+      'aldea-stoneFloor'
+    ).setOrigin(0, 0).setDepth(3);
+    const stoneSource = plaza.texture.getSourceImage() as { width: number; height: number };
+    plaza.setTileScale(128 / stoneSource.width, 128 / stoneSource.height);
   }
 
   private createCabins(): void {
