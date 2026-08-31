@@ -21,11 +21,19 @@ const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
 
-// Primera cabaña de La Aldea: 192x144 px (aprox. 6x4,5 celdas).
-// C5 se usa como centro horizontal y la base se apoya en F19, creciendo hacia arriba.
+// Cabañas de La Aldea: 192x144 px (aprox. 6x4,5 celdas).
+// La coordenada indicada representa el centro horizontal de la base;
+// la imagen crece visualmente hacia arriba gracias al origen (0.5, 1).
 const CABIN_ONE = {
   x: (5 - 0.5) * GRID,
-  baseY: 19 * GRID,
+  baseY: 18 * GRID,
+  width: 192,
+  height: 144
+} as const;
+
+const CABIN_TWO = {
+  x: (6 - 0.5) * GRID,
+  baseY: 10 * GRID,
   width: 192,
   height: 144
 } as const;
@@ -100,7 +108,7 @@ export class AldeaScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#6e934a');
 
     this.createTerrain();
-    this.createCabin();
+    this.createCabins();
     this.createGridOverlay();
     this.createPlayer();
 
@@ -211,11 +219,13 @@ export class AldeaScene extends Phaser.Scene {
     dirtOverlay.setTileScale(128 / dirtSource.width, 128 / dirtSource.height);
   }
 
-  private createCabin(): void {
-    this.add.image(CABIN_ONE.x, CABIN_ONE.baseY, 'aldea-cabin')
-      .setOrigin(0.5, 1)
-      .setDisplaySize(CABIN_ONE.width, CABIN_ONE.height)
-      .setDepth(10);
+  private createCabins(): void {
+    [CABIN_ONE, CABIN_TWO].forEach((cabin) => {
+      this.add.image(cabin.x, cabin.baseY, 'aldea-cabin')
+        .setOrigin(0.5, 1)
+        .setDisplaySize(cabin.width, cabin.height)
+        .setDepth(10);
+    });
   }
 
   private createPlayer(): void {
