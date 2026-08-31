@@ -16,13 +16,14 @@ const WORLD_HEIGHT = WORLD_ROWS * GRID;
 const PLAYER_SIZE = 64;
 const PLAYER_START = { x: 92, y: WORLD_HEIGHT - 86 };
 const ROAD_WIDTH = 105;
+const CABIN_PATH_WIDTH = GRID * 2;
 const GRID_TEXTURE_KEY = 'aldea-grid-debug-overlay';
 const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
 
 // Cabañas de La Aldea: 192x144 px (aprox. 6x4,5 celdas).
-// La coordenada indicada representa el centro horizontal de la base;
+// La coordenada indicada representa la entrada: centro horizontal de la base;
 // la imagen crece visualmente hacia arriba gracias al origen (0.5, 1).
 const CABIN_ONE = {
   x: (5 - 0.5) * GRID,
@@ -34,6 +35,13 @@ const CABIN_ONE = {
 const CABIN_TWO = {
   x: (6 - 0.5) * GRID,
   baseY: 10 * GRID,
+  width: 192,
+  height: 144
+} as const;
+
+const CABIN_THREE = {
+  x: (12 - 0.5) * GRID,
+  baseY: 6 * GRID,
   width: 192,
   height: 144
 } as const;
@@ -206,7 +214,25 @@ export class AldeaScene extends Phaser.Scene {
     }
     road.strokePath();
 
-    this.add.circle(500, 375, 150, 0xb68b55, 1).setDepth(1);
+    // Plaza central. Se mantiene exactamente con el mismo centro y radio.
+    const plazaCenter = new Phaser.Math.Vector2(500, 375);
+    this.add.circle(plazaCenter.x, plazaCenter.y, 150, 0xb68b55, 1).setDepth(1);
+
+    // Accesos a cabañas: dos filas de grid de ancho (64 px).
+    // Nacen dentro de la plaza para que la unión visual sea continua y terminan
+    // justo en el centro de la base/entrada de cada cabaña.
+    const cabinPaths = this.add.graphics().setDepth(1);
+    cabinPaths.lineStyle(CABIN_PATH_WIDTH, 0xb68b55, 1);
+
+    cabinPaths.beginPath();
+    cabinPaths.moveTo(plazaCenter.x, plazaCenter.y);
+    cabinPaths.lineTo(CABIN_TWO.x, CABIN_TWO.baseY);
+    cabinPaths.strokePath();
+
+    cabinPaths.beginPath();
+    cabinPaths.moveTo(plazaCenter.x, plazaCenter.y);
+    cabinPaths.lineTo(CABIN_THREE.x, CABIN_THREE.baseY);
+    cabinPaths.strokePath();
 
     const dirtOverlay = this.add.tileSprite(
       WORLD_WIDTH / 2,
@@ -220,7 +246,7 @@ export class AldeaScene extends Phaser.Scene {
   }
 
   private createCabins(): void {
-    [CABIN_ONE, CABIN_TWO].forEach((cabin) => {
+    [CABIN_ONE, CABIN_TWO, CABIN_THREE].forEach((cabin) => {
       this.add.image(cabin.x, cabin.baseY, 'aldea-cabin')
         .setOrigin(0.5, 1)
         .setDisplaySize(cabin.width, cabin.height)
