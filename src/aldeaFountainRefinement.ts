@@ -2,12 +2,15 @@ import * as Phaser from 'phaser';
 import { AldeaScene } from './scenes/AldeaScene';
 
 const FOUNTAIN_X = 496;
-const FOUNTAIN_Y = 352;
+const FOUNTAIN_Y = 320;
 const FOUNTAIN_SIZE = 128;
 const FOUNTAIN_ANIMATION_KEY = 'aldea-little-fountain-loop';
 
 type AldeaRuntime = Phaser.Scene & {
   player: Phaser.Physics.Arcade.Sprite;
+  ui: {
+    ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => void;
+  };
 };
 
 type AldeaPrototype = {
@@ -67,5 +70,10 @@ export function installAldeaFountainRefinement(): void {
     body.setSize(86, 54).setOffset(21, 66);
 
     this.physics.add.collider(this.player, fountain);
+
+    // La cámara del HUD se crea antes que este refinement. Hay que excluir
+    // explícitamente la fuente para que no aparezca una segunda copia fija
+    // en pantalla mientras la cámara del mundo sigue al personaje.
+    this.ui.ignoreWorldObject(fountain);
   };
 }
