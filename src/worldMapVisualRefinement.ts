@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { WorldMapScene } from './scenes/WorldMapScene';
 
-type WorldMapRuntime = WorldMapScene & {
+type WorldMapRuntime = Phaser.Scene & {
   characterId: string;
   mapContainer?: Phaser.GameObjects.Container;
   mapImage?: Phaser.GameObjects.Image;
@@ -22,7 +22,6 @@ export function installWorldMapVisualRefinement(): void {
   if (prototype.__worldMapVisualRefinementInstalled) return;
   prototype.__worldMapVisualRefinementInstalled = true;
 
-  // No dibujamos ningún círculo o marcador sobre «La Aldea».
   prototype.pulseAldea = function pulseAldeaWithoutMarker(): void {};
 
   prototype.beginAldeaTransition = function beginAldeaTransitionWithoutMarker(this: WorldMapRuntime): void {
