@@ -24,6 +24,7 @@ import { installDevMenuRefinement } from './devMenuRefinement';
 import { installArkanisTypography, waitForArkanisFont } from './arkanisTypography';
 import { installAldeaVillageRefinement } from './aldeaVillageRefinement';
 import { installAldeaFountainRefinement } from './aldeaFountainRefinement';
+import { installVillageVisualAndAccessRefinement } from './villageVisualAndAccessRefinement';
 
 installArkanisTypography();
 installTrainingGameOverHook();
@@ -38,6 +39,7 @@ installHdRenderingRefinement();
 installDevMenuRefinement();
 installAldeaVillageRefinement();
 installAldeaFountainRefinement();
+installVillageVisualAndAccessRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
