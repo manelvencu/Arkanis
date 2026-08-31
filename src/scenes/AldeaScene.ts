@@ -267,7 +267,7 @@ export class AldeaScene extends Phaser.Scene {
       const joint = this.add.tileSprite(point.x, point.y, width, width, 'aldea-dirt')
         .setDepth(1)
         .setTileScale(dirtScaleX, dirtScaleY);
-      const maskShape = this.make.graphics({ x: 0, y: 0, add: false });
+      const maskShape = this.make.graphics({ x: 0, y: 0 });
       maskShape.fillStyle(0xffffff, 1);
       maskShape.fillCircle(point.x, point.y, width / 2);
       joint.setMask(maskShape.createGeometryMask());
@@ -278,7 +278,6 @@ export class AldeaScene extends Phaser.Scene {
       points.forEach((point) => addRoundedDirtJoint(point, width));
     };
 
-    // Camino principal de entrada desde la esquina inferior izquierda.
     drawTexturedPath([
       new Phaser.Math.Vector2(-ROAD_WIDTH / 2, 656),
       new Phaser.Math.Vector2(272, 656),
@@ -286,7 +285,6 @@ export class AldeaScene extends Phaser.Scene {
       new Phaser.Math.Vector2(PLAZA.left, PLAZA_BOTTOM)
     ], ROAD_WIDTH);
 
-    // Camino principal de salida hacia la esquina superior derecha.
     drawTexturedPath([
       new Phaser.Math.Vector2(PLAZA_RIGHT, 256),
       new Phaser.Math.Vector2(864, 256),
@@ -294,7 +292,6 @@ export class AldeaScene extends Phaser.Scene {
       new Phaser.Math.Vector2(WORLD_WIDTH + ROAD_WIDTH / 2, 96)
     ], ROAD_WIDTH);
 
-    // Cabaña 1: baja dos filas, gira hacia C11/C12 y sube hasta F15.
     drawTexturedPath([
       new Phaser.Math.Vector2(CABIN_ONE.x, CABIN_ONE.baseY - CABIN_PATH_OVERLAP),
       new Phaser.Math.Vector2(CABIN_ONE.x, CABIN_ONE.baseY + GRID * 2),
@@ -302,20 +299,17 @@ export class AldeaScene extends Phaser.Scene {
       new Phaser.Math.Vector2((11.5 - 0.5) * GRID, PLAZA_BOTTOM)
     ], CABIN_PATH_WIDTH);
 
-    // Cabaña 2: baja hasta ocupar F12/F13 y gira hacia la plaza.
     drawTexturedPath([
       new Phaser.Math.Vector2(CABIN_TWO.x, CABIN_TWO.baseY - CABIN_PATH_OVERLAP),
       new Phaser.Math.Vector2(CABIN_TWO.x, 12 * GRID),
       new Phaser.Math.Vector2(PLAZA.left, 12 * GRID)
     ], CABIN_PATH_WIDTH);
 
-    // Cabaña 3: acceso vertical directo al borde superior de la plaza.
     drawTexturedPath([
       new Phaser.Math.Vector2(CABIN_THREE.x, CABIN_THREE.baseY - CABIN_PATH_OVERLAP),
       new Phaser.Math.Vector2(CABIN_THREE.x, PLAZA.top)
     ], CABIN_PATH_WIDTH);
 
-    // Cabaña 4: baja hasta F21/F22, gira a C17/C18 y sube hasta la plaza.
     const cabinFourLaneY = 21 * GRID;
     const cabinFourLaneX = 17 * GRID;
     drawTexturedPath([
@@ -325,7 +319,6 @@ export class AldeaScene extends Phaser.Scene {
       new Phaser.Math.Vector2(cabinFourLaneX, PLAZA_BOTTOM)
     ], CABIN_PATH_WIDTH);
 
-    // Cabaña 5: desde C26/F13 baja una fila y entra por el lateral derecho de la plaza.
     drawTexturedPath([
       new Phaser.Math.Vector2(CABIN_FIVE.x, CABIN_FIVE.baseY - CABIN_PATH_OVERLAP),
       new Phaser.Math.Vector2(CABIN_FIVE.x, CABIN_FIVE.baseY + GRID),
