@@ -5,10 +5,6 @@ interface GameOverData {
   characterId: CharacterId;
 }
 
-const LOGICAL_WIDTH = 960;
-const LOGICAL_HEIGHT = 540;
-const HD_SCALE = 2;
-
 export class GameOverScene extends Phaser.Scene {
   private characterId: CharacterId = 'tiana';
   private restarting = false;
@@ -27,21 +23,30 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   create(): void {
-    const width = LOGICAL_WIDTH;
-    const height = LOGICAL_HEIGHT;
-    this.cameras.main.setZoom(HD_SCALE);
+    const { width, height } = this.scale;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const imageSize = Math.min(width * 0.44, height * 0.76);
 
-    this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.58)
+    // GameOverScene es una escena de interfaz independiente: no debe heredar
+    // coordenadas lógicas ni zoom del mundo de entrenamiento.
+    this.cameras.main.setZoom(1);
+    this.cameras.main.setScroll(0, 0);
+
+    this.add.rectangle(centerX, centerY, width, height, 0x000000, 0.58)
+      .setScrollFactor(0)
       .setDepth(3000);
 
-    const glow = this.add.image(width / 2, height / 2, 'game-over-image')
-      .setDisplaySize(430, 430)
+    const glow = this.add.image(centerX, centerY, 'game-over-image')
+      .setDisplaySize(imageSize * 1.05, imageSize * 1.05)
       .setTint(0xff7a18)
       .setAlpha(0.2)
+      .setScrollFactor(0)
       .setDepth(3001);
 
-    const gameOver = this.add.image(width / 2, height / 2, 'game-over-image')
-      .setDisplaySize(410, 410)
+    const gameOver = this.add.image(centerX, centerY, 'game-over-image')
+      .setDisplaySize(imageSize, imageSize)
+      .setScrollFactor(0)
       .setDepth(3002);
 
     const baseScaleX = gameOver.scaleX;
@@ -51,7 +56,7 @@ export class GameOverScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: gameOver,
-      y: height / 2 - 5,
+      y: centerY - 10,
       scaleX: baseScaleX * 1.025,
       scaleY: baseScaleY * 0.985,
       alpha: 0.86,
@@ -73,6 +78,7 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     this.input.keyboard?.once('keydown-SPACE', () => this.restartTraining());
+    this.input.once('pointerdown', () => this.restartTraining());
     this.time.delayedCall(60_000, () => this.restartTraining());
   }
 
