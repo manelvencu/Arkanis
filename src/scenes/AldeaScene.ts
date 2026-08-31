@@ -17,6 +17,7 @@ const PLAYER_SIZE = 64;
 const PLAYER_START = { x: 92, y: WORLD_HEIGHT - 86 };
 const ROAD_WIDTH = 105;
 const CABIN_PATH_WIDTH = GRID * 2;
+const CABIN_PATH_OVERLAP = 48;
 const GRID_TEXTURE_KEY = 'aldea-grid-debug-overlay';
 const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
@@ -86,6 +87,7 @@ export class AldeaScene extends Phaser.Scene {
   private direction = new Phaser.Math.Vector2(1, 0);
   private lastShotAt = 0;
   private ui!: PlayableUiController;
+  private cabinColliders: Phaser.GameObjects.Rectangle[] = [];
 
   constructor() {
     super('AldeaScene');
@@ -96,6 +98,7 @@ export class AldeaScene extends Phaser.Scene {
     this.facing = 'side';
     this.direction.set(1, 0);
     this.lastShotAt = 0;
+    this.cabinColliders = [];
   }
 
   preload(): void {
@@ -119,6 +122,7 @@ export class AldeaScene extends Phaser.Scene {
     this.createCabins();
     this.createGridOverlay();
     this.createPlayer();
+    this.createCabinCollisions();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -219,19 +223,19 @@ export class AldeaScene extends Phaser.Scene {
     this.add.circle(plazaCenter.x, plazaCenter.y, 150, 0xb68b55, 1).setDepth(1);
 
     // Accesos a cabañas: dos filas de grid de ancho (64 px).
-    // Nacen dentro de la plaza para que la unión visual sea continua y terminan
-    // justo en el centro de la base/entrada de cada cabaña.
+    // Se prolongan dentro de la huella visual de la cabaña para que el edificio
+    // los cubra y no aparezca un final de camino cortado delante de la puerta.
     const cabinPaths = this.add.graphics().setDepth(1);
     cabinPaths.lineStyle(CABIN_PATH_WIDTH, 0xb68b55, 1);
 
     cabinPaths.beginPath();
     cabinPaths.moveTo(plazaCenter.x, plazaCenter.y);
-    cabinPaths.lineTo(CABIN_TWO.x, CABIN_TWO.baseY);
+    cabinPaths.lineTo(CABIN_TWO.x, CABIN_TWO.baseY - CABIN_PATH_OVERLAP);
     cabinPaths.strokePath();
 
     cabinPaths.beginPath();
     cabinPaths.moveTo(plazaCenter.x, plazaCenter.y);
-    cabinPaths.lineTo(CABIN_THREE.x, CABIN_THREE.baseY);
+    cabinPaths.lineTo(CABIN_THREE.x, CABIN_THREE.baseY - CABIN_PATH_OVERLAP);
     cabinPaths.strokePath();
 
     const dirtOverlay = this.add.tileSprite(
@@ -251,6 +255,23 @@ export class AldeaScene extends Phaser.Scene {
         .setOrigin(0.5, 1)
         .setDisplaySize(cabin.width, cabin.height)
         .setDepth(10);
+
+      const blocker = this.add.rectangle(
+        cabin.x,
+        cabin.baseY - cabin.height / 2,
+        cabin.width,
+        cabin.height,
+        0x000000,
+        0
+      );
+      this.physics.add.existing(blocker, true);
+      this.cabinColliders.push(blocker);
+    });
+  }
+
+  private createCabinCollisions(): void {
+    this.cabinColliders.forEach((blocker) => {
+      this.physics.add.collider(this.player, blocker);
     });
   }
 
