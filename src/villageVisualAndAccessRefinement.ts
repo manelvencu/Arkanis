@@ -13,6 +13,7 @@ type AldeaRuntime = Phaser.Scene & {
   ui: {
     ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => void;
   };
+  walkableAreas: Phaser.Geom.Rectangle[];
   __villageNpcs?: NpcHolder[];
   __c26CabinTransitioning?: boolean;
 };
@@ -36,6 +37,36 @@ const C26_TRIGGER_RADIUS = 74;
 const ROOM_WIDTH = 960;
 const ROOM_HEIGHT = 540;
 
+// Nuevo camino solicitado:
+// - vertical: C25-C27 desde F15 hasta F22;
+// - horizontal: por F21-F22 hacia la izquierda hasta enlazar con el camino existente.
+const C26_SOUTH_VERTICAL = new Phaser.Geom.Rectangle(768, 448, 96, 256);
+const C26_SOUTH_HORIZONTAL = new Phaser.Geom.Rectangle(560, 640, 256, 64);
+
+function addC26SouthRoad(scene: AldeaRuntime): void {
+  const dirtSource = scene.textures.get('aldea-dirt').getSourceImage() as { width: number; height: number };
+  const tileScaleX = 128 / Math.max(1, dirtSource.width);
+  const tileScaleY = 128 / Math.max(1, dirtSource.height);
+
+  const addRoadRect = (rect: Phaser.Geom.Rectangle): void => {
+    const road = scene.add.tileSprite(
+      rect.centerX,
+      rect.centerY,
+      rect.width,
+      rect.height,
+      'aldea-dirt'
+    )
+      .setDepth(2.25)
+      .setTileScale(tileScaleX, tileScaleY);
+
+    scene.walkableAreas.push(new Phaser.Geom.Rectangle(rect.x, rect.y, rect.width, rect.height));
+    scene.ui.ignoreWorldObject(road);
+  };
+
+  addRoadRect(C26_SOUTH_VERTICAL);
+  addRoadRect(C26_SOUTH_HORIZONTAL);
+}
+
 function installAldeaNpcAndAccessFix(): void {
   const prototype = AldeaScene.prototype as unknown as AldeaPrototype;
   if (prototype.__villageVisualAndAccessRefinementInstalled) return;
@@ -58,6 +89,8 @@ function installAldeaNpcAndAccessFix(): void {
     (this.__villageNpcs ?? []).forEach((npc) => {
       this.ui.ignoreWorldObject(npc.sprite);
     });
+
+    addC26SouthRoad(this);
   };
 
   prototype.update = function updateVisualAccess(this: AldeaRuntime, time: number, delta: number): void {
