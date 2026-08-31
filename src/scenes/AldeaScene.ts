@@ -8,6 +8,14 @@ interface AldeaData {
 
 type Facing = 'down' | 'up' | 'side';
 
+type CabinConfig = {
+  x: number;
+  baseY: number;
+  width: number;
+  height: number;
+  texture: string;
+};
+
 const GRID = 32;
 const WORLD_COLUMNS = 30;
 const WORLD_ROWS = 22;
@@ -23,34 +31,48 @@ const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
 
-// Cabañas de La Aldea: 192x144 px (aprox. 6x4,5 celdas).
-// La coordenada indicada representa la entrada: centro horizontal de la base;
-// la imagen crece visualmente hacia arriba gracias al origen (0.5, 1).
-const CABIN_ONE = {
+const CABIN_ONE: CabinConfig = {
   x: (5 - 0.5) * GRID,
   baseY: 18 * GRID,
   width: 192,
-  height: 144
-} as const;
+  height: 144,
+  texture: 'aldea-cabin'
+};
 
-const CABIN_TWO = {
+const CABIN_TWO: CabinConfig = {
   x: (6 - 0.5) * GRID,
   baseY: 10 * GRID,
   width: 192,
-  height: 144
-} as const;
+  height: 144,
+  texture: 'aldea-cabin'
+};
 
-const CABIN_THREE = {
+const CABIN_THREE: CabinConfig = {
   x: (12 - 0.5) * GRID,
   baseY: 6 * GRID,
   width: 192,
-  height: 144
-} as const;
+  height: 144,
+  texture: 'aldea-cabin'
+};
+
+const CABIN_FOUR: CabinConfig = {
+  x: (22 - 0.5) * GRID,
+  baseY: 19 * GRID,
+  width: 192,
+  height: 144,
+  texture: 'aldea-cabin-ivory'
+};
+
+const CABIN_FOUR_PATH_START = new Phaser.Math.Vector2(
+  (17 - 0.5) * GRID,
+  (16 - 0.5) * GRID
+);
 
 const ENVIRONMENT_ASSETS = {
   grass: './assets/environment/grass-tile-01.png',
   dirt: './assets/environment/dirt-ground-01.png',
-  cabin: './assets/environment/cabin-stone-thatch-01.png'
+  cabin: './assets/environment/cabin-stone-thatch-01.png',
+  cabinIvory: './assets/environment/cabin-ivory-redtile-01.png'
 } as const;
 
 const CHARACTER_ASSETS = {
@@ -103,7 +125,8 @@ export class AldeaScene extends Phaser.Scene {
 
   preload(): void {
     Object.entries(ENVIRONMENT_ASSETS).forEach(([key, path]) => {
-      this.load.image(`aldea-${key}`, path);
+      const textureKey = key === 'cabinIvory' ? 'aldea-cabin-ivory' : `aldea-${key}`;
+      this.load.image(textureKey, path);
     });
     preloadPlayableUiAssets(this);
 
@@ -218,13 +241,9 @@ export class AldeaScene extends Phaser.Scene {
     }
     road.strokePath();
 
-    // Plaza central. Se mantiene exactamente con el mismo centro y radio.
     const plazaCenter = new Phaser.Math.Vector2(500, 375);
     this.add.circle(plazaCenter.x, plazaCenter.y, 150, 0xb68b55, 1).setDepth(1);
 
-    // Accesos a cabañas: dos filas de grid de ancho (64 px).
-    // Se prolongan dentro de la huella visual de la cabaña para que el edificio
-    // los cubra y no aparezca un final de camino cortado delante de la puerta.
     const cabinPaths = this.add.graphics().setDepth(1);
     cabinPaths.lineStyle(CABIN_PATH_WIDTH, 0xb68b55, 1);
 
@@ -236,6 +255,11 @@ export class AldeaScene extends Phaser.Scene {
     cabinPaths.beginPath();
     cabinPaths.moveTo(plazaCenter.x, plazaCenter.y);
     cabinPaths.lineTo(CABIN_THREE.x, CABIN_THREE.baseY - CABIN_PATH_OVERLAP);
+    cabinPaths.strokePath();
+
+    cabinPaths.beginPath();
+    cabinPaths.moveTo(CABIN_FOUR_PATH_START.x, CABIN_FOUR_PATH_START.y);
+    cabinPaths.lineTo(CABIN_FOUR.x, CABIN_FOUR.baseY - CABIN_PATH_OVERLAP);
     cabinPaths.strokePath();
 
     const dirtOverlay = this.add.tileSprite(
@@ -250,8 +274,8 @@ export class AldeaScene extends Phaser.Scene {
   }
 
   private createCabins(): void {
-    [CABIN_ONE, CABIN_TWO, CABIN_THREE].forEach((cabin) => {
-      this.add.image(cabin.x, cabin.baseY, 'aldea-cabin')
+    [CABIN_ONE, CABIN_TWO, CABIN_THREE, CABIN_FOUR].forEach((cabin) => {
+      this.add.image(cabin.x, cabin.baseY, cabin.texture)
         .setOrigin(0.5, 1)
         .setDisplaySize(cabin.width, cabin.height)
         .setDepth(10);
