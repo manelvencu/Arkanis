@@ -11,6 +11,7 @@ interface VillageCabinData {
 }
 
 type Facing = 'down' | 'up' | 'side';
+type CabinCoin = { index: number; sprite: Phaser.GameObjects.Image };
 
 const ROOM_WIDTH = 960;
 const ROOM_HEIGHT = 540;
@@ -56,6 +57,7 @@ export class VillageCabinScene extends Phaser.Scene {
   private messageOpen = false;
   private barrel?: Phaser.Physics.Arcade.Image;
   private barrelTriggered = false;
+  private coinEntries: CabinCoin[] = [];
 
   constructor() {
     super('VillageCabinScene');
@@ -70,6 +72,7 @@ export class VillageCabinScene extends Phaser.Scene {
     this.exiting = false;
     this.messageOpen = false;
     this.barrelTriggered = false;
+    this.coinEntries = [];
   }
 
   preload(): void {
@@ -157,12 +160,16 @@ export class VillageCabinScene extends Phaser.Scene {
       this.player.setTexture(`village-cabin-${this.characterId}-${this.facing === 'side' ? 'side' : this.facing}`);
     }
 
+    if (this.kind === 'coins') this.checkCoinCollection();
     if (this.kind === 'wine') this.checkWineBarrel();
     this.checkExit();
   }
 
   private createRoom(): void {
-    this.add.tileSprite(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, ROOM_WIDTH, ROOM_HEIGHT, 'village-cabin-floor').setDepth(0);
+    const floor = this.add.tileSprite(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, ROOM_WIDTH, ROOM_HEIGHT, 'village-cabin-floor').setDepth(0);
+    const floorSource = floor.texture.getSourceImage() as { width: number; height: number };
+    floor.setTileScale(128 / floorSource.width, 128 / floorSource.height);
+
     this.add.image(ROOM_WIDTH / 2, ROOM_HEIGHT / 2 + 20, 'village-cabin-rug').setDisplaySize(300, 190).setDepth(1);
 
     this.solids = this.physics.add.staticGroup();
@@ -191,15 +198,9 @@ export class VillageCabinScene extends Phaser.Scene {
       const progress = getVillageProgress();
       positions.forEach(([x, y], index) => {
         if (progress.collectedCabinCoins.includes(index)) return;
-        const coin = this.physics.add.image(x, y, 'village-cabin-coin').setDisplaySize(30, 30).setDepth(15);
-        (coin.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setSize(26, 26, true);
+        const coin = this.add.image(x, y, 'village-cabin-coin').setDisplaySize(30, 30).setDepth(15);
+        this.coinEntries.push({ index, sprite: coin });
         this.tweens.add({ targets: coin, y: y - 7, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-        this.physics.add.overlap(this.player, coin, () => {
-          if (!coin.active || !collectVillageCabinCoin(index)) return;
-          coin.destroy();
-          this.ui.updateCoins(getVillageProgress().coins);
-          this.cameras.main.flash(90, 255, 220, 90);
-        });
       });
       return;
     }
@@ -215,6 +216,20 @@ export class VillageCabinScene extends Phaser.Scene {
 
     this.add.image(430, 165, 'village-cabin-boy').setDisplaySize(68, 68).setDepth(13);
     this.add.image(535, 165, 'village-cabin-girl').setDisplaySize(68, 68).setDepth(13);
+  }
+
+  private checkCoinCollection(): void {
+    for (const entry of this.coinEntries.slice()) {
+      if (!entry.sprite.active) continue;
+      if (Phaser.Math.Distance.Between(this.player.x, this.player.y, entry.sprite.x, entry.sprite.y) > 38) continue;
+      if (!collectVillageCabinCoin(entry.index)) continue;
+
+      this.tweens.killTweensOf(entry.sprite);
+      entry.sprite.destroy();
+      this.coinEntries = this.coinEntries.filter((coin) => coin !== entry);
+      this.ui.updateCoins(getVillageProgress().coins);
+      this.cameras.main.flash(90, 255, 220, 90);
+    }
   }
 
   private addFurniture(x: number, y: number, key: string, width: number, height: number, bodyWidth: number, bodyHeight: number): void {
@@ -248,8 +263,7 @@ export class VillageCabinScene extends Phaser.Scene {
 
     this.barrelTriggered = true;
     const progress = getVillageProgress();
-    const recovered = progress.energy < 100;
-    if (recovered) {
+    if (progress.energy < 100) {
       setVillageEnergy(100);
       this.ui.updateEnergy(100);
       this.showEnergyRecoveryEffect();
@@ -261,21 +275,14 @@ export class VillageCabinScene extends Phaser.Scene {
     const uiCamera = this.cameras.getCamera('VillageCabinSceneUICamera');
     const burst = this.add.circle(270, 210, 92, 0xffd65c, 0.18).setStrokeStyle(8, 0xffe98a, 0.95).setDepth(2000);
     const label = this.add.text(270, 210, 'ENERGÍA 100%', {
-      fontFamily: 'Arial',
-      fontSize: '34px',
-      color: '#fff4b5',
-      fontStyle: 'bold',
-      stroke: '#5b3508',
-      strokeThickness: 5
+      fontFamily: 'Arial', fontSize: '34px', color: '#fff4b5', fontStyle: 'bold', stroke: '#5b3508', strokeThickness: 5
     }).setOrigin(0.5).setDepth(2001);
-
     this.cameras.main.ignore([burst, label]);
     if (!uiCamera) return;
-
-    this.tweens.add({ targets: [burst, label], scale: 1.22, alpha: 0, duration: 950, ease: 'Quad.easeOut', onComplete: () => {
-      burst.destroy();
-      label.destroy();
-    } });
+    this.tweens.add({
+      targets: [burst, label], scale: 1.22, alpha: 0, duration: 950, ease: 'Quad.easeOut',
+      onComplete: () => { burst.destroy(); label.destroy(); }
+    });
   }
 
   private showMessage(message: string): void {
@@ -285,11 +292,7 @@ export class VillageCabinScene extends Phaser.Scene {
     const box = this.add.rectangle(center.x, center.y + 105, 640, 150, 0x17100c, 0.97)
       .setStrokeStyle(4, 0xd6a84b, 1).setDepth(200);
     const text = this.add.text(center.x, center.y + 92, message, {
-      fontFamily: 'Georgia, Times New Roman, serif',
-      fontSize: '24px',
-      color: '#fff0c7',
-      align: 'center',
-      wordWrap: { width: 590 }
+      fontFamily: 'Georgia, Times New Roman, serif', fontSize: '24px', color: '#fff0c7', align: 'center', wordWrap: { width: 590 }
     }).setOrigin(0.5).setDepth(201);
     const close = this.add.text(center.x, center.y + 150, 'Pulsa ESPACIO, ENTER o toca para continuar', {
       fontFamily: 'Arial', fontSize: '16px', color: '#d6a84b'
