@@ -6,6 +6,7 @@ import { TrainingScene } from './scenes/TrainingScene';
 import { CabinOneScene } from './scenes/CabinOneScene';
 import { CabinTwoScene } from './scenes/CabinTwoScene';
 import { CabinThreeScene } from './scenes/CabinThreeScene';
+import { VillageCabinScene } from './scenes/VillageCabinScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { AldeaScene } from './scenes/AldeaScene';
@@ -20,6 +21,7 @@ import { installWorldMapTransitionRefinement } from './worldMapTransitionRefinem
 import { installHdRenderingRefinement } from './hdRenderingRefinement';
 import { installDevMenuRefinement } from './devMenuRefinement';
 import { installArkanisTypography, waitForArkanisFont } from './arkanisTypography';
+import { installAldeaVillageRefinement } from './aldeaVillageRefinement';
 
 installArkanisTypography();
 installTrainingGameOverHook();
@@ -31,6 +33,7 @@ installCabinOneTransitionRefinement();
 installWorldMapTransitionRefinement();
 installHdRenderingRefinement();
 installDevMenuRefinement();
+installAldeaVillageRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
@@ -63,6 +66,7 @@ const config: Phaser.Types.Core.GameConfig = {
     CabinOneScene,
     CabinTwoScene,
     CabinThreeScene,
+    VillageCabinScene,
     WorldMapScene,
     AldeaScene,
     DevMenuScene,
