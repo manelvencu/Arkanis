@@ -40,6 +40,20 @@ const PLAZA = {
 const PLAZA_RIGHT = PLAZA.left + PLAZA.width;
 const PLAZA_BOTTOM = PLAZA.top + PLAZA.height;
 
+const GRASS_CLEARING = new Phaser.Geom.Rectangle(
+  (7 - 1) * GRID,
+  (14 - 1) * GRID,
+  4 * GRID,
+  6 * GRID
+);
+
+const EXIT_ZONE = new Phaser.Geom.Rectangle(
+  (30 - 1) * GRID,
+  (2 - 1) * GRID,
+  GRID,
+  4 * GRID
+);
+
 const CABIN_ONE: CabinConfig = {
   x: (5 - 0.5) * GRID,
   baseY: 18 * GRID,
@@ -93,8 +107,20 @@ const FOREST_TREES = [
   { x: 178, y: 112, width: 116, height: 150 },
   { x: 246, y: 74, width: 128, height: 166 },
   { x: 70, y: 206, width: 132, height: 170 },
-  { x: 160, y: 214, width: 122, height: 160 },
-  { x: 252, y: 188, width: 126, height: 164 }
+  { x: 160, y: 214, width: 122, height: 160 }
+] as const;
+
+const PATH_BORDER_DECORATIONS = [
+  { x: 44, y: 590, texture: 'aldea-rock', size: 34 },
+  { x: 210, y: 600, texture: 'aldea-bush', size: 40 },
+  { x: 300, y: 612, texture: 'aldea-rock', size: 30 },
+  { x: 305, y: 500, texture: 'aldea-bush', size: 38 },
+  { x: 728, y: 470, texture: 'aldea-rock', size: 32 },
+  { x: 742, y: 300, texture: 'aldea-bush', size: 38 },
+  { x: 820, y: 205, texture: 'aldea-rock', size: 30 },
+  { x: 905, y: 166, texture: 'aldea-bush', size: 38 },
+  { x: 560, y: 618, texture: 'aldea-rock', size: 30 },
+  { x: 735, y: 626, texture: 'aldea-bush', size: 40 }
 ] as const;
 
 const ENVIRONMENT_ASSETS = {
@@ -104,7 +130,9 @@ const ENVIRONMENT_ASSETS = {
   cabin: './assets/environment/cabin-stone-thatch-01.png',
   cabinIvory: './assets/environment/cabin-ivory-redtile-01.png',
   church: './assets/environment/church-stone-belltower-01.png',
-  tree: './assets/environment/tree-large-01.png'
+  tree: './assets/environment/tree-large-01.png',
+  bush: './assets/environment/bush-small-01.png',
+  rock: './assets/environment/rock-small-01.png'
 } as const;
 
 const CHARACTER_ASSETS = {
@@ -142,6 +170,9 @@ export class AldeaScene extends Phaser.Scene {
   private lastShotAt = 0;
   private ui!: PlayableUiController;
   private worldColliders: Phaser.GameObjects.Rectangle[] = [];
+  private walkableAreas: Phaser.Geom.Rectangle[] = [];
+  private lastWalkablePosition = new Phaser.Math.Vector2(PLAYER_START.x, PLAYER_START.y);
+  private exitStarted = false;
 
   constructor() {
     super('AldeaScene');
@@ -153,6 +184,9 @@ export class AldeaScene extends Phaser.Scene {
     this.direction.set(1, 0);
     this.lastShotAt = 0;
     this.worldColliders = [];
+    this.walkableAreas = [];
+    this.lastWalkablePosition.set(PLAYER_START.x, PLAYER_START.y);
+    this.exitStarted = false;
   }
 
   preload(): void {
@@ -177,6 +211,7 @@ export class AldeaScene extends Phaser.Scene {
 
     this.createTerrain();
     this.createForestEdge();
+    this.createPathBorderDecorations();
     this.createBuildings();
     this.createGridOverlay();
     this.createPlayer();
@@ -195,7 +230,24 @@ export class AldeaScene extends Phaser.Scene {
 
   update(time: number): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
+
+    if (!this.exitStarted) {
+      const footX = this.player.x;
+      const footY = this.player.y + 20;
+      if (this.isWalkablePoint(footX, footY)) {
+        this.lastWalkablePosition.set(this.player.x, this.player.y);
+      } else {
+        this.player.setPosition(this.lastWalkablePosition.x, this.lastWalkablePosition.y);
+      }
+
+      if (Phaser.Geom.Rectangle.Contains(EXIT_ZONE, this.player.x, this.player.y)) {
+        this.beginExitTransition();
+        return;
+      }
+    }
+
     body.setVelocity(0);
+    if (this.exitStarted) return;
 
     let x = 0;
     let y = 0;
@@ -244,7 +296,9 @@ export class AldeaScene extends Phaser.Scene {
       'aldea-grass'
     ).setDepth(0);
     const grassSource = grass.texture.getSourceImage() as { width: number; height: number };
-    grass.setTileScale(128 / grassSource.width, 128 / grassSource.height);
+    const grassScaleX = 128 / grassSource.width;
+    const grassScaleY = 128 / grassSource.height;
+    grass.setTileScale(grassScaleX, grassScaleY);
 
     const dirtSource = this.textures.get('aldea-dirt').getSourceImage() as { width: number; height: number };
     const dirtScaleX = 128 / dirtSource.width;
@@ -254,13 +308,17 @@ export class AldeaScene extends Phaser.Scene {
       const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
       const segmentWidth = horizontal ? Math.abs(b.x - a.x) + width : width;
       const segmentHeight = horizontal ? width : Math.abs(b.y - a.y) + width;
-      this.add.tileSprite(
-        (a.x + b.x) / 2,
-        (a.y + b.y) / 2,
+      const centerX = (a.x + b.x) / 2;
+      const centerY = (a.y + b.y) / 2;
+      this.add.tileSprite(centerX, centerY, segmentWidth, segmentHeight, 'aldea-dirt')
+        .setDepth(1)
+        .setTileScale(dirtScaleX, dirtScaleY);
+      this.walkableAreas.push(new Phaser.Geom.Rectangle(
+        centerX - segmentWidth / 2,
+        centerY - segmentHeight / 2,
         segmentWidth,
-        segmentHeight,
-        'aldea-dirt'
-      ).setDepth(1).setTileScale(dirtScaleX, dirtScaleY);
+        segmentHeight
+      ));
     };
 
     const addRoundedDirtJoint = (point: Phaser.Math.Vector2, width: number): void => {
@@ -271,6 +329,12 @@ export class AldeaScene extends Phaser.Scene {
       maskShape.fillStyle(0xffffff, 1);
       maskShape.fillCircle(point.x, point.y, width / 2);
       joint.setMask(maskShape.createGeometryMask());
+      this.walkableAreas.push(new Phaser.Geom.Rectangle(
+        point.x - width / 2,
+        point.y - width / 2,
+        width,
+        width
+      ));
     };
 
     const drawTexturedPath = (points: Phaser.Math.Vector2[], width: number): void => {
@@ -278,13 +342,14 @@ export class AldeaScene extends Phaser.Scene {
       points.forEach((point) => addRoundedDirtJoint(point, width));
     };
 
+    // Entrada principal inferior: se desplaza a C11/C12 para liberar de tierra C7-C10 entre F14-F19.
     drawTexturedPath([
       new Phaser.Math.Vector2(-ROAD_WIDTH / 2, 656),
-      new Phaser.Math.Vector2(272, 656),
-      new Phaser.Math.Vector2(272, PLAZA_BOTTOM),
-      new Phaser.Math.Vector2(PLAZA.left, PLAZA_BOTTOM)
+      new Phaser.Math.Vector2(352, 656),
+      new Phaser.Math.Vector2(352, PLAZA_BOTTOM)
     ], ROAD_WIDTH);
 
+    // Salida principal superior derecha, terminando en C30 entre F2 y F5.
     drawTexturedPath([
       new Phaser.Math.Vector2(PLAZA_RIGHT, 256),
       new Phaser.Math.Vector2(864, 256),
@@ -292,38 +357,61 @@ export class AldeaScene extends Phaser.Scene {
       new Phaser.Math.Vector2(WORLD_WIDTH + ROAD_WIDTH / 2, 96)
     ], ROAD_WIDTH);
 
+    // Cabaña 1: baja dos filas, gira a C11/C12 y sube hasta C11/F15-C12/F15.
     drawTexturedPath([
       new Phaser.Math.Vector2(CABIN_ONE.x, CABIN_ONE.baseY - CABIN_PATH_OVERLAP),
       new Phaser.Math.Vector2(CABIN_ONE.x, CABIN_ONE.baseY + GRID * 2),
-      new Phaser.Math.Vector2((11.5 - 0.5) * GRID, CABIN_ONE.baseY + GRID * 2),
-      new Phaser.Math.Vector2((11.5 - 0.5) * GRID, PLAZA_BOTTOM)
+      new Phaser.Math.Vector2(352, CABIN_ONE.baseY + GRID * 2),
+      new Phaser.Math.Vector2(352, PLAZA_BOTTOM)
     ], CABIN_PATH_WIDTH);
 
+    // Cabaña 2: baja hasta la franja F12/F13 y gira a la derecha hacia la plaza.
     drawTexturedPath([
       new Phaser.Math.Vector2(CABIN_TWO.x, CABIN_TWO.baseY - CABIN_PATH_OVERLAP),
-      new Phaser.Math.Vector2(CABIN_TWO.x, 12 * GRID),
-      new Phaser.Math.Vector2(PLAZA.left, 12 * GRID)
+      new Phaser.Math.Vector2(CABIN_TWO.x, 400),
+      new Phaser.Math.Vector2(PLAZA.left, 400)
     ], CABIN_PATH_WIDTH);
 
+    // Cabaña 3: acceso vertical directo al borde superior de la plaza.
     drawTexturedPath([
       new Phaser.Math.Vector2(CABIN_THREE.x, CABIN_THREE.baseY - CABIN_PATH_OVERLAP),
       new Phaser.Math.Vector2(CABIN_THREE.x, PLAZA.top)
     ], CABIN_PATH_WIDTH);
 
-    const cabinFourLaneY = 21 * GRID;
-    const cabinFourLaneX = 17 * GRID;
+    // Cabaña 4: baja a F21/F22, gira a C17/C18 y sube hasta la plaza.
     drawTexturedPath([
       new Phaser.Math.Vector2(CABIN_FOUR.x, CABIN_FOUR.baseY - CABIN_PATH_OVERLAP),
-      new Phaser.Math.Vector2(CABIN_FOUR.x, cabinFourLaneY),
-      new Phaser.Math.Vector2(cabinFourLaneX, cabinFourLaneY),
-      new Phaser.Math.Vector2(cabinFourLaneX, PLAZA_BOTTOM)
+      new Phaser.Math.Vector2(CABIN_FOUR.x, 672),
+      new Phaser.Math.Vector2(560, 672),
+      new Phaser.Math.Vector2(560, PLAZA_BOTTOM)
     ], CABIN_PATH_WIDTH);
 
+    // Cabaña 5: salida ortogonal hacia el lateral derecho de la plaza.
     drawTexturedPath([
       new Phaser.Math.Vector2(CABIN_FIVE.x, CABIN_FIVE.baseY - CABIN_PATH_OVERLAP),
-      new Phaser.Math.Vector2(CABIN_FIVE.x, CABIN_FIVE.baseY + GRID),
-      new Phaser.Math.Vector2(PLAZA_RIGHT, CABIN_FIVE.baseY + GRID)
+      new Phaser.Math.Vector2(CABIN_FIVE.x, 432),
+      new Phaser.Math.Vector2(PLAZA_RIGHT, 432)
     ], CABIN_PATH_WIDTH);
+
+    // Tierra horizontal frente a la iglesia: C16/F7 a C21/F7.
+    const churchApproach = this.add.tileSprite(
+      (15 * GRID + 21 * GRID) / 2,
+      (7 - 0.5) * GRID,
+      6 * GRID,
+      GRID,
+      'aldea-dirt'
+    ).setDepth(1).setTileScale(dirtScaleX, dirtScaleY);
+    void churchApproach;
+    this.walkableAreas.push(new Phaser.Geom.Rectangle(15 * GRID, 6 * GRID, 6 * GRID, GRID));
+
+    // Forzamos la zona C7-C10 / F14-F19 a hierba limpia por encima de cualquier solape de tierra.
+    this.add.tileSprite(
+      GRASS_CLEARING.centerX,
+      GRASS_CLEARING.centerY,
+      GRASS_CLEARING.width,
+      GRASS_CLEARING.height,
+      'aldea-grass'
+    ).setDepth(2).setTileScale(grassScaleX, grassScaleY);
 
     const plaza = this.add.tileSprite(
       PLAZA.left,
@@ -334,6 +422,7 @@ export class AldeaScene extends Phaser.Scene {
     ).setOrigin(0, 0).setDepth(3);
     const stoneSource = plaza.texture.getSourceImage() as { width: number; height: number };
     plaza.setTileScale(128 / stoneSource.width, 128 / stoneSource.height);
+    this.walkableAreas.push(new Phaser.Geom.Rectangle(PLAZA.left, PLAZA.top, PLAZA.width, PLAZA.height));
   }
 
   private createForestEdge(): void {
@@ -353,6 +442,14 @@ export class AldeaScene extends Phaser.Scene {
       );
       this.physics.add.existing(blocker, true);
       this.worldColliders.push(blocker);
+    });
+  }
+
+  private createPathBorderDecorations(): void {
+    PATH_BORDER_DECORATIONS.forEach((item) => {
+      this.add.image(item.x, item.y, item.texture)
+        .setDisplaySize(item.size, item.size)
+        .setDepth(7);
     });
   }
 
@@ -418,6 +515,24 @@ export class AldeaScene extends Phaser.Scene {
     this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(30).setCollideWorldBounds(true);
     this.player.setFlipX(false);
     (this.player.body as Phaser.Physics.Arcade.Body).setSize(28, 24).setOffset(18, 36);
+    this.lastWalkablePosition.set(this.player.x, this.player.y);
+  }
+
+  private isWalkablePoint(x: number, y: number): boolean {
+    if (Phaser.Geom.Rectangle.Contains(GRASS_CLEARING, x, y)) return false;
+    return this.walkableAreas.some((area) => Phaser.Geom.Rectangle.Contains(area, x, y));
+  }
+
+  private beginExitTransition(): void {
+    if (this.exitStarted) return;
+    this.exitStarted = true;
+    this.player.anims.stop();
+    (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+    this.cameras.main.fadeOut(700, 8, 7, 17);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.events.emit('aldea-exit-requested', { characterId: this.characterId });
+      this.scene.pause();
+    });
   }
 
   private shootMagicRay(): void {
