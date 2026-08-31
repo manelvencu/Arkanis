@@ -21,9 +21,19 @@ const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
 
+// Primera cabaña de La Aldea: 192x144 px (aprox. 6x4,5 celdas).
+// C5 se usa como centro horizontal y la base se apoya en F19, creciendo hacia arriba.
+const CABIN_ONE = {
+  x: (5 - 0.5) * GRID,
+  baseY: 19 * GRID,
+  width: 192,
+  height: 144
+} as const;
+
 const ENVIRONMENT_ASSETS = {
   grass: './assets/environment/grass-tile-01.png',
-  dirt: './assets/environment/dirt-ground-01.png'
+  dirt: './assets/environment/dirt-ground-01.png',
+  cabin: './assets/environment/cabin-stone-thatch-01.png'
 } as const;
 
 const CHARACTER_ASSETS = {
@@ -90,6 +100,7 @@ export class AldeaScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#6e934a');
 
     this.createTerrain();
+    this.createCabin();
     this.createGridOverlay();
     this.createPlayer();
 
@@ -198,6 +209,13 @@ export class AldeaScene extends Phaser.Scene {
     ).setDepth(2).setAlpha(0.10);
     const dirtSource = dirtOverlay.texture.getSourceImage() as { width: number; height: number };
     dirtOverlay.setTileScale(128 / dirtSource.width, 128 / dirtSource.height);
+  }
+
+  private createCabin(): void {
+    this.add.image(CABIN_ONE.x, CABIN_ONE.baseY, 'aldea-cabin')
+      .setOrigin(0.5, 1)
+      .setDisplaySize(CABIN_ONE.width, CABIN_ONE.height)
+      .setDepth(10);
   }
 
   private createPlayer(): void {
