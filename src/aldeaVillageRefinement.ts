@@ -71,7 +71,9 @@ const CABIN_ROUTES: Phaser.Math.Vector2[][] = [
   [new Phaser.Math.Vector2(176, 350), new Phaser.Math.Vector2(176, 400), new Phaser.Math.Vector2(352, 400)],
   [new Phaser.Math.Vector2(368, 220), new Phaser.Math.Vector2(368, 224)],
   [new Phaser.Math.Vector2(688, 640), new Phaser.Math.Vector2(688, 672), new Phaser.Math.Vector2(560, 672), new Phaser.Math.Vector2(560, 448)],
-  [new Phaser.Math.Vector2(816, 446), new Phaser.Math.Vector2(816, 432), new Phaser.Math.Vector2(672, 432), new Phaser.Math.Vector2(656, 432)]
+  // Cabaña C26/F13: baja por el nuevo camino C25-C27 hasta F21/F22,
+  // gira a la izquierda y enlaza con el acceso sur existente de la plaza.
+  [new Phaser.Math.Vector2(816, 446), new Phaser.Math.Vector2(816, 672), new Phaser.Math.Vector2(560, 672), new Phaser.Math.Vector2(560, 432)]
 ];
 
 const PLAZA_ENTRIES = [
@@ -79,7 +81,7 @@ const PLAZA_ENTRIES = [
   new Phaser.Math.Vector2(352, 400),
   new Phaser.Math.Vector2(368, 240),
   new Phaser.Math.Vector2(560, 432),
-  new Phaser.Math.Vector2(640, 432)
+  new Phaser.Math.Vector2(560, 432)
 ] as const;
 
 const PLAZA_CENTER = new Phaser.Math.Vector2(496, 352);
@@ -238,6 +240,12 @@ function showNpcMessage(scene: AldeaRuntime, npc: VillageNpc): void {
   const close = scene.add.text(center.x, center.y + 185, 'Pulsa ESPACIO, ENTER o toca para continuar', {
     fontFamily: 'Arial', fontSize: '16px', color: '#d6a84b'
   }).setOrigin(0.5).setDepth(501);
+
+  // El HUD usa una segunda cámara. Si estos objetos no se excluyen de ella,
+  // aparecen clonados a escala pequeña en la esquina superior izquierda.
+  scene.ui.ignoreWorldObject(box);
+  scene.ui.ignoreWorldObject(text);
+  scene.ui.ignoreWorldObject(close);
 
   const dismiss = (): void => {
     if (!box.active) return;
