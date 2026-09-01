@@ -30,12 +30,11 @@ type CabinRuntime = Phaser.Scene;
 type CabinPrototype = {
   __woodFloorRefinementInstalled?: boolean;
   create: (this: CabinRuntime) => void;
+  checkCoinCollection: (this: CabinRuntime) => void;
 };
 
 const C26_DOOR = new Phaser.Math.Vector2(816, 456);
 const C26_TRIGGER_RADIUS = 74;
-const ROOM_WIDTH = 960;
-const ROOM_HEIGHT = 540;
 
 // Nuevo camino solicitado:
 // - vertical: C25-C27 desde F15 hasta F22;
@@ -119,37 +118,45 @@ function installAldeaNpcAndAccessFix(): void {
   };
 }
 
-function installCabinWoodFloorFix(): void {
+function installCabinVisualFixes(): void {
   const prototype = VillageCabinScene.prototype as unknown as CabinPrototype;
   if (prototype.__woodFloorRefinementInstalled) return;
   prototype.__woodFloorRefinementInstalled = true;
 
   const originalCreate = prototype.create;
+  const originalCheckCoinCollection = prototype.checkCoinCollection;
 
-  prototype.create = function createWithRealWoodFloor(this: CabinRuntime): void {
+  prototype.create = function createWithCleanWoodFloor(this: CabinRuntime): void {
     originalCreate.call(this);
 
-    const source = this.textures.get('village-cabin-floor').getSourceImage() as { width: number; height: number };
-    const sourceWidth = Math.max(1, source.width);
-    const sourceHeight = Math.max(1, source.height);
+    // VillageCabinScene ya usa floor-wood-01.png como TileSprite repetible.
+    // El cuadrado grande de la esquina era la misma textura siendo dibujada también
+    // por la cámara del HUD. La dejamos únicamente en la cámara principal.
+    const uiCamera = this.cameras.getCamera('VillageCabinSceneUICamera');
+    if (!uiCamera) return;
 
-    // Repetimos el PNG real tantas veces como haga falta. Así no se estira una sola
-    // imagen para cubrir toda la habitación y se mantiene la sensación de tablones.
-    const tileWidth = 128;
-    const tileHeight = Math.max(48, Math.round(tileWidth * (sourceHeight / sourceWidth)));
+    const floorObjects = this.children.list.filter((object) => {
+      if (!(object instanceof Phaser.GameObjects.TileSprite)) return false;
+      return object.texture.key === 'village-cabin-floor';
+    });
+    if (floorObjects.length > 0) uiCamera.ignore(floorObjects);
+  };
 
-    for (let y = 0; y < ROOM_HEIGHT; y += tileHeight) {
-      for (let x = 0; x < ROOM_WIDTH; x += tileWidth) {
-        this.add.image(x, y, 'village-cabin-floor')
-          .setOrigin(0, 0)
-          .setDisplaySize(tileWidth, tileHeight)
-          .setDepth(0.35);
-      }
+  prototype.checkCoinCollection = function checkCoinCollectionWithoutFlash(this: CabinRuntime): void {
+    // Conservamos la recogida, contador y desaparición de la moneda, pero anulamos
+    // únicamente el flash de cámara que producía el pantallazo en cada recogida.
+    const camera = this.cameras.main;
+    const originalFlash = camera.flash;
+    camera.flash = (() => camera) as typeof camera.flash;
+    try {
+      originalCheckCoinCollection.call(this);
+    } finally {
+      camera.flash = originalFlash;
     }
   };
 }
 
 export function installVillageVisualAndAccessRefinement(): void {
   installAldeaNpcAndAccessFix();
-  installCabinWoodFloorFix();
+  installCabinVisualFixes();
 }
