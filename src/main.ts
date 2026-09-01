@@ -7,6 +7,7 @@ import { CabinOneScene } from './scenes/CabinOneScene';
 import { CabinTwoScene } from './scenes/CabinTwoScene';
 import { CabinThreeScene } from './scenes/CabinThreeScene';
 import { VillageCabinScene } from './scenes/VillageCabinScene';
+import { ChurchInteriorScene } from './scenes/ChurchInteriorScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { AldeaScene } from './scenes/AldeaScene';
@@ -25,6 +26,7 @@ import { installArkanisTypography, waitForArkanisFont } from './arkanisTypograph
 import { installAldeaVillageRefinement } from './aldeaVillageRefinement';
 import { installAldeaFountainRefinement } from './aldeaFountainRefinement';
 import { installVillageVisualAndAccessRefinement } from './villageVisualAndAccessRefinement';
+import { installChurchEntranceRefinement } from './churchEntranceRefinement';
 
 installArkanisTypography();
 installTrainingGameOverHook();
@@ -40,6 +42,7 @@ installDevMenuRefinement();
 installAldeaVillageRefinement();
 installAldeaFountainRefinement();
 installVillageVisualAndAccessRefinement();
+installChurchEntranceRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
@@ -73,6 +76,7 @@ const config: Phaser.Types.Core.GameConfig = {
     CabinTwoScene,
     CabinThreeScene,
     VillageCabinScene,
+    ChurchInteriorScene,
     WorldMapScene,
     AldeaScene,
     DevMenuScene,
