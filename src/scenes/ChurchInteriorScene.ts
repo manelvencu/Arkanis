@@ -72,7 +72,15 @@ export class ChurchInteriorScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayableUiAssets(this);
-    this.load.image('church-interior-base', './assets/environment/interiors/church/church-interior-base-01.png');
+    const base = './assets/environment/interiors/church/';
+    this.load.image('church-interior-base', `${base}church-interior-base-01.png`);
+    this.load.image('church-altar-main', `${base}church-altar-main-01.png`);
+    this.load.image('church-bench-01', `${base}church-bench-01.png`);
+    this.load.image('church-bench-02', `${base}church-bench-02.png`);
+    this.load.image('church-carpet-straight', `${base}church-red-carpet-straight-01.png`);
+    this.load.image('church-carpet-end', `${base}church-red-carpet-end-01.png`);
+    this.load.image('church-candelabra', `${base}church-candelabra-01.png`);
+    this.load.image('church-donation-chest', `${base}church-donation-chest-01.png`);
 
     Object.entries(CHARACTER_ASSETS[this.animatedCharacter]).forEach(([key, path]) => {
       this.load.image(`church-player-${this.animatedCharacter}-${key}`, path);
@@ -91,6 +99,7 @@ export class ChurchInteriorScene extends Phaser.Scene {
       .setDepth(0);
 
     this.createRoomCollisions();
+    this.createChurchFurnishings();
     this.createPlayerAnimations();
 
     this.player = this.physics.add.sprite(
@@ -147,6 +156,55 @@ export class ChurchInteriorScene extends Phaser.Scene {
     }
 
     this.checkExit();
+  }
+
+  private createChurchFurnishings(): void {
+    // Pasillo central sobrio: suficiente para identificar la iglesia sin recargarla.
+    const carpetSegments = [430, 350, 270];
+    carpetSegments.forEach((y) => {
+      this.add.image(ENTRANCE_X, y, 'church-carpet-straight')
+        .setDisplaySize(88, 96)
+        .setDepth(1.5);
+    });
+    this.add.image(ENTRANCE_X, 205, 'church-carpet-end')
+      .setDisplaySize(88, 82)
+      .setDepth(1.5);
+
+    // Dos filas de bancos a cada lado, dejando un pasillo amplio y laterales transitables.
+    this.addSolidImage(320, 330, 'church-bench-01', 210, 68, 188, 38, 8);
+    this.addSolidImage(640, 330, 'church-bench-02', 210, 68, 188, 38, 8);
+    this.addSolidImage(320, 420, 'church-bench-02', 210, 68, 188, 38, 8);
+    this.addSolidImage(640, 420, 'church-bench-01', 210, 68, 188, 38, 8);
+
+    // Altar central sobre la plataforma de piedra de la imagen base.
+    this.addSolidImage(480, 132, 'church-altar-main', 150, 92, 118, 44, 12);
+
+    // Dos puntos de luz junto al altar.
+    this.add.image(370, 158, 'church-candelabra').setDisplaySize(44, 62).setDepth(11);
+    this.add.image(590, 158, 'church-candelabra').setDisplaySize(44, 62).setDepth(11);
+
+    // Un único detalle cerca de la entrada para evitar llenar demasiado el espacio.
+    this.addSolidImage(105, 455, 'church-donation-chest', 72, 58, 58, 28, 9);
+  }
+
+  private addSolidImage(
+    x: number,
+    y: number,
+    key: string,
+    width: number,
+    height: number,
+    bodyWidth: number,
+    bodyHeight: number,
+    depth: number
+  ): Phaser.Physics.Arcade.Image {
+    const item = this.physics.add.staticImage(x, y, key)
+      .setDisplaySize(width, height)
+      .setDepth(depth);
+    item.refreshBody();
+    const body = item.body as Phaser.Physics.Arcade.StaticBody;
+    body.setSize(bodyWidth, bodyHeight).setOffset((width - bodyWidth) / 2, height - bodyHeight);
+    this.solids.add(item);
+    return item;
   }
 
   private createRoomCollisions(): void {
