@@ -77,7 +77,7 @@ export class VillageCabinScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayableUiAssets(this);
-    this.load.image('village-cabin-floor', './assets/environment/interiors/cabin/floor-wood-01.png');
+    this.load.image('village-cabin-base', './assets/environment/interiors/cabin/cabin-interior-base-01.png');
     this.load.image('village-cabin-bed', './assets/environment/interiors/cabin/bed-single-01.png');
     this.load.image('village-cabin-table', './assets/environment/interiors/cabin/table-main-01.png');
     this.load.image('village-cabin-barrel', './assets/environment/interiors/cabin/barrel-01.png');
@@ -166,27 +166,31 @@ export class VillageCabinScene extends Phaser.Scene {
   }
 
   private createRoom(): void {
-    const floor = this.add.tileSprite(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, ROOM_WIDTH, ROOM_HEIGHT, 'village-cabin-floor').setDepth(0);
-    const floorSource = floor.texture.getSourceImage() as { width: number; height: number };
-    floor.setTileScale(128 / floorSource.width, 128 / floorSource.height);
+    this.add.image(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, 'village-cabin-base')
+      .setDisplaySize(ROOM_WIDTH, ROOM_HEIGHT)
+      .setDepth(0);
 
+    // Conservamos de momento los muebles existentes sobre la nueva base para comparar el resultado.
     this.add.image(ROOM_WIDTH / 2, ROOM_HEIGHT / 2 + 20, 'village-cabin-rug').setDisplaySize(300, 190).setDepth(1);
 
     this.solids = this.physics.add.staticGroup();
     const wall = (x: number, y: number, width: number, height: number): void => {
-      const item = this.add.rectangle(x, y, width, height, 0x3f2a20, 1).setDepth(3);
+      const item = this.add.rectangle(x, y, width, height, 0x000000, 0).setDepth(3);
       this.physics.add.existing(item, true);
       this.solids.add(item);
     };
 
-    wall(ROOM_WIDTH / 2, 18, ROOM_WIDTH, 36);
-    wall(18, ROOM_HEIGHT / 2, 36, ROOM_HEIGHT);
-    wall(ROOM_WIDTH - 18, ROOM_HEIGHT / 2, 36, ROOM_HEIGHT);
-    wall(ROOM_WIDTH / 4 - 30, ROOM_HEIGHT - 18, ROOM_WIDTH / 2 - 60, 36);
-    wall(ROOM_WIDTH * 0.75 + 30, ROOM_HEIGHT - 18, ROOM_WIDTH / 2 - 60, 36);
+    // La franja oscura y las paredes dibujadas en la base quedan fuera de la zona transitable.
+    wall(ROOM_WIDTH / 2, 92, ROOM_WIDTH, 184);
+    wall(67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
+    wall(ROOM_WIDTH - 67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
 
-    this.addFurniture(130, 108, 'village-cabin-bed', 150, 130, 110, 62);
-    this.addFurniture(820, 110, 'village-cabin-table', 135, 115, 100, 58);
+    // Borde inferior con el hueco central de la puerta libre.
+    wall(250, ROOM_HEIGHT - 38, 500, 76);
+    wall(710, ROOM_HEIGHT - 38, 500, 76);
+
+    this.addFurniture(130, 145, 'village-cabin-bed', 150, 130, 110, 62);
+    this.addFurniture(820, 145, 'village-cabin-table', 135, 115, 100, 58);
   }
 
   private createCabinContent(): void {
