@@ -76,11 +76,10 @@ export class ChurchInteriorScene extends Phaser.Scene {
     this.load.image('church-interior-base', `${base}church-interior-base-01.png`);
     this.load.image('church-altar-main', `${base}church-altar-main-01.png`);
     this.load.image('church-bench-01', `${base}church-bench-01.png`);
-    this.load.image('church-bench-02', `${base}church-bench-02.png`);
     this.load.image('church-carpet-straight', `${base}church-red-carpet-straight-01.png`);
-    this.load.image('church-carpet-end', `${base}church-red-carpet-end-01.png`);
     this.load.image('church-candelabra', `${base}church-candelabra-01.png`);
     this.load.image('church-donation-chest', `${base}church-donation-chest-01.png`);
+    this.load.image('church-priest', './assets/characters/npcs/npc-priest-idle-down-01.png');
 
     Object.entries(CHARACTER_ASSETS[this.animatedCharacter]).forEach(([key, path]) => {
       this.load.image(`church-player-${this.animatedCharacter}-${key}`, path);
@@ -159,22 +158,20 @@ export class ChurchInteriorScene extends Phaser.Scene {
   }
 
   private createChurchFurnishings(): void {
-    // Pasillo central sobrio: suficiente para identificar la iglesia sin recargarla.
-    const carpetSegments = [430, 350, 270];
-    carpetSegments.forEach((y) => {
+    // Usamos exclusivamente el tramo central de alfombra y lo giramos 90 grados.
+    // Se repite de forma limpia desde la entrada hasta delante del sacerdote.
+    [446, 366, 286].forEach((y) => {
       this.add.image(ENTRANCE_X, y, 'church-carpet-straight')
-        .setDisplaySize(88, 96)
+        .setDisplaySize(96, 82)
+        .setRotation(Math.PI / 2)
         .setDepth(1.5);
     });
-    this.add.image(ENTRANCE_X, 205, 'church-carpet-end')
-      .setDisplaySize(88, 82)
-      .setDepth(1.5);
 
-    // Dos filas de bancos a cada lado, dejando un pasillo amplio y laterales transitables.
-    this.addSolidImage(320, 330, 'church-bench-01', 210, 68, 188, 38, 8);
-    this.addSolidImage(640, 330, 'church-bench-02', 210, 68, 188, 38, 8);
-    this.addSolidImage(320, 420, 'church-bench-02', 210, 68, 188, 38, 8);
-    this.addSolidImage(640, 420, 'church-bench-01', 210, 68, 188, 38, 8);
+    // Cuatro bancos iguales, algo más pequeños y simétricos para que el conjunto sea más coherente.
+    this.addSolidImage(330, 342, 'church-bench-01', 178, 56, 158, 30, 8);
+    this.addSolidImage(630, 342, 'church-bench-01', 178, 56, 158, 30, 8);
+    this.addSolidImage(330, 423, 'church-bench-01', 178, 56, 158, 30, 8);
+    this.addSolidImage(630, 423, 'church-bench-01', 178, 56, 158, 30, 8);
 
     // Altar central sobre la plataforma de piedra de la imagen base.
     this.addSolidImage(480, 132, 'church-altar-main', 150, 92, 118, 44, 12);
@@ -182,6 +179,9 @@ export class ChurchInteriorScene extends Phaser.Scene {
     // Dos puntos de luz junto al altar.
     this.add.image(370, 158, 'church-candelabra').setDisplaySize(44, 62).setDepth(11);
     this.add.image(590, 158, 'church-candelabra').setDisplaySize(44, 62).setDepth(11);
+
+    // Sacerdote estático delante del altar, mirando hacia el personaje.
+    this.addSolidImage(480, 222, 'church-priest', 72, 86, 34, 24, 20);
 
     // Un único detalle cerca de la entrada para evitar llenar demasiado el espacio.
     this.addSolidImage(105, 455, 'church-donation-chest', 72, 58, 58, 28, 9);
