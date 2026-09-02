@@ -16,7 +16,7 @@ type AldeaRuntime = Phaser.Scene & {
   direction: Phaser.Math.Vector2;
   worldColliders: Phaser.GameObjects.Rectangle[];
   __churchTransitioning?: boolean;
-  __churchReturnFacingDown?: boolean;
+  __returningFromChurch?: boolean;
 };
 
 type AldeaPrototype = {
@@ -27,25 +27,35 @@ type AldeaPrototype = {
 };
 
 const GRID = 32;
-const CHURCH_X = (19 - 0.5) * GRID;
-const CHURCH_BLOCKER_Y = 112;
+const CHURCH_TRIGGER = new Phaser.Geom.Rectangle((18 - 1) * GRID, (7 - 1) * GRID, GRID * 2, GRID);
+const CHURCH_RETURN = new Phaser.Math.Vector2((18 - 0.5) * GRID, (8 - 0.5) * GRID);
+const CHURCH_CENTER_X = (19 - 0.5) * GRID;
+const CHURCH_BASE_Y = 7 * GRID;
 const CHURCH_WIDTH = 240;
 const CHURCH_HEIGHT = 224;
-const CHURCH_ENTRY = new Phaser.Geom.Rectangle((18 - 1) * GRID, (7 - 1) * GRID, 2 * GRID, GRID);
-const CHURCH_RETURN = new Phaser.Math.Vector2((18 - 0.5) * GRID, (8 - 0.5) * GRID);
 
 function replaceChurchBlocker(scene: AldeaRuntime): void {
-  const oldBlocker = scene.worldColliders.find((blocker) =>
-    Math.abs(blocker.x - CHURCH_X) < 1 &&
-    Math.abs(blocker.y - CHURCH_BLOCKER_Y) < 1 &&
-    Math.abs(blocker.width - CHURCH_WIDTH) < 1 &&
-    Math.abs(blocker.height - CHURCH_HEIGHT) < 1
-  );
+  const churchBlocker = scene.worldColliders.find((blocker) => {
+    const body = blocker.body as Phaser.Physics.Arcade.StaticBody | null;
+    return Boolean(
+      body
+      && Math.abs(blocker.x - CHURCH_CENTER_X) < 1
+      && Math.abs(blocker.y - (CHURCH_BASE_Y - CHURCH_HEIGHT / 2)) < 1
+      && Math.abs(blocker.width - CHURCH_WIDTH) < 1
+      && Math.abs(blocker.height - CHURCH_HEIGHT) < 1
+    );
+  });
 
-  if (oldBlocker) {
-    scene.worldColliders = scene.worldColliders.filter((blocker) => blocker !== oldBlocker);
-    oldBlocker.destroy();
-  }
+  if (!churchBlocker) return;
+
+  scene.worldColliders = scene.worldColliders.filter((blocker) => blocker !== churchBlocker);
+  churchBlocker.destroy();
+
+  const leftEdge = CHURCH_CENTER_X - CHURCH_WIDTH / 2;
+  const rightEdge = CHURCH_CENTER_X + CHURCH_WIDTH / 2;
+  const doorLeft = CHURCH_TRIGGER.left;
+  const doorRight = CHURCH_TRIGGER.right;
+  const doorTop = CHURCH_TRIGGER.top;
 
   const addBlocker = (x: number, y: number, width: number, height: number): void => {
     const blocker = scene.add.rectangle(x, y, width, height, 0x000000, 0);
@@ -54,10 +64,15 @@ function replaceChurchBlocker(scene: AldeaRuntime): void {
     scene.worldColliders.push(blocker);
   };
 
-  // La iglesia sigue bloqueada salvo exactamente en C18/F7 y C19/F7.
-  addBlocker(CHURCH_X, 96, CHURCH_WIDTH, 192);
-  addBlocker(508, 208, 72, 32);
-  addBlocker(660, 208, 104, 32);
+  // Parte superior de la iglesia: permanece sólida hasta justo encima de F7.
+  addBlocker(CHURCH_CENTER_X, doorTop / 2, CHURCH_WIDTH, doorTop);
+
+  // F7 queda abierta únicamente en C18 y C19.
+  const leftWidth = doorLeft - leftEdge;
+  if (leftWidth > 0) addBlocker(leftEdge + leftWidth / 2, doorTop + GRID / 2, leftWidth, GRID);
+
+  const rightWidth = rightEdge - doorRight;
+  if (rightWidth > 0) addBlocker(doorRight + rightWidth / 2, doorTop + GRID / 2, rightWidth, GRID);
 }
 
 export function installChurchEntranceRefinement(): void {
@@ -72,19 +87,20 @@ export function installChurchEntranceRefinement(): void {
   prototype.init = function initChurchEntrance(this: AldeaRuntime, data: AldeaData): void {
     originalInit.call(this, data);
     this.__churchTransitioning = false;
-    this.__churchReturnFacingDown = data.returnX === CHURCH_RETURN.x && data.returnY === CHURCH_RETURN.y;
+    this.__returningFromChurch = data.returnX === CHURCH_RETURN.x && data.returnY === CHURCH_RETURN.y;
   };
 
   prototype.create = function createChurchEntrance(this: AldeaRuntime): void {
     originalCreate.call(this);
     replaceChurchBlocker(this);
 
-    if (this.__churchReturnFacingDown) {
+    if (this.__returningFromChurch) {
+      this.player.setPosition(CHURCH_RETURN.x, CHURCH_RETURN.y);
+      this.player.anims.stop();
+      this.player.setTexture('aldea-player-down');
+      this.player.setFlipX(false);
       this.facing = 'down';
       this.direction.set(0, 1);
-      this.player.anims.stop();
-      this.player.setFlipX(false);
-      this.player.setTexture('aldea-player-down');
     }
   };
 
@@ -93,12 +109,12 @@ export function installChurchEntranceRefinement(): void {
 
     if (this.__churchTransitioning || this.exitStarted || !this.scene.isActive()) return;
 
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    if (!body || body.velocity.y >= -5) return;
+
     const footX = this.player.x;
     const footY = this.player.y + 20;
-    if (!Phaser.Geom.Rectangle.Contains(CHURCH_ENTRY, footX, footY)) return;
-
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    if (!body) return;
+    if (!Phaser.Geom.Rectangle.Contains(CHURCH_TRIGGER, footX, footY)) return;
 
     this.__churchTransitioning = true;
     body.setVelocity(0);
