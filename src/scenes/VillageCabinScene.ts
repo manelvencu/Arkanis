@@ -17,6 +17,7 @@ const ROOM_WIDTH = 960;
 const ROOM_HEIGHT = 540;
 const PLAYER_SIZE = 68;
 const PLAYER_SPEED = 150;
+const CABIN_ASSET_ROOT = './assets/environment/interiors/cabin/';
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -77,11 +78,21 @@ export class VillageCabinScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayableUiAssets(this);
-    this.load.image('village-cabin-base', './assets/environment/interiors/cabin/cabin-interior-base-01.png');
-    this.load.image('village-cabin-bed', './assets/environment/interiors/cabin/bed-single-01.png');
-    this.load.image('village-cabin-table', './assets/environment/interiors/cabin/table-main-01.png');
-    this.load.image('village-cabin-barrel', './assets/environment/interiors/cabin/barrel-01.png');
-    this.load.image('village-cabin-rug', './assets/environment/interiors/cabin/rug-01.png');
+    const loadCabin = (key: string, filename: string): void => this.load.image(key, `${CABIN_ASSET_ROOT}${filename}`);
+    loadCabin('village-cabin-base', 'cabin-interior-base-01.png');
+    loadCabin('village-cabin-bed-left', 'cabin-bed-left-01.png');
+    loadCabin('village-cabin-bed-right', 'cabin-bed-right-01.png');
+    loadCabin('village-cabin-bedside-left', 'cabin-bedside-table-left-01.png');
+    loadCabin('village-cabin-table-main', 'cabin-table-main-01.png');
+    loadCabin('village-cabin-chair-left', 'cabin-chair-left-01.png');
+    loadCabin('village-cabin-chair-right', 'cabin-chair-right-01.png');
+    loadCabin('village-cabin-barrel-right', 'cabin-barrel-right-01.png');
+    loadCabin('village-cabin-crate-closed', 'cabin-crate-closed-01.png');
+    loadCabin('village-cabin-bookshelf', 'cabin-bookshelf-01.png');
+    loadCabin('village-cabin-fireplace', 'cabin-fireplace-01.png');
+    loadCabin('village-cabin-rug-small', 'cabin-rug-small-01.png');
+    loadCabin('village-cabin-plant-left', 'cabin-plant-pot-left-01.png');
+    loadCabin('village-cabin-plant-right', 'cabin-plant-pot-right-01.png');
     this.load.image('village-cabin-coin', './assets/environment/coin-gold-01.png');
     this.load.image('village-cabin-boy', './assets/characters/npcs/npc-boy-explorer-idle-down.png');
     this.load.image('village-cabin-girl', './assets/characters/npcs/npc-girl-braids-idle-down.png');
@@ -100,6 +111,7 @@ export class VillageCabinScene extends Phaser.Scene {
     this.cameras.main.centerOn(ROOM_WIDTH / 2, ROOM_HEIGHT / 2);
 
     this.createRoom();
+    this.createCabinFurnishings();
     this.createPlayerAnimations();
 
     const character = this.characterId === 'lupe' ? 'lupe' : 'tiana';
@@ -170,34 +182,52 @@ export class VillageCabinScene extends Phaser.Scene {
       .setDisplaySize(ROOM_WIDTH, ROOM_HEIGHT)
       .setDepth(0);
 
-    // Conservamos de momento los muebles existentes sobre la nueva base para comparar el resultado.
-    this.add.image(ROOM_WIDTH / 2, ROOM_HEIGHT / 2 + 20, 'village-cabin-rug').setDisplaySize(300, 190).setDepth(1);
-
     this.solids = this.physics.add.staticGroup();
     const wall = (x: number, y: number, width: number, height: number): void => {
-      const item = this.add.rectangle(x, y, width, height, 0x000000, 0).setDepth(3);
+      const item = this.add.rectangle(x, y, width, height, 0x000000, 0);
       this.physics.add.existing(item, true);
       this.solids.add(item);
     };
 
-    // La franja oscura y las paredes dibujadas en la base quedan fuera de la zona transitable.
     wall(ROOM_WIDTH / 2, 92, ROOM_WIDTH, 184);
     wall(67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
     wall(ROOM_WIDTH - 67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
-
-    // Borde inferior con el hueco central de la puerta libre.
     wall(250, ROOM_HEIGHT - 38, 500, 76);
     wall(710, ROOM_HEIGHT - 38, 500, 76);
+  }
 
-    this.addFurniture(130, 145, 'village-cabin-bed', 150, 130, 110, 62);
-    this.addFurniture(820, 145, 'village-cabin-table', 135, 115, 100, 58);
+  private createCabinFurnishings(): void {
+    if (this.kind === 'coins') {
+      this.addFurniture(210, 205, 'village-cabin-bed-left', 170, 112, 130, 42);
+      this.addFurniture(320, 212, 'village-cabin-bedside-left', 74, 78, 52, 34);
+      this.addFurniture(740, 195, 'village-cabin-bookshelf', 118, 112, 92, 38);
+      this.add.image(480, 345, 'village-cabin-rug-small').setDisplaySize(150, 105).setDepth(2);
+      this.addFurniture(770, 355, 'village-cabin-plant-right', 66, 76, 42, 26);
+      return;
+    }
+
+    if (this.kind === 'wine') {
+      this.addFurniture(480, 188, 'village-cabin-fireplace', 132, 98, 100, 34);
+      this.addFurniture(690, 295, 'village-cabin-table-main', 150, 92, 116, 36);
+      this.addFurniture(610, 345, 'village-cabin-chair-left', 64, 86, 38, 28);
+      this.addFurniture(770, 345, 'village-cabin-chair-right', 64, 86, 38, 28);
+      this.add.image(345, 330, 'village-cabin-rug-small').setDisplaySize(140, 98).setDepth(2);
+      this.addFurniture(215, 345, 'village-cabin-plant-left', 66, 76, 42, 26);
+      return;
+    }
+
+    this.addFurniture(215, 205, 'village-cabin-bed-left', 170, 112, 130, 42);
+    this.addFurniture(745, 205, 'village-cabin-bed-right', 170, 112, 130, 42);
+    this.add.image(480, 335, 'village-cabin-rug-small').setDisplaySize(160, 112).setDepth(2);
+    this.addFurniture(250, 355, 'village-cabin-plant-left', 66, 76, 42, 26);
+    this.addFurniture(710, 355, 'village-cabin-plant-right', 66, 76, 42, 26);
   }
 
   private createCabinContent(): void {
     if (this.kind === 'coins') {
       const positions: Array<[number, number]> = [
-        [250, 145], [360, 135], [480, 145], [600, 135], [710, 150],
-        [250, 275], [365, 320], [480, 280], [600, 320], [710, 275]
+        [390, 195], [480, 190], [570, 195], [650, 215], [430, 285],
+        [530, 285], [365, 375], [480, 400], [595, 375], [690, 405]
       ];
       const progress = getVillageProgress();
       positions.forEach(([x, y], index) => {
@@ -210,16 +240,16 @@ export class VillageCabinScene extends Phaser.Scene {
     }
 
     if (this.kind === 'wine') {
-      this.barrel = this.physics.add.staticImage(500, 155, 'village-cabin-barrel').setDisplaySize(95, 120).setDepth(12);
+      this.barrel = this.physics.add.staticImage(310, 230, 'village-cabin-barrel-right').setDisplaySize(82, 98).setDepth(12);
       this.barrel.refreshBody();
-      (this.barrel.body as Phaser.Physics.Arcade.StaticBody).setSize(70, 62).setOffset(12, 50);
+      (this.barrel.body as Phaser.Physics.Arcade.StaticBody).setSize(56, 42).setOffset(13, 50);
       this.solids.add(this.barrel);
-      this.add.image(610, 165, 'village-cabin-boy').setDisplaySize(68, 68).setDepth(13);
+      this.add.image(385, 245, 'village-cabin-boy').setDisplaySize(68, 68).setDepth(13);
       return;
     }
 
-    this.add.image(430, 165, 'village-cabin-boy').setDisplaySize(68, 68).setDepth(13);
-    this.add.image(535, 165, 'village-cabin-girl').setDisplaySize(68, 68).setDepth(13);
+    this.add.image(430, 245, 'village-cabin-boy').setDisplaySize(68, 68).setDepth(13);
+    this.add.image(535, 245, 'village-cabin-girl').setDisplaySize(68, 68).setDepth(13);
   }
 
   private checkCoinCollection(): void {
@@ -232,15 +262,15 @@ export class VillageCabinScene extends Phaser.Scene {
       entry.sprite.destroy();
       this.coinEntries = this.coinEntries.filter((coin) => coin !== entry);
       this.ui.updateCoins(getVillageProgress().coins);
-      this.cameras.main.flash(90, 255, 220, 90);
     }
   }
 
-  private addFurniture(x: number, y: number, key: string, width: number, height: number, bodyWidth: number, bodyHeight: number): void {
+  private addFurniture(x: number, y: number, key: string, width: number, height: number, bodyWidth: number, bodyHeight: number): Phaser.Physics.Arcade.Image {
     const item = this.physics.add.staticImage(x, y, key).setDisplaySize(width, height).setDepth(8);
     item.refreshBody();
     (item.body as Phaser.Physics.Arcade.StaticBody).setSize(bodyWidth, bodyHeight).setOffset((width - bodyWidth) / 2, height - bodyHeight);
     this.solids.add(item);
+    return item;
   }
 
   private createPlayerAnimations(): void {
@@ -292,15 +322,19 @@ export class VillageCabinScene extends Phaser.Scene {
   private showMessage(message: string): void {
     if (this.messageOpen) return;
     this.messageOpen = true;
-    const center = this.cameras.main.midPoint;
-    const box = this.add.rectangle(center.x, center.y + 105, 640, 150, 0x17100c, 0.97)
+    const view = this.cameras.main.worldView;
+    const boxY = Math.min(view.centerY + 105, view.bottom - 100);
+    const box = this.add.rectangle(view.centerX, boxY, 640, 150, 0x17100c, 0.97)
       .setStrokeStyle(4, 0xd6a84b, 1).setDepth(200);
-    const text = this.add.text(center.x, center.y + 92, message, {
+    const text = this.add.text(view.centerX, boxY - 13, message, {
       fontFamily: 'Georgia, Times New Roman, serif', fontSize: '24px', color: '#fff0c7', align: 'center', wordWrap: { width: 590 }
     }).setOrigin(0.5).setDepth(201);
-    const close = this.add.text(center.x, center.y + 150, 'Pulsa ESPACIO, ENTER o toca para continuar', {
+    const close = this.add.text(view.centerX, boxY + 45, 'Pulsa ESPACIO, ENTER o toca para continuar', {
       fontFamily: 'Arial', fontSize: '16px', color: '#d6a84b'
     }).setOrigin(0.5).setDepth(201);
+    this.ui.ignoreWorldObject(box);
+    this.ui.ignoreWorldObject(text);
+    this.ui.ignoreWorldObject(close);
 
     const dismiss = (): void => {
       if (!box.active) return;
