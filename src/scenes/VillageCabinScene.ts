@@ -78,7 +78,9 @@ export class VillageCabinScene extends Phaser.Scene {
 
   preload(): void {
     preloadPlayableUiAssets(this);
-    const loadCabin = (key: string, filename: string): void => this.load.image(key, `${CABIN_ASSET_ROOT}${filename}`);
+    const loadCabin = (key: string, filename: string): void => {
+      this.load.image(key, `${CABIN_ASSET_ROOT}${filename}`);
+    };
     loadCabin('village-cabin-base', 'cabin-interior-base-01.png');
     loadCabin('village-cabin-bed-left', 'cabin-bed-left-01.png');
     loadCabin('village-cabin-bed-right', 'cabin-bed-right-01.png');
