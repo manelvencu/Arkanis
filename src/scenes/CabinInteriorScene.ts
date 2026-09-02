@@ -17,13 +17,14 @@ export interface CabinInteriorConfig {
 type Facing = 'down' | 'up' | 'side';
 type TouchDirection = 'left' | 'right' | 'up' | 'down';
 
-const ROOM_WIDTH = 384;
-const ROOM_HEIGHT = 320;
-const WALL = 24;
-const PLAYER_SIZE = 64;
+const ROOM_WIDTH = 960;
+const ROOM_HEIGHT = 540;
+const PLAYER_SIZE = 68;
+const PLAYER_SPEED = 150;
 const TRAINING_RETURN_ROW = 12;
 const TRAINING_GRID_SIZE = 32;
 const TRAINING_RETURN_Y = (TRAINING_RETURN_ROW - 1) * TRAINING_GRID_SIZE + TRAINING_GRID_SIZE / 2;
+const CABIN_ASSET_ROOT = './assets/environment/interiors/cabin/';
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -79,13 +80,27 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     this.messageOpen = false;
     this.chestInRange = false;
     this.exiting = false;
+    this.touchDirections = { left: false, right: false, up: false, down: false };
     this.chestOpened = getTrainingProgress().readChestIds.includes(this.cabinConfig.chestId);
   }
 
   preload(): void {
     const p = this.cabinConfig.assetPrefix;
-    this.load.image(`${p}-bed`, './assets/environment/interiors/cabin/bed-single-01.png');
-    this.load.image(`${p}-table`, './assets/environment/interiors/cabin/table-main-01.png');
+    const loadCabin = (key: string, filename: string): void => this.load.image(`${p}-${key}`, `${CABIN_ASSET_ROOT}${filename}`);
+    loadCabin('base', 'cabin-interior-base-01.png');
+    loadCabin('bed-left', 'cabin-bed-left-01.png');
+    loadCabin('bed-right', 'cabin-bed-right-01.png');
+    loadCabin('bedside-left', 'cabin-bedside-table-left-01.png');
+    loadCabin('table-main', 'cabin-table-main-01.png');
+    loadCabin('chair-left', 'cabin-chair-left-01.png');
+    loadCabin('chair-right', 'cabin-chair-right-01.png');
+    loadCabin('barrel-right', 'cabin-barrel-right-01.png');
+    loadCabin('crate-closed', 'cabin-crate-closed-01.png');
+    loadCabin('bookshelf', 'cabin-bookshelf-01.png');
+    loadCabin('fireplace', 'cabin-fireplace-01.png');
+    loadCabin('rug-small', 'cabin-rug-small-01.png');
+    loadCabin('plant-left', 'cabin-plant-pot-left-01.png');
+    loadCabin('plant-right', 'cabin-plant-pot-right-01.png');
     this.load.image(`${p}-chest-closed`, './assets/environment/chest-closed-01.png');
     this.load.image(`${p}-chest-open`, './assets/environment/chest-open-01.png');
 
@@ -98,27 +113,20 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     this.cameras.main.setBackgroundColor('#17100c');
     this.cameras.main.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
-    this.cameras.main.setZoom(1.55);
+    this.cameras.main.setZoom(2);
     this.cameras.main.centerOn(ROOM_WIDTH / 2, ROOM_HEIGHT / 2);
 
     this.createRoom();
     this.createFurniture();
     this.createPlayerAnimations();
 
-    this.player = this.physics.add.sprite(ROOM_WIDTH / 2, ROOM_HEIGHT - 62, `${p}-player-up`);
-    this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(20).setCollideWorldBounds(true);
-    (this.player.body as Phaser.Physics.Arcade.Body).setSize(28, 24).setOffset(18, 36);
+    this.player = this.physics.add.sprite(ROOM_WIDTH / 2, ROOM_HEIGHT - 76, `${p}-player-up`);
+    this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(30).setCollideWorldBounds(true);
+    (this.player.body as Phaser.Physics.Arcade.Body).setSize(30, 28).setOffset(19, 38);
 
     this.physics.add.collider(this.player, this.solids);
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.createTouchControls();
-
-    this.add.text(ROOM_WIDTH / 2, 46, 'Cabaña', {
-      fontFamily: 'Georgia, Times New Roman, serif',
-      fontSize: '15px',
-      color: '#f4d58b',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(50);
 
     this.cameras.main.fadeIn(220, 18, 12, 8);
   }
@@ -142,7 +150,7 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
 
     if (x !== 0 || y !== 0) {
       const movement = new Phaser.Math.Vector2(x, y).normalize();
-      body.setVelocity(movement.x * 120, movement.y * 120);
+      body.setVelocity(movement.x * PLAYER_SPEED, movement.y * PLAYER_SPEED);
 
       if (Math.abs(movement.x) > Math.abs(movement.y)) {
         this.facing = 'side';
@@ -165,59 +173,71 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
   }
 
   private createRoom(): void {
-    const graphics = this.add.graphics();
-    graphics.fillStyle(0x6f492d, 1);
-    graphics.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
-
-    for (let y = WALL; y < ROOM_HEIGHT - WALL; y += 24) {
-      graphics.lineStyle(1, 0x855b39, 0.55);
-      graphics.lineBetween(WALL, y, ROOM_WIDTH - WALL, y);
-    }
-    for (let x = WALL + 18; x < ROOM_WIDTH - WALL; x += 48) {
-      graphics.lineStyle(1, 0x5b3924, 0.28);
-      graphics.lineBetween(x, WALL, x, ROOM_HEIGHT - WALL);
-    }
-
-    graphics.fillStyle(0x3f2a20, 1);
-    graphics.fillRect(0, 0, ROOM_WIDTH, WALL);
-    graphics.fillRect(0, 0, WALL, ROOM_HEIGHT);
-    graphics.fillRect(ROOM_WIDTH - WALL, 0, WALL, ROOM_HEIGHT);
-    graphics.fillRect(0, ROOM_HEIGHT - WALL, ROOM_WIDTH / 2 - 34, WALL);
-    graphics.fillRect(ROOM_WIDTH / 2 + 34, ROOM_HEIGHT - WALL, ROOM_WIDTH / 2 - 34, WALL);
-    graphics.lineStyle(4, 0x271915, 1);
-    graphics.strokeRect(2, 2, ROOM_WIDTH - 4, ROOM_HEIGHT - 4);
+    const p = this.cabinConfig.assetPrefix;
+    this.add.image(ROOM_WIDTH / 2, ROOM_HEIGHT / 2, `${p}-base`)
+      .setDisplaySize(ROOM_WIDTH, ROOM_HEIGHT)
+      .setDepth(0);
 
     this.solids = this.physics.add.staticGroup();
-    this.addWall(ROOM_WIDTH / 2, WALL / 2, ROOM_WIDTH, WALL);
-    this.addWall(WALL / 2, ROOM_HEIGHT / 2, WALL, ROOM_HEIGHT);
-    this.addWall(ROOM_WIDTH - WALL / 2, ROOM_HEIGHT / 2, WALL, ROOM_HEIGHT);
-    this.addWall((ROOM_WIDTH / 2 - 34) / 2, ROOM_HEIGHT - WALL / 2, ROOM_WIDTH / 2 - 34, WALL);
-    this.addWall(ROOM_WIDTH - (ROOM_WIDTH / 2 - 34) / 2, ROOM_HEIGHT - WALL / 2, ROOM_WIDTH / 2 - 34, WALL);
-    this.add.rectangle(ROOM_WIDTH / 2, ROOM_HEIGHT - 10, 64, 20, 0x2a1710).setDepth(2);
+    this.addWall(ROOM_WIDTH / 2, 92, ROOM_WIDTH, 184);
+    this.addWall(67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
+    this.addWall(ROOM_WIDTH - 67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
+    this.addWall(250, ROOM_HEIGHT - 38, 500, 76);
+    this.addWall(710, ROOM_HEIGHT - 38, 500, 76);
   }
 
   private createFurniture(): void {
     const p = this.cabinConfig.assetPrefix;
-    this.addFurniture(76, 82, `${p}-bed`, 100, 88, 76, 48);
-    this.addFurniture(310, 82, `${p}-table`, 92, 82, 72, 44);
 
+    if (this.cabinConfig.sceneKey === 'CabinOneScene') {
+      this.addFurniture(210, 205, `${p}-bed-left`, 170, 112, 130, 42);
+      this.addFurniture(320, 212, `${p}-bedside-left`, 74, 78, 52, 34);
+      this.addFurniture(740, 195, `${p}-bookshelf`, 118, 112, 92, 38);
+      this.add.image(480, 345, `${p}-rug-small`).setDisplaySize(150, 105).setDepth(2);
+      this.addFurniture(770, 355, `${p}-plant-right`, 66, 76, 42, 26);
+      this.createChest(520, 205);
+      return;
+    }
+
+    if (this.cabinConfig.sceneKey === 'CabinTwoScene') {
+      this.addFurniture(480, 188, `${p}-fireplace`, 132, 98, 100, 34);
+      this.addFurniture(690, 290, `${p}-table-main`, 150, 92, 116, 36);
+      this.addFurniture(610, 345, `${p}-chair-left`, 64, 86, 38, 28);
+      this.addFurniture(770, 345, `${p}-chair-right`, 64, 86, 38, 28);
+      this.addFurniture(220, 300, `${p}-barrel-right`, 82, 98, 56, 42);
+      this.add.image(420, 345, `${p}-rug-small`).setDisplaySize(150, 105).setDepth(2);
+      this.createChest(330, 215);
+      return;
+    }
+
+    this.addFurniture(220, 205, `${p}-bed-left`, 170, 112, 130, 42);
+    this.addFurniture(740, 205, `${p}-bed-right`, 170, 112, 130, 42);
+    this.addFurniture(745, 350, `${p}-crate-closed`, 82, 78, 58, 30);
+    this.addFurniture(220, 355, `${p}-plant-left`, 66, 76, 42, 26);
+    this.add.image(480, 340, `${p}-rug-small`).setDisplaySize(160, 112).setDepth(2);
+    this.createChest(480, 205);
+  }
+
+  private createChest(x: number, y: number): void {
+    const p = this.cabinConfig.assetPrefix;
     this.chest = this.physics.add.staticImage(
-      ROOM_WIDTH / 2,
-      67,
+      x,
+      y,
       this.chestOpened ? `${p}-chest-open` : `${p}-chest-closed`
     );
-    this.chest.setDisplaySize(74, 60).setDepth(8).refreshBody();
-    (this.chest.body as Phaser.Physics.Arcade.StaticBody).setSize(56, 36).setOffset(9, 18);
+    this.chest.setDisplaySize(76, 62).setDepth(10).refreshBody();
+    (this.chest.body as Phaser.Physics.Arcade.StaticBody).setSize(58, 34).setOffset(9, 25);
     this.solids.add(this.chest);
   }
 
-  private addFurniture(x: number, y: number, key: string, width: number, height: number, bodyWidth: number, bodyHeight: number): void {
+  private addFurniture(x: number, y: number, key: string, width: number, height: number, bodyWidth: number, bodyHeight: number): Phaser.Physics.Arcade.Image {
     const item = this.physics.add.staticImage(x, y, key).setDisplaySize(width, height).setDepth(8);
     item.refreshBody();
     (item.body as Phaser.Physics.Arcade.StaticBody)
       .setSize(bodyWidth, bodyHeight)
       .setOffset((width - bodyWidth) / 2, height - bodyHeight);
     this.solids.add(item);
+    return item;
   }
 
   private addWall(x: number, y: number, width: number, height: number): void {
@@ -227,12 +247,7 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
   }
 
   private checkChest(): void {
-    const isNearChest = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      this.chest.x,
-      this.chest.y
-    ) <= 72;
+    const isNearChest = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.chest.x, this.chest.y) <= 82;
 
     if (!isNearChest) {
       this.chestInRange = false;
@@ -254,19 +269,21 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
 
   private showMessage(message: string): void {
     this.messageOpen = true;
-    const box = this.add.rectangle(ROOM_WIDTH / 2, ROOM_HEIGHT / 2 + 38, 330, 132, 0x17100c, 0.96)
-      .setStrokeStyle(3, 0xd6a84b, 1)
+    const view = this.cameras.main.worldView;
+    const boxY = Math.min(view.centerY + 105, view.bottom - 100);
+    const box = this.add.rectangle(view.centerX, boxY, 640, 150, 0x17100c, 0.96)
+      .setStrokeStyle(4, 0xd6a84b, 1)
       .setDepth(100)
       .setInteractive({ useHandCursor: true });
-    const text = this.add.text(ROOM_WIDTH / 2, ROOM_HEIGHT / 2 + 28, message, {
+    const text = this.add.text(view.centerX, boxY - 13, message, {
       fontFamily: 'Georgia, Times New Roman, serif',
-      fontSize: '11px',
+      fontSize: '22px',
       color: '#fff0c7',
       align: 'center',
-      wordWrap: { width: 300 }
+      wordWrap: { width: 590 }
     }).setOrigin(0.5).setDepth(101);
-    const close = this.add.text(ROOM_WIDTH / 2, ROOM_HEIGHT / 2 + 91, 'Toca para continuar', {
-      fontFamily: 'Arial', fontSize: '9px', color: '#d6a84b'
+    const close = this.add.text(view.centerX, boxY + 48, 'Toca, ESPACIO o ENTER para continuar', {
+      fontFamily: 'Arial', fontSize: '15px', color: '#d6a84b'
     }).setOrigin(0.5).setDepth(101);
 
     const dismiss = (): void => {
@@ -283,7 +300,7 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
 
   private checkDoor(): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
-    if (this.player.y < ROOM_HEIGHT - 44 || Math.abs(this.player.x - ROOM_WIDTH / 2) > 34 || body.velocity.y <= 0) return;
+    if (this.player.y < ROOM_HEIGHT - 42 || Math.abs(this.player.x - ROOM_WIDTH / 2) > 58 || body.velocity.y <= 0) return;
     this.exitCabin();
   }
 
@@ -310,25 +327,25 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
 
   private createPlayerAnimations(): void {
     const p = this.cabinConfig.assetPrefix;
-    const make = (key: string, frames: string[]): void => {
-      if (this.anims.exists(key)) return;
-      this.anims.create({ key, frames: frames.map((textureKey) => ({ key: textureKey })), frameRate: 7, repeat: -1 });
+    const make = (key: string, frames: string[], frameRate: number): void => {
+      if (this.anims.exists(key)) this.anims.remove(key);
+      this.anims.create({ key, frames: frames.map((textureKey) => ({ key: textureKey })), frameRate, repeat: -1 });
     };
-    make(`${p}-walk-down`, [`${p}-player-down1`, `${p}-player-down2`]);
-    make(`${p}-walk-side`, [`${p}-player-side1`, `${p}-player-side2`]);
-    make(`${p}-walk-up`, [`${p}-player-up1`, `${p}-player-up2`]);
+    make(`${p}-walk-down`, [`${p}-player-down1`, `${p}-player-down2`], 6);
+    make(`${p}-walk-side`, [`${p}-player-side1`, `${p}-player-side`, `${p}-player-side2`, `${p}-player-side`], 8);
+    make(`${p}-walk-up`, [`${p}-player-up1`, `${p}-player-up2`], 6);
   }
 
   private createTouchControls(): void {
-    const centerX = 68;
-    const centerY = ROOM_HEIGHT - 70;
-    const spacing = 34;
+    const centerX = 112;
+    const centerY = ROOM_HEIGHT - 108;
+    const spacing = 56;
     const createButton = (x: number, y: number, label: string, direction: TouchDirection): void => {
-      const button = this.add.circle(x, y, 18, 0x17100c, 0.72)
-        .setStrokeStyle(2, 0xd6a84b, 0.9)
+      const button = this.add.circle(x, y, 34, 0x17100c, 0.72)
+        .setStrokeStyle(4, 0xd6a84b, 0.9)
         .setDepth(200)
         .setInteractive({ useHandCursor: true });
-      this.add.text(x, y, label, { fontFamily: 'Arial', fontSize: '14px', color: '#fff0c7' })
+      this.add.text(x, y, label, { fontFamily: 'Arial', fontSize: '28px', color: '#fff0c7' })
         .setOrigin(0.5).setDepth(201);
       const down = (): void => { this.touchDirections[direction] = true; };
       const up = (): void => { this.touchDirections[direction] = false; };
