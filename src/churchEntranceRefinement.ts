@@ -15,6 +15,7 @@ type AldeaRuntime = Phaser.Scene & {
   facing: 'down' | 'up' | 'side';
   direction: Phaser.Math.Vector2;
   worldColliders: Phaser.GameObjects.Rectangle[];
+  walkableAreas: Phaser.Geom.Rectangle[];
   __churchTransitioning?: boolean;
   __returningFromChurch?: boolean;
 };
@@ -34,6 +35,12 @@ const CHURCH_BASE_Y = 7 * GRID;
 const CHURCH_WIDTH = 240;
 const CHURCH_HEIGHT = 224;
 
+// Abrimos físicamente algo más que las dos celdas de disparo para que el cuerpo del
+// personaje no roce con los laterales del blocker al aproximarse a C18/F7-C19/F7.
+const PHYSICAL_DOOR_LEFT = CHURCH_TRIGGER.left - GRID / 2;
+const PHYSICAL_DOOR_RIGHT = CHURCH_TRIGGER.right + GRID / 2;
+const PHYSICAL_DOOR_TOP = CHURCH_TRIGGER.top - GRID / 2;
+
 function replaceChurchBlocker(scene: AldeaRuntime): void {
   const churchBlocker = scene.worldColliders.find((blocker) => {
     const body = blocker.body as Phaser.Physics.Arcade.StaticBody | null;
@@ -46,33 +53,42 @@ function replaceChurchBlocker(scene: AldeaRuntime): void {
     );
   });
 
-  if (!churchBlocker) return;
-
-  scene.worldColliders = scene.worldColliders.filter((blocker) => blocker !== churchBlocker);
-  churchBlocker.destroy();
+  if (churchBlocker) {
+    scene.worldColliders = scene.worldColliders.filter((blocker) => blocker !== churchBlocker);
+    churchBlocker.destroy();
+  }
 
   const leftEdge = CHURCH_CENTER_X - CHURCH_WIDTH / 2;
   const rightEdge = CHURCH_CENTER_X + CHURCH_WIDTH / 2;
-  const doorLeft = CHURCH_TRIGGER.left;
-  const doorRight = CHURCH_TRIGGER.right;
-  const doorTop = CHURCH_TRIGGER.top;
 
   const addBlocker = (x: number, y: number, width: number, height: number): void => {
+    if (width <= 0 || height <= 0) return;
     const blocker = scene.add.rectangle(x, y, width, height, 0x000000, 0);
     scene.physics.add.existing(blocker, true);
     scene.physics.add.collider(scene.player, blocker);
     scene.worldColliders.push(blocker);
   };
 
-  // Parte superior de la iglesia: permanece sólida hasta justo encima de F7.
-  addBlocker(CHURCH_CENTER_X, doorTop / 2, CHURCH_WIDTH, doorTop);
+  // Cuerpo superior de la iglesia, retirado media celda más hacia arriba para que
+  // el personaje pueda penetrar con naturalidad en el hueco antes de disparar la transición.
+  addBlocker(CHURCH_CENTER_X, PHYSICAL_DOOR_TOP / 2, CHURCH_WIDTH, PHYSICAL_DOOR_TOP);
 
-  // F7 queda abierta únicamente en C18 y C19.
-  const leftWidth = doorLeft - leftEdge;
-  if (leftWidth > 0) addBlocker(leftEdge + leftWidth / 2, doorTop + GRID / 2, leftWidth, GRID);
+  // Laterales sólidos hasta la base de la iglesia, dejando un corredor central holgado.
+  const doorwayHeight = CHURCH_BASE_Y - PHYSICAL_DOOR_TOP;
+  const leftWidth = PHYSICAL_DOOR_LEFT - leftEdge;
+  addBlocker(leftEdge + leftWidth / 2, PHYSICAL_DOOR_TOP + doorwayHeight / 2, leftWidth, doorwayHeight);
 
-  const rightWidth = rightEdge - doorRight;
-  if (rightWidth > 0) addBlocker(doorRight + rightWidth / 2, doorTop + GRID / 2, rightWidth, GRID);
+  const rightWidth = rightEdge - PHYSICAL_DOOR_RIGHT;
+  addBlocker(PHYSICAL_DOOR_RIGHT + rightWidth / 2, PHYSICAL_DOOR_TOP + doorwayHeight / 2, rightWidth, doorwayHeight);
+
+  // Garantiza que el corredor desde la plaza hasta C18/F7-C19/F7 sea considerado transitable
+  // por el sistema de walkableAreas de AldeaScene.
+  scene.walkableAreas.push(new Phaser.Geom.Rectangle(
+    PHYSICAL_DOOR_LEFT,
+    PHYSICAL_DOOR_TOP,
+    PHYSICAL_DOOR_RIGHT - PHYSICAL_DOOR_LEFT,
+    CHURCH_BASE_Y - PHYSICAL_DOOR_TOP + GRID
+  ));
 }
 
 export function installChurchEntranceRefinement(): void {
@@ -110,7 +126,7 @@ export function installChurchEntranceRefinement(): void {
     if (this.__churchTransitioning || this.exitStarted || !this.scene.isActive()) return;
 
     const body = this.player.body as Phaser.Physics.Arcade.Body;
-    if (!body || body.velocity.y >= -5) return;
+    if (!body) return;
 
     const footX = this.player.x;
     const footY = this.player.y + 20;
