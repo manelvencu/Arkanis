@@ -142,12 +142,9 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
       this.player.setTexture(`${this.cabinConfig.assetPrefix}-player-${this.facing === 'side' ? 'side' : this.facing}`);
     }
 
-    // En esta primera pasada solo fijamos el perímetro. Los muebles horneados en la imagen
-    // se convertirán después en zonas bloqueadas mediante la plantilla grid.
-    this.player.x = Phaser.Math.Clamp(this.player.x, 36, ROOM_WIDTH - 36);
-    this.player.y = Phaser.Math.Clamp(this.player.y, 64, ROOM_HEIGHT - 22);
-    body.updateFromGameObject();
-
+    // No resincronizamos manualmente el body con el sprite: Arcade Physics debe
+    // aplicar la velocidad libremente. El propio world bound contiene al jugador.
+    // Más adelante añadiremos las colisiones del mobiliario mediante el grid.
     this.checkChest();
     this.checkDoor();
   }
