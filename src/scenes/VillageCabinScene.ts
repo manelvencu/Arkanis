@@ -151,12 +151,6 @@ export class VillageCabinScene extends Phaser.Scene {
       this.player.setTexture(`village-cabin-${this.characterId}-${this.facing === 'side' ? 'side' : this.facing}`);
     }
 
-    // Primera fase de la nueva sistemática: solo perímetro seguro. Las colisiones de
-    // muebles se definirán después con la plantilla grid sobre cada fondo terminado.
-    this.player.x = Phaser.Math.Clamp(this.player.x, 36, ROOM_WIDTH - 36);
-    this.player.y = Phaser.Math.Clamp(this.player.y, 64, ROOM_HEIGHT - 22);
-    body.updateFromGameObject();
-
     if (this.kind === 'coins') this.checkCoinCollection();
     if (this.kind === 'wine') this.checkWineNpc();
     this.checkExit();
