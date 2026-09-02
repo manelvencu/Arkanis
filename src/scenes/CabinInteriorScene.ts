@@ -25,6 +25,10 @@ const TRAINING_RETURN_ROW = 12;
 const TRAINING_GRID_SIZE = 32;
 const TRAINING_RETURN_Y = (TRAINING_RETURN_ROW - 1) * TRAINING_GRID_SIZE + TRAINING_GRID_SIZE / 2;
 const CABIN_ASSET_ROOT = './assets/environment/interiors/cabin/';
+const PLAYABLE_TOP = 112;
+const PLAYABLE_SIDE = 104;
+const PLAYABLE_BOTTOM = 400;
+const DOOR_HALF_WIDTH = 70;
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -115,7 +119,8 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     this.cameras.main.setBackgroundColor('#17100c');
     this.cameras.main.setBounds(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
-    this.cameras.main.setZoom(2);
+    // Un poco menos de zoom que en La Aldea: así se aprecia completa la nueva base y su puerta.
+    this.cameras.main.setZoom(1.65);
     this.cameras.main.centerOn(ROOM_WIDTH / 2, ROOM_HEIGHT / 2);
 
     this.createRoom();
@@ -181,11 +186,14 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
       .setDepth(0);
 
     this.solids = this.physics.add.staticGroup();
-    this.addWall(ROOM_WIDTH / 2, 92, ROOM_WIDTH, 184);
-    this.addWall(67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
-    this.addWall(ROOM_WIDTH - 67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
-    this.addWall(250, ROOM_HEIGHT - 38, 500, 76);
-    this.addWall(710, ROOM_HEIGHT - 38, 500, 76);
+    this.addWall(ROOM_WIDTH / 2, PLAYABLE_TOP / 2, ROOM_WIDTH, PLAYABLE_TOP);
+    this.addWall(PLAYABLE_SIDE / 2, ROOM_HEIGHT / 2, PLAYABLE_SIDE, ROOM_HEIGHT);
+    this.addWall(ROOM_WIDTH - PLAYABLE_SIDE / 2, ROOM_HEIGHT / 2, PLAYABLE_SIDE, ROOM_HEIGHT);
+
+    const bottomHeight = ROOM_HEIGHT - PLAYABLE_BOTTOM;
+    const sideWidth = ROOM_WIDTH / 2 - DOOR_HALF_WIDTH;
+    this.addWall(sideWidth / 2, PLAYABLE_BOTTOM + bottomHeight / 2, sideWidth, bottomHeight);
+    this.addWall(ROOM_WIDTH - sideWidth / 2, PLAYABLE_BOTTOM + bottomHeight / 2, sideWidth, bottomHeight);
   }
 
   private createFurniture(): void {
