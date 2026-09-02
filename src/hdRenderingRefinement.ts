@@ -1,6 +1,5 @@
 import * as Phaser from 'phaser';
 import { TrainingScene } from './scenes/TrainingScene';
-import { CabinInteriorScene } from './scenes/CabinInteriorScene';
 
 const HD_SCALE = 2;
 const LOGICAL_WIDTH = 960;
@@ -36,11 +35,6 @@ type TrainingRuntime = {
   touchShootRequested: boolean;
 };
 
-type CabinPrototype = {
-  __hdRenderingInstalled?: boolean;
-  create: (this: CabinInteriorScene) => void;
-};
-
 function textureKey(child: Phaser.GameObjects.GameObject): string | undefined {
   return child instanceof Phaser.GameObjects.Image ? child.texture.key : undefined;
 }
@@ -57,8 +51,6 @@ function scaleTextToHd(text: Phaser.GameObjects.Text | undefined): void {
 function createCleanTouchControls(scene: TrainingScene): void {
   const runtime = scene as unknown as TrainingRuntime;
 
-  // Elimina por completo los controles creados por TrainingScene antes de construir
-  // la versión HD. Así evitamos restos, botones duplicados y posiciones mezcladas.
   scene.children.list
     .filter((child) => depthOf(child) >= CONTROL_DEPTH)
     .slice()
@@ -259,13 +251,7 @@ export function installHdRenderingRefinement(): void {
     };
   }
 
-  const cabinPrototype = CabinInteriorScene.prototype as unknown as CabinPrototype;
-  if (!cabinPrototype.__hdRenderingInstalled) {
-    const originalCabinCreate = cabinPrototype.create;
-    cabinPrototype.__hdRenderingInstalled = true;
-    cabinPrototype.create = function createHdCabin(this: CabinInteriorScene): void {
-      originalCabinCreate.call(this);
-      this.cameras.main.setZoom(1.55 * HD_SCALE);
-    };
-  }
+  // CabinInteriorScene ya trabaja directamente en el espacio lógico 960x540.
+  // Su cámara se fija a zoom 2 dentro de la propia escena para encajar exactamente
+  // en el viewport físico 1920x1080. No debemos volver a escalarla aquí.
 }
