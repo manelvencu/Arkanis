@@ -27,7 +27,6 @@ import { installAldeaVillageRefinement } from './aldeaVillageRefinement';
 import { installAldeaFountainRefinement } from './aldeaFountainRefinement';
 import { installVillageVisualAndAccessRefinement } from './villageVisualAndAccessRefinement';
 import { installChurchEntranceRefinement } from './churchEntranceRefinement';
-import { installCabinInteriorBoundsRefinement } from './cabinInteriorBoundsRefinement';
 
 installArkanisTypography();
 installTrainingGameOverHook();
@@ -44,7 +43,6 @@ installAldeaVillageRefinement();
 installAldeaFountainRefinement();
 installVillageVisualAndAccessRefinement();
 installChurchEntranceRefinement();
-installCabinInteriorBoundsRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
