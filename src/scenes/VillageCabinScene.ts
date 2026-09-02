@@ -18,6 +18,10 @@ const ROOM_HEIGHT = 540;
 const PLAYER_SIZE = 68;
 const PLAYER_SPEED = 150;
 const CABIN_ASSET_ROOT = './assets/environment/interiors/cabin/';
+const PLAYABLE_TOP = 112;
+const PLAYABLE_SIDE = 104;
+const PLAYABLE_BOTTOM = 400;
+const DOOR_HALF_WIDTH = 70;
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -191,11 +195,16 @@ export class VillageCabinScene extends Phaser.Scene {
       this.solids.add(item);
     };
 
-    wall(ROOM_WIDTH / 2, 92, ROOM_WIDTH, 184);
-    wall(67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
-    wall(ROOM_WIDTH - 67, ROOM_HEIGHT / 2, 134, ROOM_HEIGHT);
-    wall(250, ROOM_HEIGHT - 38, 500, 76);
-    wall(710, ROOM_HEIGHT - 38, 500, 76);
+    // La zona jugable llega justo hasta el borde oscuro dibujado en la nueva base.
+    wall(ROOM_WIDTH / 2, PLAYABLE_TOP / 2, ROOM_WIDTH, PLAYABLE_TOP);
+    wall(PLAYABLE_SIDE / 2, ROOM_HEIGHT / 2, PLAYABLE_SIDE, ROOM_HEIGHT);
+    wall(ROOM_WIDTH - PLAYABLE_SIDE / 2, ROOM_HEIGHT / 2, PLAYABLE_SIDE, ROOM_HEIGHT);
+
+    // El borde inferior comienza donde acaba el suelo claro, dejando abierto el portal central.
+    const bottomHeight = ROOM_HEIGHT - PLAYABLE_BOTTOM;
+    const sideWidth = ROOM_WIDTH / 2 - DOOR_HALF_WIDTH;
+    wall(sideWidth / 2, PLAYABLE_BOTTOM + bottomHeight / 2, sideWidth, bottomHeight);
+    wall(ROOM_WIDTH - sideWidth / 2, PLAYABLE_BOTTOM + bottomHeight / 2, sideWidth, bottomHeight);
   }
 
   private createCabinFurnishings(): void {
@@ -334,9 +343,18 @@ export class VillageCabinScene extends Phaser.Scene {
     const close = this.add.text(view.centerX, boxY + 45, 'Pulsa ESPACIO, ENTER o toca para continuar', {
       fontFamily: 'Arial', fontSize: '16px', color: '#d6a84b'
     }).setOrigin(0.5).setDepth(201);
+
+    // El HUD utiliza una cámara secundaria. Excluimos el diálogo de cualquier cámara
+    // que no sea la principal para evitar la copia reducida de la esquina superior izquierda.
     this.ui.ignoreWorldObject(box);
     this.ui.ignoreWorldObject(text);
     this.ui.ignoreWorldObject(close);
+    this.cameras.cameras.forEach((camera) => {
+      if (camera === this.cameras.main) return;
+      camera.ignore(box);
+      camera.ignore(text);
+      camera.ignore(close);
+    });
 
     const dismiss = (): void => {
       if (!box.active) return;
