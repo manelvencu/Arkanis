@@ -86,7 +86,9 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
 
   preload(): void {
     const p = this.cabinConfig.assetPrefix;
-    const loadCabin = (key: string, filename: string): void => this.load.image(`${p}-${key}`, `${CABIN_ASSET_ROOT}${filename}`);
+    const loadCabin = (key: string, filename: string): void => {
+      this.load.image(`${p}-${key}`, `${CABIN_ASSET_ROOT}${filename}`);
+    };
     loadCabin('base', 'cabin-interior-base-01.png');
     loadCabin('bed-left', 'cabin-bed-left-01.png');
     loadCabin('bed-right', 'cabin-bed-right-01.png');
