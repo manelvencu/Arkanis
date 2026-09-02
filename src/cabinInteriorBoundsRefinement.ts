@@ -2,14 +2,14 @@ import * as Phaser from 'phaser';
 import { CabinInteriorScene } from './scenes/CabinInteriorScene';
 import { VillageCabinScene } from './scenes/VillageCabinScene';
 
-type CabinPrototype = {
-  __cabinInteriorBoundsRefinementInstalled?: boolean;
-  create: (this: Phaser.Scene) => void;
-  update: (this: Phaser.Scene) => void;
-};
-
 type CabinRuntime = Phaser.Scene & {
   player: Phaser.Physics.Arcade.Sprite;
+};
+
+type CabinPrototype = {
+  __cabinInteriorBoundsRefinementInstalled?: boolean;
+  create: (this: CabinRuntime) => void;
+  update: (this: CabinRuntime) => void;
 };
 
 const ROOM_WIDTH = 960;
