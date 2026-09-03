@@ -29,19 +29,45 @@ type AldeaPrototype = {
 };
 
 const GRID = 32;
-// La entrada lógica se baja una fila: C18/F8 y C19/F8. Así la transición se dispara
-// delante de la fachada, antes de que el cuerpo del personaje alcance el collider de la iglesia.
-const CHURCH_TRIGGER = new Phaser.Geom.Rectangle((18 - 1) * GRID, (8 - 1) * GRID, GRID * 2, GRID);
-const CHURCH_RETURN = new Phaser.Math.Vector2((18 - 0.5) * GRID, (8 - 0.5) * GRID);
-const CHURCH_CENTER_X = (19 - 0.5) * GRID;
-const CHURCH_BASE_Y = 7 * GRID;
+const CHURCH_CENTER_X = (19 - 0.5) * GRID; // 592
+const CHURCH_BASE_Y = 7 * GRID; // 224
 const CHURCH_WIDTH = 240;
 const CHURCH_HEIGHT = 224;
 
-// El hueco físico sigue siendo algo más ancho que la entrada lógica para evitar roces visuales.
-const PHYSICAL_DOOR_LEFT = (18 - 1) * GRID - GRID / 2;
-const PHYSICAL_DOOR_RIGHT = (20 - 1) * GRID + GRID / 2;
-const PHYSICAL_DOOR_TOP = (7 - 1) * GRID - GRID / 2;
+// La aproximación a la iglesia queda expresamente transitable desde la plaza hasta la fachada.
+// Es más ancha que el hueco visual para que el cuerpo físico del personaje no roce con ningún
+// borde heredado del edificio o de la antigua franja de tierra.
+const CHURCH_APPROACH = new Phaser.Geom.Rectangle(
+  CHURCH_CENTER_X - GRID * 2,
+  CHURCH_BASE_Y - GRID * 2,
+  GRID * 4,
+  GRID * 4
+);
+
+// Disparamos la transición ANTES de que el cuerpo llegue a tocar la fachada. La zona cubre
+// el tramo final de aproximación (F8 y parte de F9), centrado en la puerta de la iglesia.
+const CHURCH_TRIGGER = new Phaser.Geom.Rectangle(
+  CHURCH_CENTER_X - GRID,
+  CHURCH_BASE_Y + 4,
+  GRID * 2,
+  GRID * 2
+);
+
+const CHURCH_RETURN = new Phaser.Math.Vector2((18 - 0.5) * GRID, (8 - 0.5) * GRID);
+
+// Hueco físico amplio en el centro de la fachada.
+const PHYSICAL_DOOR_LEFT = CHURCH_CENTER_X - GRID * 1.5;
+const PHYSICAL_DOOR_RIGHT = CHURCH_CENTER_X + GRID * 1.5;
+const PHYSICAL_DOOR_TOP = CHURCH_BASE_Y - GRID * 2;
+
+function blockerBounds(blocker: Phaser.GameObjects.Rectangle): Phaser.Geom.Rectangle {
+  return new Phaser.Geom.Rectangle(
+    blocker.x - blocker.width / 2,
+    blocker.y - blocker.height / 2,
+    blocker.width,
+    blocker.height
+  );
+}
 
 function replaceChurchBlocker(scene: AldeaRuntime): void {
   const churchBlocker = scene.worldColliders.find((blocker) => {
@@ -60,6 +86,22 @@ function replaceChurchBlocker(scene: AldeaRuntime): void {
     churchBlocker.destroy();
   }
 
+  // Limpieza defensiva: si algún refinamiento anterior dejó un collider invisible justo en el
+  // acceso central, lo retiramos. Solo afectamos al corredor estrecho frente a la puerta.
+  const doorwayClearance = new Phaser.Geom.Rectangle(
+    PHYSICAL_DOOR_LEFT,
+    PHYSICAL_DOOR_TOP,
+    PHYSICAL_DOOR_RIGHT - PHYSICAL_DOOR_LEFT,
+    CHURCH_BASE_Y - PHYSICAL_DOOR_TOP + GRID * 2
+  );
+
+  scene.worldColliders.slice().forEach((blocker) => {
+    if (!blocker.active) return;
+    if (!Phaser.Geom.Intersects.RectangleToRectangle(blockerBounds(blocker), doorwayClearance)) return;
+    scene.worldColliders = scene.worldColliders.filter((item) => item !== blocker);
+    blocker.destroy();
+  });
+
   const leftEdge = CHURCH_CENTER_X - CHURCH_WIDTH / 2;
   const rightEdge = CHURCH_CENTER_X + CHURCH_WIDTH / 2;
 
@@ -71,8 +113,10 @@ function replaceChurchBlocker(scene: AldeaRuntime): void {
     scene.worldColliders.push(blocker);
   };
 
+  // Cuerpo de la iglesia por encima del hueco.
   addBlocker(CHURCH_CENTER_X, PHYSICAL_DOOR_TOP / 2, CHURCH_WIDTH, PHYSICAL_DOOR_TOP);
 
+  // Laterales sólidos, dejando libre por completo el corredor central.
   const doorwayHeight = CHURCH_BASE_Y - PHYSICAL_DOOR_TOP;
   const leftWidth = PHYSICAL_DOOR_LEFT - leftEdge;
   addBlocker(leftEdge + leftWidth / 2, PHYSICAL_DOOR_TOP + doorwayHeight / 2, leftWidth, doorwayHeight);
@@ -80,12 +124,13 @@ function replaceChurchBlocker(scene: AldeaRuntime): void {
   const rightWidth = rightEdge - PHYSICAL_DOOR_RIGHT;
   addBlocker(PHYSICAL_DOOR_RIGHT + rightWidth / 2, PHYSICAL_DOOR_TOP + doorwayHeight / 2, rightWidth, doorwayHeight);
 
-  // Corredor transitable que enlaza la plaza con la nueva fila de entrada F8.
+  // El sistema base de Aldea solo permite caminar por rectángulos registrados en walkableAreas.
+  // Registramos explícitamente toda la zona de tierra/retranqueo de la iglesia como transitable.
   scene.walkableAreas.push(new Phaser.Geom.Rectangle(
-    PHYSICAL_DOOR_LEFT,
-    PHYSICAL_DOOR_TOP,
-    PHYSICAL_DOOR_RIGHT - PHYSICAL_DOOR_LEFT,
-    CHURCH_TRIGGER.bottom - PHYSICAL_DOOR_TOP + GRID
+    CHURCH_APPROACH.x,
+    CHURCH_APPROACH.y,
+    CHURCH_APPROACH.width,
+    CHURCH_APPROACH.height
   ));
 }
 
@@ -127,12 +172,10 @@ export function installChurchEntranceRefinement(): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     if (!body) return;
 
-    const footX = this.player.x;
-    const footY = this.player.y + 20;
-    const insideTrigger = Phaser.Geom.Rectangle.Contains(CHURCH_TRIGGER, footX, footY);
+    // Usamos el centro del personaje para que la transición ocurra antes de que su cuerpo físico
+    // pueda tocar la fachada. No dependemos de la velocidad ni de penetrar en el edificio.
+    const insideTrigger = Phaser.Geom.Rectangle.Contains(CHURCH_TRIGGER, this.player.x, this.player.y);
 
-    // Al volver de la iglesia aparecemos en C18/F8. No permitimos reentrar instantáneamente:
-    // primero hay que abandonar esa celda y después ya queda rearmado el acceso.
     if (this.__churchReturnGuard) {
       if (!insideTrigger) this.__churchReturnGuard = false;
       return;
