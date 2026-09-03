@@ -18,6 +18,7 @@ type AldeaRuntime = Phaser.Scene & {
   walkableAreas: Phaser.Geom.Rectangle[];
   __churchTransitioning?: boolean;
   __returningFromChurch?: boolean;
+  __churchReturnGuard?: boolean;
 };
 
 type AldeaPrototype = {
@@ -28,18 +29,19 @@ type AldeaPrototype = {
 };
 
 const GRID = 32;
-const CHURCH_TRIGGER = new Phaser.Geom.Rectangle((18 - 1) * GRID, (7 - 1) * GRID, GRID * 2, GRID);
+// La entrada lógica se baja una fila: C18/F8 y C19/F8. Así la transición se dispara
+// delante de la fachada, antes de que el cuerpo del personaje alcance el collider de la iglesia.
+const CHURCH_TRIGGER = new Phaser.Geom.Rectangle((18 - 1) * GRID, (8 - 1) * GRID, GRID * 2, GRID);
 const CHURCH_RETURN = new Phaser.Math.Vector2((18 - 0.5) * GRID, (8 - 0.5) * GRID);
 const CHURCH_CENTER_X = (19 - 0.5) * GRID;
 const CHURCH_BASE_Y = 7 * GRID;
 const CHURCH_WIDTH = 240;
 const CHURCH_HEIGHT = 224;
 
-// Abrimos físicamente algo más que las dos celdas de disparo para que el cuerpo del
-// personaje no roce con los laterales del blocker al aproximarse a C18/F7-C19/F7.
-const PHYSICAL_DOOR_LEFT = CHURCH_TRIGGER.left - GRID / 2;
-const PHYSICAL_DOOR_RIGHT = CHURCH_TRIGGER.right + GRID / 2;
-const PHYSICAL_DOOR_TOP = CHURCH_TRIGGER.top - GRID / 2;
+// El hueco físico sigue siendo algo más ancho que la entrada lógica para evitar roces visuales.
+const PHYSICAL_DOOR_LEFT = (18 - 1) * GRID - GRID / 2;
+const PHYSICAL_DOOR_RIGHT = (20 - 1) * GRID + GRID / 2;
+const PHYSICAL_DOOR_TOP = (7 - 1) * GRID - GRID / 2;
 
 function replaceChurchBlocker(scene: AldeaRuntime): void {
   const churchBlocker = scene.worldColliders.find((blocker) => {
@@ -69,11 +71,8 @@ function replaceChurchBlocker(scene: AldeaRuntime): void {
     scene.worldColliders.push(blocker);
   };
 
-  // Cuerpo superior de la iglesia, retirado media celda más hacia arriba para que
-  // el personaje pueda penetrar con naturalidad en el hueco antes de disparar la transición.
   addBlocker(CHURCH_CENTER_X, PHYSICAL_DOOR_TOP / 2, CHURCH_WIDTH, PHYSICAL_DOOR_TOP);
 
-  // Laterales sólidos hasta la base de la iglesia, dejando un corredor central holgado.
   const doorwayHeight = CHURCH_BASE_Y - PHYSICAL_DOOR_TOP;
   const leftWidth = PHYSICAL_DOOR_LEFT - leftEdge;
   addBlocker(leftEdge + leftWidth / 2, PHYSICAL_DOOR_TOP + doorwayHeight / 2, leftWidth, doorwayHeight);
@@ -81,13 +80,12 @@ function replaceChurchBlocker(scene: AldeaRuntime): void {
   const rightWidth = rightEdge - PHYSICAL_DOOR_RIGHT;
   addBlocker(PHYSICAL_DOOR_RIGHT + rightWidth / 2, PHYSICAL_DOOR_TOP + doorwayHeight / 2, rightWidth, doorwayHeight);
 
-  // Garantiza que el corredor desde la plaza hasta C18/F7-C19/F7 sea considerado transitable
-  // por el sistema de walkableAreas de AldeaScene.
+  // Corredor transitable que enlaza la plaza con la nueva fila de entrada F8.
   scene.walkableAreas.push(new Phaser.Geom.Rectangle(
     PHYSICAL_DOOR_LEFT,
     PHYSICAL_DOOR_TOP,
     PHYSICAL_DOOR_RIGHT - PHYSICAL_DOOR_LEFT,
-    CHURCH_BASE_Y - PHYSICAL_DOOR_TOP + GRID
+    CHURCH_TRIGGER.bottom - PHYSICAL_DOOR_TOP + GRID
   ));
 }
 
@@ -104,6 +102,7 @@ export function installChurchEntranceRefinement(): void {
     originalInit.call(this, data);
     this.__churchTransitioning = false;
     this.__returningFromChurch = data.returnX === CHURCH_RETURN.x && data.returnY === CHURCH_RETURN.y;
+    this.__churchReturnGuard = this.__returningFromChurch;
   };
 
   prototype.create = function createChurchEntrance(this: AldeaRuntime): void {
@@ -130,7 +129,16 @@ export function installChurchEntranceRefinement(): void {
 
     const footX = this.player.x;
     const footY = this.player.y + 20;
-    if (!Phaser.Geom.Rectangle.Contains(CHURCH_TRIGGER, footX, footY)) return;
+    const insideTrigger = Phaser.Geom.Rectangle.Contains(CHURCH_TRIGGER, footX, footY);
+
+    // Al volver de la iglesia aparecemos en C18/F8. No permitimos reentrar instantáneamente:
+    // primero hay que abandonar esa celda y después ya queda rearmado el acceso.
+    if (this.__churchReturnGuard) {
+      if (!insideTrigger) this.__churchReturnGuard = false;
+      return;
+    }
+
+    if (!insideTrigger) return;
 
     this.__churchTransitioning = true;
     body.setVelocity(0);
