@@ -27,6 +27,7 @@ import { installAldeaVillageRefinement } from './aldeaVillageRefinement';
 import { installAldeaFountainRefinement } from './aldeaFountainRefinement';
 import { installVillageVisualAndAccessRefinement } from './villageVisualAndAccessRefinement';
 import { installChurchEntranceRefinement } from './churchEntranceRefinement';
+import { installPlayerProgressBridge } from './playerProgressBridge';
 
 installArkanisTypography();
 installTrainingGameOverHook();
@@ -43,6 +44,7 @@ installAldeaVillageRefinement();
 installAldeaFountainRefinement();
 installVillageVisualAndAccessRefinement();
 installChurchEntranceRefinement();
+installPlayerProgressBridge();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
