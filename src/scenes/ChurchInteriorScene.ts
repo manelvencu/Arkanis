@@ -130,12 +130,8 @@ export class ChurchInteriorScene extends Phaser.Scene {
       this.player.setTexture(`church-player-${this.animatedCharacter}-${this.facing === 'side' ? 'side' : this.facing}`);
     }
 
-    // Igual que en las nuevas cabañas: de momento solo contenemos al jugador en el mapa.
-    // La geometría exacta de bancos, altar y paredes se marcará con grid tras la prueba visual.
-    this.player.x = Phaser.Math.Clamp(this.player.x, 34, ROOM_WIDTH - 34);
-    this.player.y = Phaser.Math.Clamp(this.player.y, 54, ROOM_HEIGHT - 22);
-    body.updateFromGameObject();
-
+    // Igual que en las nuevas cabañas: Arcade Physics gestiona el movimiento y el
+    // límite exterior del mapa. Más adelante añadiremos las colisiones exactas con grid.
     this.checkExit();
   }
 
