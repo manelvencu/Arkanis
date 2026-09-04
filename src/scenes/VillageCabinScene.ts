@@ -214,8 +214,70 @@ export class VillageCabinScene extends Phaser.Scene {
     if (progress.energy < 100) {
       setVillageEnergy(100);
       this.ui.updateEnergy(100);
+      this.playEnergyRecoveryEffect();
     }
     this.showMessage('Toma de nuestro vino y retoma fuerzas para el camino');
+  }
+
+  private playEnergyRecoveryEffect(): void {
+    const uiCamera = this.cameras.getCamera('VillageCabinSceneUICamera');
+    if (!uiCamera) return;
+
+    // Coordenadas físicas del HUD (el UI trabaja a 1920x1080 aunque el interior sea 960x540).
+    const centerX = 190 * 2;
+    const centerY = 105 * 2;
+
+    const glow = this.add.rectangle(centerX, centerY, 570, 92, 0xf6d36b, 0.12)
+      .setStrokeStyle(8, 0xffe889, 0.95)
+      .setScrollFactor(0)
+      .setDepth(1400)
+      .setAlpha(0);
+    const label = this.add.text(centerX, centerY + 58, 'ENERGÍA RECUPERADA', {
+      fontFamily: 'Georgia, Times New Roman, serif',
+      fontSize: '28px',
+      color: '#fff0a8',
+      fontStyle: 'bold',
+      stroke: '#5b3a08',
+      strokeThickness: 5
+    })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(1401)
+      .setAlpha(0);
+
+    // Estos elementos pertenecen exclusivamente al HUD: evitamos que la cámara del mundo
+    // los dibuje también con su zoom y desplazamiento.
+    this.cameras.main.ignore([glow, label]);
+
+    this.tweens.add({
+      targets: glow,
+      alpha: { from: 0, to: 1 },
+      scaleX: { from: 0.96, to: 1.08 },
+      scaleY: { from: 0.82, to: 1.18 },
+      duration: 230,
+      yoyo: true,
+      repeat: 2,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: glow,
+          alpha: 0,
+          duration: 350,
+          onComplete: () => glow.destroy()
+        });
+      }
+    });
+
+    this.tweens.add({
+      targets: label,
+      alpha: 1,
+      y: centerY + 50,
+      duration: 260,
+      hold: 900,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+      onComplete: () => label.destroy()
+    });
   }
 
   private showMessage(message: string): void {
