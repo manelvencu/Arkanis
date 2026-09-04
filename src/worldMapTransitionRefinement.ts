@@ -17,6 +17,9 @@ type TrainingRuntime = {
   coinsCollected: number;
 };
 
+const REGISTRY_ENERGY_KEY = 'arkanis.player.energy';
+const REGISTRY_COINS_KEY = 'arkanis.player.coins';
+
 export function installWorldMapTransitionRefinement(): void {
   const prototype = TrainingScene.prototype as unknown as TrainingPrototype;
   if (prototype.__worldMapTransitionInstalled) return;
@@ -39,14 +42,23 @@ export function installWorldMapTransitionRefinement(): void {
     body.setVelocity(0);
     runtime.player.anims.stop();
 
-    // El estado del personaje es global entre pantallas: lo que se haya perdido o
-    // recogido en Zona Entrenamiento debe llegar intacto a Mapa Mundial y La Aldea.
-    setVillageProgressFromTraining(runtime.energy, runtime.coinsCollected);
+    const energy = Math.max(0, Math.min(100, runtime.energy));
+    const coins = Math.max(0, Math.floor(runtime.coinsCollected));
+
+    // Guardamos el estado en dos capas: progreso de juego y Registry de Phaser.
+    // El Registry pertenece a la instancia completa del juego y sobrevive a los cambios de escena.
+    setVillageProgressFromTraining(energy, coins);
+    this.registry.set(REGISTRY_ENERGY_KEY, energy);
+    this.registry.set(REGISTRY_COINS_KEY, coins);
 
     this.cameras.main.fadeOut(750, 3, 2, 8);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.physics.pause();
-      this.scene.start('WorldMapScene', { characterId: runtime.characterId });
+      this.scene.start('WorldMapScene', {
+        characterId: runtime.characterId,
+        energy,
+        coins
+      });
     });
   };
 }
