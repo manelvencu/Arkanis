@@ -20,6 +20,11 @@ export function getVillageProgress(): VillageProgress {
   return progress;
 }
 
+export function setVillageProgressFromTraining(energy: number, coins: number): void {
+  progress.energy = Math.max(0, Math.min(100, energy));
+  progress.coins = Math.max(0, Math.floor(coins));
+}
+
 export function takeNextNpcMessage(): { message: string; deliveredHolder: boolean } | null {
   const messages = [
     'Hay ocho mundos que deberás ir visitando. En cada uno deberás conseguir un fragmento de la Joya de Arkanis.',
