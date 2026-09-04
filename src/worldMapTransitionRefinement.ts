@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { TrainingScene } from './scenes/TrainingScene';
+import { setVillageProgressFromTraining } from './villageProgress';
 
 type TrainingPrototype = {
   __worldMapTransitionInstalled?: boolean;
@@ -12,6 +13,8 @@ type TrainingRuntime = {
   player: Phaser.Physics.Arcade.Sprite;
   barrier: Phaser.Physics.Arcade.Image;
   characterId: string;
+  energy: number;
+  coinsCollected: number;
 };
 
 export function installWorldMapTransitionRefinement(): void {
@@ -35,6 +38,11 @@ export function installWorldMapTransitionRefinement(): void {
     runtime.isExiting = true;
     body.setVelocity(0);
     runtime.player.anims.stop();
+
+    // El estado del personaje es global entre pantallas: lo que se haya perdido o
+    // recogido en Zona Entrenamiento debe llegar intacto a Mapa Mundial y La Aldea.
+    setVillageProgressFromTraining(runtime.energy, runtime.coinsCollected);
+
     this.cameras.main.fadeOut(750, 3, 2, 8);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.physics.pause();
