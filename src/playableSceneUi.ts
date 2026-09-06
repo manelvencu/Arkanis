@@ -7,8 +7,17 @@ const LOGICAL_WIDTH = 960;
 const LOGICAL_HEIGHT = 540;
 const PHYSICAL_WIDTH = LOGICAL_WIDTH * HD_SCALE;
 const PHYSICAL_HEIGHT = LOGICAL_HEIGHT * HD_SCALE;
+const ENERGY_FRAME_CENTER_X = 190 * HD_SCALE;
+const ENERGY_FRAME_CENTER_Y = 105 * HD_SCALE;
+const ENERGY_FRAME_WIDTH = 264 * HD_SCALE;
+const ENERGY_FRAME_HEIGHT = 34 * HD_SCALE;
 const ENERGY_FULL_WIDTH = 220 * HD_SCALE;
 const ENERGY_FILL_HEIGHT = 16 * HD_SCALE;
+// El PNG del relleno tiene su masa visual ligeramente baja dentro del lienzo.
+// Este pequeño ajuste centra VISUALMENTE el relleno dentro del marco.
+const ENERGY_FILL_VISUAL_OFFSET_Y = -3 * HD_SCALE;
+const ENERGY_FILL_LEFT_X = ENERGY_FRAME_CENTER_X - ENERGY_FULL_WIDTH / 2;
+const ENERGY_FILL_CENTER_Y = ENERGY_FRAME_CENTER_Y + ENERGY_FILL_VISUAL_OFFSET_Y;
 const DPAD_CENTER_X = 112 * HD_SCALE;
 const DPAD_CENTER_Y = (LOGICAL_HEIGHT - 108) * HD_SCALE;
 const DPAD_SPACING = 56 * HD_SCALE;
@@ -23,6 +32,7 @@ export interface PlayableUiController {
   consumeShootRequest: () => boolean;
   updateEnergy: (energy: number) => void;
   updateCoins: (coins: number) => void;
+  updateStatus: (text: string) => void;
   ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => void;
 }
 
@@ -71,18 +81,20 @@ export function createPlayableUi(
     strokeThickness: 2 * HD_SCALE
   }).setOrigin(0.5).setScrollFactor(0).setDepth(1005));
 
-  const energyGold = remember(scene.add.image(80 * HD_SCALE, 102 * HD_SCALE, 'playable-energyGold')
+  // El relleno se calcula siempre a partir del centro del marco. Así el 100 % queda
+  // centrado en X y el offset Y compensa únicamente el margen visual del propio PNG.
+  const energyGold = remember(scene.add.image(ENERGY_FILL_LEFT_X, ENERGY_FILL_CENTER_Y, 'playable-energyGold')
     .setOrigin(0, 0.5)
     .setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT)
     .setScrollFactor(0)
     .setDepth(1003));
-  const energyRed = remember(scene.add.image(80 * HD_SCALE, 102 * HD_SCALE, 'playable-energyRed')
+  const energyRed = remember(scene.add.image(ENERGY_FILL_LEFT_X, ENERGY_FILL_CENTER_Y, 'playable-energyRed')
     .setOrigin(0, 0.5)
     .setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT)
     .setScrollFactor(0)
     .setDepth(1003));
-  remember(scene.add.image(190 * HD_SCALE, 105 * HD_SCALE, 'playable-energyFrame')
-    .setDisplaySize(264 * HD_SCALE, 34 * HD_SCALE)
+  remember(scene.add.image(ENERGY_FRAME_CENTER_X, ENERGY_FRAME_CENTER_Y, 'playable-energyFrame')
+    .setDisplaySize(ENERGY_FRAME_WIDTH, ENERGY_FRAME_HEIGHT)
     .setScrollFactor(0)
     .setDepth(1004));
 
@@ -96,6 +108,14 @@ export function createPlayableUi(
     color: '#2a1808',
     fontStyle: 'bold'
   }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(1005));
+
+  const statusText = remember(scene.add.text((LOGICAL_WIDTH / 2) * HD_SCALE, 44 * HD_SCALE, '', {
+    fontFamily: 'Arial',
+    fontSize: `${15 * HD_SCALE}px`,
+    color: '#2a1808',
+    fontStyle: 'bold',
+    align: 'center'
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(1005));
 
   const menu = remember(scene.add.image((LOGICAL_WIDTH - 80) * HD_SCALE, 44 * HD_SCALE, 'playable-menu')
     .setDisplaySize(40 * HD_SCALE, 40 * HD_SCALE)
@@ -203,8 +223,17 @@ export function createPlayableUi(
     const clamped = Phaser.Math.Clamp(energy, 0, 100);
     const fillWidth = ENERGY_FULL_WIDTH * (clamped / 100);
     const isCritical = clamped < 30;
-    energyGold.setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT).setVisible(!isCritical);
-    energyRed.setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT).setVisible(isCritical);
+
+    energyGold
+      .setPosition(ENERGY_FILL_LEFT_X, ENERGY_FILL_CENTER_Y)
+      .setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT)
+      .clearTint()
+      .setVisible(!isCritical);
+    energyRed
+      .setPosition(ENERGY_FILL_LEFT_X, ENERGY_FILL_CENTER_Y)
+      .setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT)
+      .clearTint()
+      .setVisible(isCritical);
   };
   updateEnergy(initialEnergy);
 
@@ -217,6 +246,7 @@ export function createPlayableUi(
     },
     updateEnergy,
     updateCoins: (coins: number) => coinCounter.setText(String(coins)),
+    updateStatus: (text: string) => statusText.setText(text),
     ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => uiCamera.ignore(object)
   };
 }
