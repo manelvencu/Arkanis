@@ -16,8 +16,11 @@ export type InteriorGridDefinition = {
   blocked?: InteriorCellRange[];
 };
 
-export type FootPointDefinition = {
-  /** Vertical offset from sprite centre to the point between the character's feet. */
+// Se conserva este nombre mientras CabinInteriorScene migra su nomenclatura.
+// width/height ya no deciden la celda: la autoridad es un único punto entre los pies.
+export type FootprintDefinition = {
+  width: number;
+  height: number;
   offsetY: number;
 };
 
@@ -49,7 +52,7 @@ function buildCellSet(ranges: InteriorCellRange[]): ReadonlySet<string> {
 export function buildWalkableCellSet(definition: InteriorGridDefinition): ReadonlySet<string> {
   if (definition.walkable) return buildCellSet(definition.walkable);
 
-  // Compatibilidad temporal con interiores todavía definidos como zonas bloqueadas.
+  // Compatibilidad temporal con interiores aún expresados como bloqueos.
   const blocked = buildCellSet(definition.blocked ?? []);
   const walkable = new Set<string>();
   for (let f = 1; f <= definition.rows; f += 1) {
@@ -61,22 +64,33 @@ export function buildWalkableCellSet(definition: InteriorGridDefinition): Readon
   return walkable;
 }
 
-export function isFootPointWalkable(
+/**
+ * Alias temporal por compatibilidad con CabinInteriorScene.
+ * Aunque el nombre histórico diga "Blocked", devuelve el conjunto AUTORIZADO.
+ * El siguiente interior nuevo debe usar directamente buildWalkableCellSet.
+ */
+export function buildBlockedCellSet(definition: InteriorGridDefinition): ReadonlySet<string> {
+  return buildWalkableCellSet(definition);
+}
+
+export function isFootprintWalkable(
   spriteX: number,
   spriteY: number,
   definition: InteriorGridDefinition,
   walkableCells: ReadonlySet<string>,
-  footPoint: FootPointDefinition
+  footprint: FootprintDefinition
 ): boolean {
-  const x = spriteX;
-  const y = spriteY + footPoint.offsetY;
+  // Punto de autoridad: centro horizontal del sprite + punto central entre los pies.
+  // La cabeza, hombros y ancho visual pueden solaparse por perspectiva sin alterar la colisión.
+  const footX = spriteX;
+  const footY = spriteY + footprint.offsetY;
 
-  if (x < 0 || x >= definition.roomWidth || y < 0 || y >= definition.roomHeight) return false;
+  if (footX < 0 || footX >= definition.roomWidth || footY < 0 || footY >= definition.roomHeight) return false;
 
   const cellWidth = definition.roomWidth / definition.columns;
   const cellHeight = definition.roomHeight / definition.rows;
-  const column = Math.floor(x / cellWidth) + 1;
-  const row = Math.floor(y / cellHeight) + 1;
+  const column = Math.floor(footX / cellWidth) + 1;
+  const row = Math.floor(footY / cellHeight) + 1;
 
   return walkableCells.has(`${column}:${row}`);
 }
@@ -88,7 +102,7 @@ export function moveOnInteriorGrid(
   deltaY: number,
   definition: InteriorGridDefinition,
   walkableCells: ReadonlySet<string>,
-  footPoint: FootPointDefinition
+  footprint: FootprintDefinition
 ): GridMoveResult {
   const distance = Math.max(Math.abs(deltaX), Math.abs(deltaY));
   const steps = Math.max(1, Math.ceil(distance / MAX_STEP_PIXELS));
@@ -99,13 +113,13 @@ export function moveOnInteriorGrid(
   let y = startY;
 
   for (let step = 0; step < steps; step += 1) {
-    // Resolver por ejes permite deslizarse de forma natural por los bordes sin
-    // permitir que el punto de apoyo entre jamás en una celda no jugable.
+    // Ejes independientes: al chocar en diagonal se desliza por el eje libre,
+    // pero el punto de los pies nunca puede entrar en una celda no jugable.
     const candidateX = x + stepX;
-    if (isFootPointWalkable(candidateX, y, definition, walkableCells, footPoint)) x = candidateX;
+    if (isFootprintWalkable(candidateX, y, definition, walkableCells, footprint)) x = candidateX;
 
     const candidateY = y + stepY;
-    if (isFootPointWalkable(x, candidateY, definition, walkableCells, footPoint)) y = candidateY;
+    if (isFootprintWalkable(x, candidateY, definition, walkableCells, footprint)) y = candidateY;
   }
 
   return { x, y, movedX: x - startX, movedY: y - startY };
