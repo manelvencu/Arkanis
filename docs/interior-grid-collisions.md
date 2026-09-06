@@ -7,9 +7,12 @@ Este documento define cómo deben construirse a partir de ahora las colisiones d
 La rejilla visual y la colisión son dos cosas distintas.
 
 - La rejilla visible sirve únicamente para marcar y revisar celdas.
-- La colisión real se guarda como datos de celdas bloqueadas.
-- Una celda bloqueada es **no jugable**: los pies del personaje no pueden entrar en ella desde ninguna dirección.
+- La colisión real se guarda como datos de **área jugable**.
+- Por defecto, una celda es **NO JUGABLE**.
+- Solo las celdas declaradas expresamente como jugables pueden ser pisadas.
 - No se deben crear parches independientes para izquierda, derecha, arriba o abajo.
+
+Esta es la convención preferida para todos los interiores nuevos.
 
 ## Grid estándar actual
 
@@ -23,17 +26,27 @@ Los interiores actuales usan:
 
 La guía visual puede ocultarse con G sin alterar las colisiones.
 
-## Cómo se define una zona bloqueada
+## Punto de referencia del personaje
 
-Las zonas se expresan mediante rangos inclusivos de celdas:
+La autoridad de movimiento es un único punto: **el centro entre los pies del personaje**.
+
+Al definir un mapa no hay que pensar en la cabeza, hombros ni anchura visual del sprite. Es normal que, por perspectiva, parte del personaje pueda solaparse visualmente con una cama, mesa o pared. Lo que nunca puede ocurrir es que el punto central entre sus pies entre en una celda no jugable.
+
+En las escenas actuales ese punto se calcula con un desplazamiento vertical de +25 px desde el centro lógico del sprite.
+
+## Cómo se define el área jugable
+
+Las zonas jugables se expresan mediante rangos inclusivos de celdas:
 
 ```ts
-cellRange(1, 1, 30, 4)   // F1-F4 completas
-cellRange(5, 6, 8, 8)    // C5-C8, F6-F8
-cellRange(1, 13, 13, 15) // parte izquierda de F13-F15
+cellRange(9, 6, 26, 6)   // F6C9 a F6C26
+cellRange(5, 9, 23, 10)  // F9-F10, C5-C23
+cellRange(14, 13, 17, 15) // pasillo de salida F13-F15, C14-C17
 ```
 
-Los mapas actuales de las cabañas de ZE están centralizados en:
+**Todo lo que no aparezca en esos rangos queda automáticamente prohibido.**
+
+Los mapas están centralizados en:
 
 `src/interiorCollisionMaps.ts`
 
@@ -48,45 +61,58 @@ No confiamos en que Arcade Physics empuje al personaje fuera de rectángulos fí
 Antes de aplicar cada desplazamiento:
 
 1. Se calcula la nueva posición propuesta.
-2. Se calcula la huella de los pies del personaje.
-3. Se comprueban todas las celdas que tocaría esa huella.
-4. Si alguna está bloqueada, ese desplazamiento no se aplica.
+2. Se calcula el punto central entre los pies.
+3. Se obtiene la celda del grid que contiene ese punto.
+4. Si esa celda no está declarada como jugable, ese componente del desplazamiento no se aplica.
 5. El movimiento diagonal se resuelve por ejes, permitiendo deslizarse por una pared sin atravesarla.
-6. Cada frame se divide internamente en pasos de máximo 4 px para evitar atravesar una celda por velocidad alta o lag.
+6. Cada frame se divide internamente en pasos de máximo 4 px para evitar saltarse una celda por velocidad alta o lag.
 
-Por tanto, una celda bloqueada no se puede atravesar lateralmente, perpendicularmente ni en diagonal.
-
-## Huella del personaje
-
-Para interiores se usa una huella lógica centrada en los pies, no todo el sprite:
-
-- ancho: 30 px;
-- alto: 18 px;
-- desplazamiento vertical respecto al centro del sprite: +25 px.
-
-Esto permite que la parte visual superior del personaje pueda solaparse con mobiliario en perspectiva, mientras sus pies siguen respetando el suelo jugable.
+Por tanto, una celda no jugable no puede pisarse ni atravesarse lateralmente, perpendicularmente ni en diagonal.
 
 ## Flujo para crear un nuevo interior
 
 1. Crear o reutilizar el fondo 960 x 540.
 2. Mostrar la guía 30 x 15.
-3. Recorrer visualmente la habitación tomando siempre como referencia los pies del personaje.
-4. Anotar las celdas o rangos no jugables.
-5. Añadir esos rangos al mapa de colisión del interior.
-6. Mantener libres expresamente puertas, pasillos y zonas de interacción.
-7. Probar entrada desde los cuatro lados y en diagonal.
-8. Ocultar la guía y repetir una prueba rápida: la colisión debe ser idéntica.
+3. Recorrer visualmente la habitación tomando siempre como referencia el **centro entre los pies**.
+4. Anotar únicamente las celdas o rangos JUGABLES.
+5. Añadir esos rangos al mapa del interior.
+6. Todo el resto queda no jugable automáticamente.
+7. Probar los bordes desde los cuatro lados y en diagonal.
+8. Ocultar la guía y repetir una prueba rápida: el comportamiento debe ser idéntico.
+
+## Formato recomendado al definir una habitación
+
+Ejemplo:
+
+```text
+Área jugable:
+F6C9 a F6C26
+F7C9 a F8C23
+F9C5 a F10C23
+F11C5 a F11C26
+F12C6 a F12C26
+F13C14 a F15C17
+
+Todo lo demás no es jugable.
+```
+
+Ese formato es suficiente para construir el mapa.
 
 ## Qué no hacer
 
+- No definir primero todo como jugable y después intentar cerrar decenas de zonas con parches.
 - No crear un collider distinto para cada lado de una pared.
 - No añadir límites X/Y manuales específicos para corregir una fuga.
 - No depender de rectángulos Arcade solapados para representar las celdas no jugables.
 - No usar la imagen de la rejilla como sistema de colisión.
-- No modificar el tamaño de la huella por habitación salvo que exista una razón de diseño documentada.
+- No usar el centro visual del personaje como referencia de suelo.
+
+## Compatibilidad temporal
+
+Algunos interiores anteriores pueden conservar durante la migración una lista de celdas bloqueadas. El motor puede convertir temporalmente ese formato a celdas permitidas, pero los interiores nuevos y los que vayamos afinando deben pasar al modelo positivo de **área jugable**.
 
 ## Reutilización
 
-Si dos interiores usan exactamente la misma distribución, deben reutilizar el mismo conjunto de rangos, como hacen actualmente Cabaña 1 y Cabaña 3 de ZE.
+Si dos interiores usan exactamente la misma distribución, deben reutilizar el mismo conjunto de rangos. Cabaña 1 y Cabaña 3 de ZE comparten actualmente la misma distribución y, por tanto, el mismo mapa jugable.
 
-Cuando empecemos a definir las cabañas de La Aldea, la tienda de vino y la iglesia, deben incorporarse al mismo sistema de datos y validación, no crear sistemas de colisión nuevos por escena.
+Cuando definamos las cabañas de La Aldea, la tienda de vino, la iglesia y futuros interiores, deben incorporarse a este mismo sistema de datos y validación.
