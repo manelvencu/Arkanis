@@ -31,6 +31,7 @@ import { installPlayerProgressBridge } from './playerProgressBridge';
 import { installInteriorGridRefinement } from './interiorGridRefinement';
 import { installCabinOneCollisionRefinement } from './cabinOneCollisionRefinement';
 import { installCabinTwoCollisionRefinement } from './cabinTwoCollisionRefinement';
+import { installCabinThreeCollisionRefinement } from './cabinThreeCollisionRefinement';
 
 installArkanisTypography();
 installTrainingGameOverHook();
@@ -51,6 +52,7 @@ installPlayerProgressBridge();
 installInteriorGridRefinement();
 installCabinOneCollisionRefinement();
 installCabinTwoCollisionRefinement();
+installCabinThreeCollisionRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
