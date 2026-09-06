@@ -75,10 +75,16 @@ export function installAldeaWalkableGridRefinement(): void {
   prototype.create = function createWithGridOwnedCollision(this: AldeaRuntime): void {
     originalCreate.call(this);
 
-    // El grid positivo es ahora la única autoridad para el movimiento del jugador.
-    // Los colliders físicos antiguos de edificios/árboles pueden contradecir una celda
-    // declarada jugable, especialmente en puertas. Los retiramos después de que todos
-    // los refinamientos anteriores hayan terminado de construir la escena.
+    // El grid positivo es la única autoridad para el movimiento del jugador.
+    // Desactivamos todos los cuerpos estáticos heredados de la etapa anterior (edificios,
+    // árboles, fuente o refinamientos) porque pueden bloquear físicamente una celda que el
+    // mapa positivo declara jugable. La whitelist ya impide atravesar cualquier zona no válida.
+    const staticBodies = [...this.physics.world.staticBodies.entries];
+    staticBodies.forEach((body) => {
+      const gameObject = body.gameObject;
+      if (gameObject && gameObject !== this.player) this.physics.world.disable(gameObject);
+    });
+
     this.worldColliders.forEach((blocker) => {
       if (blocker.active) blocker.destroy();
     });
