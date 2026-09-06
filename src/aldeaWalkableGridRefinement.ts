@@ -120,7 +120,7 @@ export function installAldeaWalkableGridRefinement(): void {
     // El grid positivo es la única autoridad para el movimiento del jugador.
     // Desactivamos todos los cuerpos estáticos heredados de la etapa anterior porque
     // pueden bloquear físicamente una celda que el mapa positivo declara jugable.
-    const staticBodies = [...this.physics.world.staticBodies.entries];
+    const staticBodies = Array.from(this.physics.world.staticBodies.values());
     staticBodies.forEach((body) => {
       const gameObject = body.gameObject;
       if (gameObject && gameObject !== this.player) this.physics.world.disable(gameObject);
