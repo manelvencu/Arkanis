@@ -33,6 +33,9 @@ const WALKABLE_RANGES: AldeaCellRange[] = [
   range(17, 11, 21, 11),
   range(11, 12, 21, 14),
 
+  // Continuación inferior de la plaza hacia el camino inferior izquierdo.
+  range(11, 15, 13, 19),
+
   // Acceso iglesia.
   range(18, 7, 19, 7),
 
