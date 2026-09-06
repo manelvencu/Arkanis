@@ -19,6 +19,30 @@ function range(c1: number, f1: number, c2: number, f2: number): AldeaCellRange {
   return { c1, f1, c2, f2 };
 }
 
+function buildCellSet(ranges: AldeaCellRange[]): ReadonlySet<string> {
+  const cells = new Set<string>();
+  for (const item of ranges) {
+    for (let f = item.f1; f <= item.f2; f += 1) {
+      for (let c = item.c1; c <= item.c2; c += 1) cells.add(`${c}:${f}`);
+    }
+  }
+  return cells;
+}
+
+/**
+ * Celdas exactas que disparan entradas en La Aldea.
+ * Regla estructural: TODA celda de entrada se añade también automáticamente
+ * al conjunto jugable para que nunca pueda existir una puerta inaccesible.
+ */
+export const ALDEA_ENTRANCE_CELLS = {
+  church: buildCellSet([range(18, 7, 19, 7)]),
+  blessing: buildCellSet([range(26, 13, 26, 13)]),
+  wine: buildCellSet([range(22, 19, 22, 20)]),
+  coins: buildCellSet([range(5, 18, 5, 19)])
+} as const;
+
+export type AldeaEntranceKey = keyof typeof ALDEA_ENTRANCE_CELLS;
+
 // Área jugable exterior de La Aldea.
 // Regla: únicamente estas celdas pueden ser pisadas por el centro entre los pies.
 // Todo lo demás queda fuera de la zona jugable.
@@ -65,24 +89,12 @@ const WALKABLE_RANGES: AldeaCellRange[] = [
   range(5, 18, 5, 19)
 ];
 
-function buildCellSet(ranges: AldeaCellRange[]): ReadonlySet<string> {
-  const cells = new Set<string>();
-  for (const item of ranges) {
-    for (let f = item.f1; f <= item.f2; f += 1) {
-      for (let c = item.c1; c <= item.c2; c += 1) cells.add(`${c}:${f}`);
-    }
-  }
-  return cells;
-}
+const walkableCells = new Set(buildCellSet(WALKABLE_RANGES));
+Object.values(ALDEA_ENTRANCE_CELLS).forEach((entranceCells) => {
+  entranceCells.forEach((cell) => walkableCells.add(cell));
+});
 
-export const ALDEA_WALKABLE_CELLS = buildCellSet(WALKABLE_RANGES);
-
-export const ALDEA_ENTRANCE_CELLS = {
-  church: buildCellSet([range(18, 7, 19, 7)]),
-  blessing: buildCellSet([range(26, 13, 26, 13)]),
-  wine: buildCellSet([range(22, 19, 22, 20)]),
-  coins: buildCellSet([range(5, 18, 5, 19)])
-} as const;
+export const ALDEA_WALKABLE_CELLS: ReadonlySet<string> = walkableCells;
 
 export function getAldeaFootCell(spriteX: number, spriteY: number): AldeaGridCell | null {
   const footX = spriteX;
@@ -104,7 +116,7 @@ export function isAldeaWalkableFootPoint(spriteX: number, spriteY: number): bool
 }
 
 export function isAldeaEntranceCell(
-  entrance: keyof typeof ALDEA_ENTRANCE_CELLS,
+  entrance: AldeaEntranceKey,
   spriteX: number,
   spriteY: number
 ): boolean {
