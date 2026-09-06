@@ -9,6 +9,12 @@ const GRID_ROWS = 15;
 const CELL_WIDTH = ROOM_WIDTH / GRID_COLUMNS;
 const CELL_HEIGHT = ROOM_HEIGHT / GRID_ROWS;
 
+// C1-C4 y C27-C30 son pared lateral. Como el cuerpo físico del jugador mide
+// 30px de ancho, su centro debe permanecer dentro de C5-C26 dejando medio cuerpo.
+const PLAYER_FOOT_BODY_HALF_WIDTH = 15;
+const HARD_LEFT_X = 4 * CELL_WIDTH + PLAYER_FOOT_BODY_HALF_WIDTH;
+const HARD_RIGHT_X = 26 * CELL_WIDTH - PLAYER_FOOT_BODY_HALF_WIDTH;
+
 type CabinOneRuntime = Phaser.Scene & {
   player: Phaser.Physics.Arcade.Sprite;
   interiorBlockers?: Phaser.Physics.Arcade.StaticGroup;
@@ -17,6 +23,7 @@ type CabinOneRuntime = Phaser.Scene & {
 type CabinOnePrototype = {
   __collisionGridRefinementInstalled?: boolean;
   create?: (this: CabinOneRuntime) => void;
+  update?: (this: CabinOneRuntime) => void;
 };
 
 export function installCabinOneCollisionRefinement(): void {
@@ -25,6 +32,7 @@ export function installCabinOneCollisionRefinement(): void {
   prototype.__collisionGridRefinementInstalled = true;
 
   const originalCreate = CabinInteriorScene.prototype.create as unknown as (this: CabinOneRuntime) => void;
+  const originalUpdate = CabinInteriorScene.prototype.update as unknown as (this: CabinOneRuntime) => void;
 
   prototype.create = function createCabinOneWithRefinedGrid(this: CabinOneRuntime): void {
     originalCreate.call(this);
@@ -69,5 +77,21 @@ export function installCabinOneCollisionRefinement(): void {
     // F13-F15 bloqueadas salvo el mismo pasillo C14-C17 hasta la salida.
     blockRange(1, 13, 13, 15);
     blockRange(18, 13, 30, 15);
+  };
+
+  prototype.update = function updateCabinOneWithHardSideBounds(this: CabinOneRuntime): void {
+    originalUpdate.call(this);
+
+    // Refuerzo determinista de los laterales. Evita que al mantener pulsada una
+    // dirección Arcade Physics permita acabar atravesando varios blockers contiguos.
+    // No depende de la guía visual del grid.
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    if (this.player.x < HARD_LEFT_X) {
+      this.player.setX(HARD_LEFT_X);
+      if (body.velocity.x < 0) body.setVelocityX(0);
+    } else if (this.player.x > HARD_RIGHT_X) {
+      this.player.setX(HARD_RIGHT_X);
+      if (body.velocity.x > 0) body.setVelocityX(0);
+    }
   };
 }
