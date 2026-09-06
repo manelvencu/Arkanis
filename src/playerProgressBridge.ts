@@ -1,7 +1,8 @@
+import * as Phaser from 'phaser';
 import { AldeaScene } from './scenes/AldeaScene';
 import { getVillageProgress, setVillageProgressFromTraining } from './villageProgress';
 
-type AldeaRuntime = AldeaScene & {
+type AldeaRuntime = Phaser.Scene & {
   ui: {
     updateEnergy: (energy: number) => void;
     updateCoins: (coins: number) => void;
