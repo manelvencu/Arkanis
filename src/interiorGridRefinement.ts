@@ -1,5 +1,4 @@
 import * as Phaser from 'phaser';
-import { CabinInteriorScene } from './scenes/CabinInteriorScene';
 import { VillageCabinScene } from './scenes/VillageCabinScene';
 import { ChurchInteriorScene } from './scenes/ChurchInteriorScene';
 import { createInteriorGridGuide } from './interiorGridGuide';
@@ -31,13 +30,15 @@ function installOnPrototype(prototype: CreatePrototype): void {
 }
 
 /**
- * Activa la rejilla temporal de definición de colisiones en todos los interiores:
- * - las tres cabañas de Zona Entrenamiento,
+ * Activa la rejilla temporal solo en los interiores que todavía estamos definiendo:
  * - cabañas y tienda de vino de La Aldea,
  * - iglesia.
+ *
+ * Las tres cabañas de Zona Entrenamiento ya tienen su área jugable validada y
+ * dejan de mostrar la guía. Sus colisiones siguen activas porque dependen del mapa
+ * lógico de celdas, no de la rejilla visual.
  */
 export function installInteriorGridRefinement(): void {
-  installOnPrototype(CabinInteriorScene.prototype as unknown as CreatePrototype);
   installOnPrototype(VillageCabinScene.prototype as unknown as CreatePrototype);
   installOnPrototype(ChurchInteriorScene.prototype as unknown as CreatePrototype);
 }
