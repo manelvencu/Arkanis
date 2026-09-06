@@ -115,6 +115,11 @@ export function installAldeaWalkableGridRefinement(): void {
 
   const originalCreate = prototype.create;
   prototype.create = function createWithGridOwnedCollision(this: AldeaRuntime): void {
+    // La misma instancia de AldeaScene se reutiliza al volver de un interior.
+    // Hay que limpiar este cerrojo en cada create; de lo contrario, tras entrar una vez
+    // en una construcción, las siguientes entradas quedan bloqueadas para siempre.
+    this.__aldeaGridTransitioning = false;
+
     originalCreate.call(this);
 
     // Solo retiramos los blockers que Aldea registra de forma explícita.
