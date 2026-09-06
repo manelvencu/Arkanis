@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { AldeaScene } from './scenes/AldeaScene';
-import { isAldeaEntranceCell, isAldeaWalkableFootPoint } from './aldeaWalkableGrid';
+import { isAldeaEntranceCell, isAldeaWalkableFootPoint, type AldeaEntranceKey } from './aldeaWalkableGrid';
 import type { CharacterId } from './gameData';
 
 type AldeaRuntime = Phaser.Scene & {
@@ -8,6 +8,10 @@ type AldeaRuntime = Phaser.Scene & {
   characterId: CharacterId;
   exitStarted: boolean;
   worldColliders: Phaser.GameObjects.Rectangle[];
+  cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
+  ui?: {
+    touchDirections: Record<'left' | 'right' | 'up' | 'down', boolean>;
+  };
   __villageDialogueOpen?: boolean;
   __villageCabinTransitioning?: boolean;
   __c26CabinTransitioning?: boolean;
@@ -22,9 +26,22 @@ type AldeaPrototype = {
   update: (this: AldeaRuntime, time: number, delta: number) => void;
 };
 
+type VillageEntranceKind = 'coins' | 'wine' | 'blessing';
+
+type EntranceSpec =
+  | { key: 'church'; scene: 'church' }
+  | { key: Exclude<AldeaEntranceKey, 'church'>; scene: 'village'; kind: VillageEntranceKind; returnX: number; returnY: number };
+
+const ENTRANCE_SPECS: EntranceSpec[] = [
+  { key: 'church', scene: 'church' },
+  { key: 'blessing', scene: 'village', kind: 'blessing', returnX: 816, returnY: 498 },
+  { key: 'wine', scene: 'village', kind: 'wine', returnX: 688, returnY: 680 },
+  { key: 'coins', scene: 'village', kind: 'coins', returnX: 144, returnY: 648 }
+];
+
 function startVillageInterior(
   scene: AldeaRuntime,
-  kind: 'coins' | 'wine' | 'blessing',
+  kind: VillageEntranceKind,
   returnX: number,
   returnY: number
 ): void {
@@ -60,11 +77,36 @@ function startChurchInterior(scene: AldeaRuntime): void {
   });
 }
 
+function playerIntendsToMoveUp(scene: AldeaRuntime): boolean {
+  const keyboardUp = scene.cursors?.up.isDown ?? false;
+  const touchUp = scene.ui?.touchDirections.up ?? false;
+  const body = scene.player.body as Phaser.Physics.Arcade.Body | null;
+  const velocityUp = Boolean(body && body.velocity.y < -5);
+  return keyboardUp || touchUp || velocityUp;
+}
+
+function triggerExactEntrance(scene: AldeaRuntime): void {
+  if (!playerIntendsToMoveUp(scene)) return;
+
+  for (const entrance of ENTRANCE_SPECS) {
+    if (!isAldeaEntranceCell(entrance.key, scene.player.x, scene.player.y)) continue;
+
+    if (entrance.scene === 'church') {
+      startChurchInterior(scene);
+    } else {
+      startVillageInterior(scene, entrance.kind, entrance.returnX, entrance.returnY);
+    }
+    return;
+  }
+}
+
 /**
  * Exterior de La Aldea:
  * - área jugable positiva por celdas de 32 px;
  * - autoridad = centro entre los pies;
- * - entradas de edificios definidas por celdas exactas.
+ * - entradas de edificios definidas por celdas exactas;
+ * - toda celda de entrada es jugable por construcción;
+ * - la transición se dispara al estar en la celda y avanzar hacia arriba.
  */
 export function installAldeaWalkableGridRefinement(): void {
   const prototype = AldeaScene.prototype as unknown as AldeaPrototype;
@@ -76,9 +118,8 @@ export function installAldeaWalkableGridRefinement(): void {
     originalCreate.call(this);
 
     // El grid positivo es la única autoridad para el movimiento del jugador.
-    // Desactivamos todos los cuerpos estáticos heredados de la etapa anterior (edificios,
-    // árboles, fuente o refinamientos) porque pueden bloquear físicamente una celda que el
-    // mapa positivo declara jugable. La whitelist ya impide atravesar cualquier zona no válida.
+    // Desactivamos todos los cuerpos estáticos heredados de la etapa anterior porque
+    // pueden bloquear físicamente una celda que el mapa positivo declara jugable.
     const staticBodies = [...this.physics.world.staticBodies.entries];
     staticBodies.forEach((body) => {
       const gameObject = body.gameObject;
@@ -116,26 +157,6 @@ export function installAldeaWalkableGridRefinement(): void {
 
     if (this.exitStarted || this.__aldeaGridTransitioning || this.__villageDialogueOpen || !this.scene.isActive()) return;
 
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    if (!body || body.velocity.y >= -5) return;
-
-    if (isAldeaEntranceCell('church', this.player.x, this.player.y)) {
-      startChurchInterior(this);
-      return;
-    }
-
-    if (isAldeaEntranceCell('blessing', this.player.x, this.player.y)) {
-      startVillageInterior(this, 'blessing', 816, 498);
-      return;
-    }
-
-    if (isAldeaEntranceCell('wine', this.player.x, this.player.y)) {
-      startVillageInterior(this, 'wine', 688, 680);
-      return;
-    }
-
-    if (isAldeaEntranceCell('coins', this.player.x, this.player.y)) {
-      startVillageInterior(this, 'coins', 144, 648);
-    }
+    triggerExactEntrance(this);
   };
 }
