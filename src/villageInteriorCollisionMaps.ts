@@ -32,7 +32,24 @@ const ALDEA_WINE_SHOP_WALKABLE = [
   cellRange(12, 11, 22, 11),
   cellRange(13, 12, 22, 12),
   cellRange(14, 13, 17, 13),
-  cellRange(14, 14, 17, 14)
+  cellRange(14, 14, 17, 14),
+  cellRange(14, 15, 17, 15)
+];
+
+// Cabaña de la parte derecha, justo encima de la tienda de vino (kind: blessing).
+// Autoridad: punto central entre los pies. Todo lo no listado es NO jugable.
+const ALDEA_UPPER_RIGHT_WALKABLE = [
+  cellRange(7, 5, 21, 5),
+  cellRange(5, 6, 22, 6),
+  cellRange(8, 7, 23, 7),
+  cellRange(8, 8, 23, 8),
+  cellRange(8, 9, 26, 9),
+  cellRange(8, 10, 26, 10),
+  cellRange(4, 11, 26, 11),
+  cellRange(4, 12, 26, 12),
+  cellRange(14, 13, 17, 13),
+  cellRange(14, 14, 17, 14),
+  cellRange(14, 15, 17, 15)
 ];
 
 function makeWalkableDefinition(walkable: InteriorGridDefinition['walkable']): InteriorGridDefinition {
@@ -47,5 +64,6 @@ function makeWalkableDefinition(walkable: InteriorGridDefinition['walkable']): I
 
 export const VILLAGE_CABIN_COLLISION_MAPS: Partial<Record<VillageCabinKind, InteriorGridDefinition>> = {
   coins: makeWalkableDefinition(ALDEA_LOWER_LEFT_WALKABLE),
-  wine: makeWalkableDefinition(ALDEA_WINE_SHOP_WALKABLE)
+  wine: makeWalkableDefinition(ALDEA_WINE_SHOP_WALKABLE),
+  blessing: makeWalkableDefinition(ALDEA_UPPER_RIGHT_WALKABLE)
 };
