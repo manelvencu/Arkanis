@@ -21,6 +21,20 @@ const ALDEA_LOWER_LEFT_WALKABLE = [
   cellRange(14, 15, 17, 15)
 ];
 
+// Tienda de vino de La Aldea (kind: wine, cabaña inferior derecha).
+// Autoridad: punto central entre los pies. Todo lo no listado es NO jugable.
+const ALDEA_WINE_SHOP_WALKABLE = [
+  cellRange(8, 6, 22, 6),
+  cellRange(8, 7, 24, 7),
+  cellRange(9, 8, 21, 8),
+  cellRange(10, 9, 22, 9),
+  cellRange(10, 10, 22, 10),
+  cellRange(12, 11, 22, 11),
+  cellRange(13, 12, 22, 12),
+  cellRange(14, 13, 17, 13),
+  cellRange(14, 14, 17, 14)
+];
+
 function makeWalkableDefinition(walkable: InteriorGridDefinition['walkable']): InteriorGridDefinition {
   return {
     columns: COLUMNS,
@@ -32,5 +46,6 @@ function makeWalkableDefinition(walkable: InteriorGridDefinition['walkable']): I
 }
 
 export const VILLAGE_CABIN_COLLISION_MAPS: Partial<Record<VillageCabinKind, InteriorGridDefinition>> = {
-  coins: makeWalkableDefinition(ALDEA_LOWER_LEFT_WALKABLE)
+  coins: makeWalkableDefinition(ALDEA_LOWER_LEFT_WALKABLE),
+  wine: makeWalkableDefinition(ALDEA_WINE_SHOP_WALKABLE)
 };
