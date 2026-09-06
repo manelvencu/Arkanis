@@ -39,8 +39,8 @@ En las escenas actuales ese punto se calcula con un desplazamiento vertical de +
 Las zonas jugables se expresan mediante rangos inclusivos de celdas:
 
 ```ts
-cellRange(9, 6, 26, 6)   // F6C9 a F6C26
-cellRange(5, 9, 23, 10)  // F9-F10, C5-C23
+cellRange(9, 6, 26, 6)    // F6C9 a F6C26
+cellRange(5, 9, 23, 10)   // F9-F10, C5-C23
 cellRange(14, 13, 17, 15) // pasillo de salida F13-F15, C14-C17
 ```
 
@@ -68,6 +68,12 @@ Antes de aplicar cada desplazamiento:
 6. Cada frame se divide internamente en pasos de máximo 4 px para evitar saltarse una celda por velocidad alta o lag.
 
 Por tanto, una celda no jugable no puede pisarse ni atravesarse lateralmente, perpendicularmente ni en diagonal.
+
+## Velocidad de movimiento en interiores
+
+La velocidad actual de referencia para estas cabañas es de **135 px/s**.
+
+El movimiento se calcula con `delta`, por lo que la velocidad no depende de los FPS. Si en el futuro se ajusta la sensación de movimiento, debe modificarse la constante común de velocidad del interior y no añadir multiplicadores distintos por cabaña.
 
 ## Flujo para crear un nuevo interior
 
@@ -98,6 +104,27 @@ Todo lo demás no es jugable.
 
 Ese formato es suficiente para construir el mapa.
 
+## Caso validado: Cabaña 1 y Cabaña 3 de ZE
+
+Cabaña 1 y Cabaña 3 comparten la misma distribución visual y reutilizan exactamente el mismo mapa jugable:
+
+```text
+F6C9 a F6C26
+F7C9 a F7C23
+F8C9 a F8C23
+F9C5 a F9C23
+F10C5 a F10C23
+F11C5 a F11C26
+F12C6 a F12C26
+F13C14 a F13C17
+F14C14 a F14C17
+F15C14 a F15C17
+```
+
+Todo lo demás es no jugable.
+
+Este caso se considera la referencia validada para futuros interiores con requisitos equivalentes.
+
 ## Qué no hacer
 
 - No definir primero todo como jugable y después intentar cerrar decenas de zonas con parches.
@@ -113,6 +140,8 @@ Algunos interiores anteriores pueden conservar durante la migración una lista d
 
 ## Reutilización
 
-Si dos interiores usan exactamente la misma distribución, deben reutilizar el mismo conjunto de rangos. Cabaña 1 y Cabaña 3 de ZE comparten actualmente la misma distribución y, por tanto, el mismo mapa jugable.
+Si dos interiores usan exactamente la misma distribución, deben reutilizar el mismo conjunto de rangos, no copiar dos listas independientes. Así cualquier corrección futura se aplica a ambos automáticamente.
+
+Cabaña 1 y Cabaña 3 de ZE ya siguen este criterio compartiendo el mismo conjunto `CABIN_ONE_WALKABLE` en `src/interiorCollisionMaps.ts`.
 
 Cuando definamos las cabañas de La Aldea, la tienda de vino, la iglesia y futuros interiores, deben incorporarse a este mismo sistema de datos y validación.
