@@ -6,9 +6,9 @@ const ROOM_HEIGHT = 540;
 const COLUMNS = 30;
 const ROWS = 15;
 
-// Cabaña inferior derecha de La Aldea (kind: wine).
+// Cabaña inferior izquierda de La Aldea (kind: coins).
 // Autoridad: punto central entre los pies. Todo lo no listado es NO jugable.
-const ALDEA_LOWER_RIGHT_WALKABLE = [
+const ALDEA_LOWER_LEFT_WALKABLE = [
   cellRange(9, 6, 25, 6),
   cellRange(9, 7, 23, 7),
   cellRange(8, 8, 23, 8),
@@ -32,5 +32,5 @@ function makeWalkableDefinition(walkable: InteriorGridDefinition['walkable']): I
 }
 
 export const VILLAGE_CABIN_COLLISION_MAPS: Partial<Record<VillageCabinKind, InteriorGridDefinition>> = {
-  wine: makeWalkableDefinition(ALDEA_LOWER_RIGHT_WALKABLE)
+  coins: makeWalkableDefinition(ALDEA_LOWER_LEFT_WALKABLE)
 };
