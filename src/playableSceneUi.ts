@@ -71,12 +71,12 @@ export function createPlayableUi(
     strokeThickness: 2 * HD_SCALE
   }).setOrigin(0.5).setScrollFactor(0).setDepth(1005));
 
-  const energyGold = remember(scene.add.image(80 * HD_SCALE, 105 * HD_SCALE, 'playable-energyGold')
+  const energyGold = remember(scene.add.image(80 * HD_SCALE, 102 * HD_SCALE, 'playable-energyGold')
     .setOrigin(0, 0.5)
     .setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT)
     .setScrollFactor(0)
     .setDepth(1003));
-  const energyRed = remember(scene.add.image(80 * HD_SCALE, 105 * HD_SCALE, 'playable-energyRed')
+  const energyRed = remember(scene.add.image(80 * HD_SCALE, 102 * HD_SCALE, 'playable-energyRed')
     .setOrigin(0, 0.5)
     .setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT)
     .setScrollFactor(0)
