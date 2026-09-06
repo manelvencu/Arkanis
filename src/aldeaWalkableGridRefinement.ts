@@ -7,6 +7,7 @@ type AldeaRuntime = Phaser.Scene & {
   player: Phaser.Physics.Arcade.Sprite;
   characterId: CharacterId;
   exitStarted: boolean;
+  worldColliders: Phaser.GameObjects.Rectangle[];
   __villageDialogueOpen?: boolean;
   __villageCabinTransitioning?: boolean;
   __c26CabinTransitioning?: boolean;
@@ -16,6 +17,7 @@ type AldeaRuntime = Phaser.Scene & {
 
 type AldeaPrototype = {
   __aldeaWalkableGridInstalled?: boolean;
+  create: (this: AldeaRuntime) => void;
   isWalkablePoint: (x: number, y: number) => boolean;
   update: (this: AldeaRuntime, time: number, delta: number) => void;
 };
@@ -68,6 +70,20 @@ export function installAldeaWalkableGridRefinement(): void {
   const prototype = AldeaScene.prototype as unknown as AldeaPrototype;
   if (prototype.__aldeaWalkableGridInstalled) return;
   prototype.__aldeaWalkableGridInstalled = true;
+
+  const originalCreate = prototype.create;
+  prototype.create = function createWithGridOwnedCollision(this: AldeaRuntime): void {
+    originalCreate.call(this);
+
+    // El grid positivo es ahora la única autoridad para el movimiento del jugador.
+    // Los colliders físicos antiguos de edificios/árboles pueden contradecir una celda
+    // declarada jugable, especialmente en puertas. Los retiramos después de que todos
+    // los refinamientos anteriores hayan terminado de construir la escena.
+    this.worldColliders.forEach((blocker) => {
+      if (blocker.active) blocker.destroy();
+    });
+    this.worldColliders = [];
+  };
 
   prototype.isWalkablePoint = function isWalkablePointFromGrid(x: number, y: number): boolean {
     // AldeaScene entrega aquí directamente el punto de pies (x, y).
