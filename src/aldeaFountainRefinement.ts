@@ -69,7 +69,8 @@ export function installAldeaFountainRefinement(): void {
     const body = fountain.body as Phaser.Physics.Arcade.StaticBody;
     body.setSize(86, 54).setOffset(21, 66);
 
-    this.physics.add.collider(this.player, fountain);
+    // El movimiento del jugador en La Aldea se limita mediante el grid positivo.
+    // No añadimos collider físico con la fuente para evitar contradicciones con celdas jugables.
 
     // La cámara del HUD se crea antes que este refinement. Hay que excluir
     // explícitamente la fuente para que no aparezca una segunda copia fija
