@@ -2,6 +2,12 @@ import * as Phaser from 'phaser';
 import { characters, type CharacterId } from '../gameData';
 import { createPlayableUi, preloadPlayableUiAssets, type PlayableUiController } from '../playableSceneUi';
 import { getVillageProgress } from '../villageProgress';
+import { CHURCH_INTERIOR_COLLISION_MAP } from '../churchInteriorCollisionMap';
+import {
+  buildWalkableCellSet,
+  moveOnInteriorGrid,
+  type FootprintDefinition
+} from '../interiorGridCollision';
 
 type Facing = 'down' | 'up' | 'side';
 type AnimatedCharacter = 'tiana' | 'lupe';
@@ -15,10 +21,17 @@ interface ChurchInteriorData {
 const ROOM_WIDTH = 960;
 const ROOM_HEIGHT = 540;
 const PLAYER_SIZE = 68;
-const PLAYER_SPEED = 150;
+const PLAYER_SPEED = 135;
 const ENTRANCE_X = ROOM_WIDTH / 2;
 const EXIT_HALF_WIDTH = 74;
 const EXIT_Y = 500;
+
+// Autoridad de suelo: centro entre los pies, igual que en las cabañas ya validadas.
+const PLAYER_FOOTPRINT: FootprintDefinition = {
+  width: 30,
+  height: 18,
+  offsetY: 25
+};
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -55,6 +68,7 @@ export class ChurchInteriorScene extends Phaser.Scene {
   private ui!: PlayableUiController;
   private facing: Facing = 'up';
   private exiting = false;
+  private walkableCells: ReadonlySet<string> = new Set<string>();
 
   constructor() {
     super('ChurchInteriorScene');
@@ -67,6 +81,7 @@ export class ChurchInteriorScene extends Phaser.Scene {
     this.returnY = data.returnY ?? 240;
     this.facing = 'up';
     this.exiting = false;
+    this.walkableCells = buildWalkableCellSet(CHURCH_INTERIOR_COLLISION_MAP);
   }
 
   preload(): void {
@@ -98,8 +113,10 @@ export class ChurchInteriorScene extends Phaser.Scene {
       454,
       `church-player-${this.animatedCharacter}-up`
     );
-    this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(30).setCollideWorldBounds(true);
-    (this.player.body as Phaser.Physics.Arcade.Body).setSize(30, 28).setOffset(19, 38);
+    this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(30);
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    body.setSize(30, 20).setOffset(19, 46);
+    body.setAllowGravity(false);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     const characterData = characters.find((item) => item.id === this.characterId) ?? characters[0];
@@ -108,7 +125,7 @@ export class ChurchInteriorScene extends Phaser.Scene {
     this.cameras.main.fadeIn(260, 18, 12, 8);
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(0);
     if (this.exiting) return;
@@ -120,19 +137,41 @@ export class ChurchInteriorScene extends Phaser.Scene {
     if (this.cursors.up.isDown || this.ui.touchDirections.up) y -= 1;
     if (this.cursors.down.isDown || this.ui.touchDirections.down) y += 1;
 
+    let moved = false;
+    let movingDown = false;
+
     if (x !== 0 || y !== 0) {
       const movement = new Phaser.Math.Vector2(x, y).normalize();
-      body.setVelocity(movement.x * PLAYER_SPEED, movement.y * PLAYER_SPEED);
       this.setFacingFromMovement(movement);
-      this.player.anims.play(`church-player-${this.animatedCharacter}-walk-${this.facing}`, true);
+      movingDown = movement.y > 0;
+
+      const safeDelta = Math.min(delta, 50);
+      const distance = PLAYER_SPEED * (safeDelta / 1000);
+      const result = moveOnInteriorGrid(
+        this.player.x,
+        this.player.y,
+        movement.x * distance,
+        movement.y * distance,
+        CHURCH_INTERIOR_COLLISION_MAP,
+        this.walkableCells,
+        PLAYER_FOOTPRINT
+      );
+
+      moved = Math.abs(result.movedX) > 0.001 || Math.abs(result.movedY) > 0.001;
+      if (moved) {
+        this.player.setPosition(result.x, result.y);
+        body.updateFromGameObject();
+        this.player.anims.play(`church-player-${this.animatedCharacter}-walk-${this.facing}`, true);
+      } else {
+        this.player.anims.stop();
+        this.player.setTexture(`church-player-${this.animatedCharacter}-${this.facing === 'side' ? 'side' : this.facing}`);
+      }
     } else {
       this.player.anims.stop();
       this.player.setTexture(`church-player-${this.animatedCharacter}-${this.facing === 'side' ? 'side' : this.facing}`);
     }
 
-    // Igual que en las nuevas cabañas: Arcade Physics gestiona el movimiento y el
-    // límite exterior del mapa. Más adelante añadiremos las colisiones exactas con grid.
-    this.checkExit();
+    this.checkExit(movingDown && moved);
   }
 
   private setFacingFromMovement(movement: Phaser.Math.Vector2): void {
@@ -170,9 +209,8 @@ export class ChurchInteriorScene extends Phaser.Scene {
     ], 8);
   }
 
-  private checkExit(): void {
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    if (body.velocity.y <= 0) return;
+  private checkExit(movingDown: boolean): void {
+    if (!movingDown) return;
     if (Math.abs(this.player.x - ENTRANCE_X) > EXIT_HALF_WIDTH) return;
     if (this.player.y < EXIT_Y) return;
     this.exitChurch();
