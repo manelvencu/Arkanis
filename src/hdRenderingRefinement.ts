@@ -8,6 +8,7 @@ const PHYSICAL_WIDTH = LOGICAL_WIDTH * HD_SCALE;
 const PHYSICAL_HEIGHT = LOGICAL_HEIGHT * HD_SCALE;
 const ENERGY_FULL_WIDTH = 220 * HD_SCALE;
 const ENERGY_FILL_HEIGHT = 16 * HD_SCALE;
+const ENERGY_FILL_Y = 102 * HD_SCALE;
 
 const DPAD_CENTER_X = 112 * HD_SCALE;
 const DPAD_CENTER_Y = (LOGICAL_HEIGHT - 108) * HD_SCALE;
@@ -154,11 +155,11 @@ function layoutTrainingUi(scene: TrainingScene): Phaser.GameObjects.GameObject[]
     .setDisplaySize(264 * HD_SCALE, 34 * HD_SCALE)
     .setScrollFactor(0);
 
-  runtime.energyGold?.setPosition(80 * HD_SCALE, 105 * HD_SCALE)
+  runtime.energyGold?.setPosition(80 * HD_SCALE, ENERGY_FILL_Y)
     .setOrigin(0, 0.5)
     .setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT)
     .setScrollFactor(0);
-  runtime.energyRed?.setPosition(80 * HD_SCALE, 105 * HD_SCALE)
+  runtime.energyRed?.setPosition(80 * HD_SCALE, ENERGY_FILL_Y)
     .setOrigin(0, 0.5)
     .setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT)
     .setScrollFactor(0);
@@ -226,18 +227,22 @@ export function installHdRenderingRefinement(): void {
     trainingPrototype.updateHud = function updateHdHud(this: TrainingScene): void {
       originalUpdateHud.call(this);
       const runtime = this as unknown as TrainingRuntime;
-      const fillWidth = ENERGY_FULL_WIDTH * (runtime.energy / 100);
-      const isCritical = runtime.energy < 30;
+      const clamped = Phaser.Math.Clamp(runtime.energy, 0, 100);
+      const fillWidth = ENERGY_FULL_WIDTH * (clamped / 100);
+      const isCritical = clamped < 30;
 
+      // Una única capa visible evita discrepancias entre los dos assets.
+      // Por debajo del 30 % la misma barra se tiñe de rojo de forma inequívoca.
       runtime.energyGold
-        .setPosition(80 * HD_SCALE, 105 * HD_SCALE)
+        .setPosition(80 * HD_SCALE, ENERGY_FILL_Y)
         .setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT)
-        .setVisible(!isCritical)
+        .setVisible(true)
+        .setTint(isCritical ? 0xff3030 : 0xffffff)
         .setScrollFactor(0);
       runtime.energyRed
-        .setPosition(80 * HD_SCALE, 105 * HD_SCALE)
+        .setPosition(80 * HD_SCALE, ENERGY_FILL_Y)
         .setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT)
-        .setVisible(isCritical)
+        .setVisible(false)
         .setScrollFactor(0);
     };
 
