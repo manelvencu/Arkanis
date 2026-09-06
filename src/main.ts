@@ -29,6 +29,7 @@ import { installVillageVisualAndAccessRefinement } from './villageVisualAndAcces
 import { installChurchEntranceRefinement } from './churchEntranceRefinement';
 import { installPlayerProgressBridge } from './playerProgressBridge';
 import { installInteriorGridRefinement } from './interiorGridRefinement';
+import { installAldeaWalkableGridRefinement } from './aldeaWalkableGridRefinement';
 
 installArkanisTypography();
 installTrainingGameOverHook();
@@ -47,6 +48,7 @@ installVillageVisualAndAccessRefinement();
 installChurchEntranceRefinement();
 installPlayerProgressBridge();
 installInteriorGridRefinement();
+installAldeaWalkableGridRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
