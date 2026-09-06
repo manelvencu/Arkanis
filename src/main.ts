@@ -30,6 +30,7 @@ import { installChurchEntranceRefinement } from './churchEntranceRefinement';
 import { installPlayerProgressBridge } from './playerProgressBridge';
 import { installInteriorGridRefinement } from './interiorGridRefinement';
 import { installCabinOneCollisionRefinement } from './cabinOneCollisionRefinement';
+import { installCabinTwoCollisionRefinement } from './cabinTwoCollisionRefinement';
 
 installArkanisTypography();
 installTrainingGameOverHook();
@@ -49,6 +50,7 @@ installChurchEntranceRefinement();
 installPlayerProgressBridge();
 installInteriorGridRefinement();
 installCabinOneCollisionRefinement();
+installCabinTwoCollisionRefinement();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
