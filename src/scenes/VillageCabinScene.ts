@@ -2,6 +2,13 @@ import * as Phaser from 'phaser';
 import { characters, type CharacterId } from '../gameData';
 import { createPlayableUi, preloadPlayableUiAssets, type PlayableUiController } from '../playableSceneUi';
 import { collectVillageCabinCoin, getVillageProgress, setVillageEnergy, type VillageCabinKind } from '../villageProgress';
+import { VILLAGE_CABIN_COLLISION_MAPS } from '../villageInteriorCollisionMaps';
+import {
+  buildWalkableCellSet,
+  moveOnInteriorGrid,
+  type FootprintDefinition,
+  type InteriorGridDefinition
+} from '../interiorGridCollision';
 
 interface VillageCabinData {
   characterId?: CharacterId;
@@ -16,11 +23,18 @@ type CabinCoin = { index: number; sprite: Phaser.GameObjects.Image };
 const ROOM_WIDTH = 960;
 const ROOM_HEIGHT = 540;
 const PLAYER_SIZE = 68;
-const PLAYER_SPEED = 150;
+const PLAYER_SPEED = 135;
 const DOOR_X = ROOM_WIDTH / 2;
 const DOOR_HALF_WIDTH = 72;
 const EXIT_Y = 500;
 const CABIN_ASSET_ROOT = './assets/environment/interiors/cabin/';
+
+// Misma referencia validada en las cabañas de ZE: centro entre los pies.
+const PLAYER_FOOT_POINT: FootprintDefinition = {
+  width: 0,
+  height: 0,
+  offsetY: 25
+};
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -61,6 +75,8 @@ export class VillageCabinScene extends Phaser.Scene {
   private wineTriggered = false;
   private coinEntries: CabinCoin[] = [];
   private wineNpc?: Phaser.GameObjects.Image;
+  private gridDefinition?: InteriorGridDefinition;
+  private walkableCells: ReadonlySet<string> = new Set<string>();
 
   constructor() {
     super('VillageCabinScene');
@@ -77,6 +93,9 @@ export class VillageCabinScene extends Phaser.Scene {
     this.wineTriggered = false;
     this.coinEntries = [];
     this.wineNpc = undefined;
+
+    this.gridDefinition = VILLAGE_CABIN_COLLISION_MAPS[this.kind];
+    this.walkableCells = this.gridDefinition ? buildWalkableCellSet(this.gridDefinition) : new Set<string>();
   }
 
   preload(): void {
@@ -129,7 +148,7 @@ export class VillageCabinScene extends Phaser.Scene {
     }
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(0);
     if (this.exiting || this.messageOpen) return;
@@ -141,11 +160,43 @@ export class VillageCabinScene extends Phaser.Scene {
     if (this.cursors.up.isDown || this.ui.touchDirections.up) y -= 1;
     if (this.cursors.down.isDown || this.ui.touchDirections.down) y += 1;
 
+    let moved = false;
+    let movingDown = false;
+
     if (x !== 0 || y !== 0) {
       const movement = new Phaser.Math.Vector2(x, y).normalize();
-      body.setVelocity(movement.x * PLAYER_SPEED, movement.y * PLAYER_SPEED);
       this.setFacingFromMovement(movement);
-      this.player.anims.play(`village-cabin-${this.characterId}-walk-${this.facing}`, true);
+      movingDown = movement.y > 0;
+
+      if (this.gridDefinition) {
+        const safeDelta = Math.min(delta, 50);
+        const distance = PLAYER_SPEED * (safeDelta / 1000);
+        const result = moveOnInteriorGrid(
+          this.player.x,
+          this.player.y,
+          movement.x * distance,
+          movement.y * distance,
+          this.gridDefinition,
+          this.walkableCells,
+          PLAYER_FOOT_POINT
+        );
+        moved = Math.abs(result.movedX) > 0.001 || Math.abs(result.movedY) > 0.001;
+        if (moved) {
+          this.player.setPosition(result.x, result.y);
+          body.updateFromGameObject();
+        }
+      } else {
+        // Interiores de La Aldea todavía no definidos conservan temporalmente el movimiento previo.
+        body.setVelocity(movement.x * PLAYER_SPEED, movement.y * PLAYER_SPEED);
+        moved = true;
+      }
+
+      if (moved) {
+        this.player.anims.play(`village-cabin-${this.characterId}-walk-${this.facing}`, true);
+      } else {
+        this.player.anims.stop();
+        this.player.setTexture(`village-cabin-${this.characterId}-${this.facing === 'side' ? 'side' : this.facing}`);
+      }
     } else {
       this.player.anims.stop();
       this.player.setTexture(`village-cabin-${this.characterId}-${this.facing === 'side' ? 'side' : this.facing}`);
@@ -153,7 +204,7 @@ export class VillageCabinScene extends Phaser.Scene {
 
     if (this.kind === 'coins') this.checkCoinCollection();
     if (this.kind === 'wine') this.checkWineNpc();
-    this.checkExit();
+    this.checkExit(movingDown, moved);
   }
 
   private setFacingFromMovement(movement: Phaser.Math.Vector2): void {
@@ -310,9 +361,8 @@ export class VillageCabinScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-ENTER', dismiss);
   }
 
-  private checkExit(): void {
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    if (body.velocity.y <= 0) return;
+  private checkExit(movingDown: boolean, moved: boolean): void {
+    if (!movingDown || !moved) return;
     if (Math.abs(this.player.x - DOOR_X) > DOOR_HALF_WIDTH) return;
     if (this.player.y < EXIT_Y) return;
     this.exitCabin();
