@@ -28,6 +28,10 @@ const CABIN_ASSET_ROOT = './assets/environment/interiors/cabin/';
 const DOOR_X = ROOM_WIDTH / 2;
 const DOOR_HALF_WIDTH = 72;
 const EXIT_Y = 500;
+const INTERIOR_GRID_COLUMNS = 30;
+const INTERIOR_GRID_ROWS = 15;
+const INTERIOR_CELL_WIDTH = ROOM_WIDTH / INTERIOR_GRID_COLUMNS;
+const INTERIOR_CELL_HEIGHT = ROOM_HEIGHT / INTERIOR_GRID_ROWS;
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -65,6 +69,7 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
   private chestOpened = false;
   private chestInRange = false;
   private exiting = false;
+  private interiorBlockers?: Phaser.Physics.Arcade.StaticGroup;
   private touchDirections: Record<TouchDirection, boolean> = { left: false, right: false, up: false, down: false };
 
   protected constructor(config: CabinInteriorConfig) {
@@ -78,6 +83,7 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     this.chestInRange = false;
     this.exiting = false;
     this.facing = 'up';
+    this.interiorBlockers = undefined;
     this.touchDirections = { left: false, right: false, up: false, down: false };
     this.chestOpened = getTrainingProgress().readChestIds.includes(this.cabinConfig.chestId);
   }
@@ -113,7 +119,11 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
 
     this.player = this.physics.add.sprite(DOOR_X, 454, `${p}-player-up`);
     this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(30).setCollideWorldBounds(true);
-    (this.player.body as Phaser.Physics.Arcade.Body).setSize(30, 28).setOffset(19, 38);
+    // El cuerpo físico está concentrado en la parte baja del sprite para que las
+    // colisiones del grid respondan principalmente a los pies del personaje.
+    (this.player.body as Phaser.Physics.Arcade.Body).setSize(30, 20).setOffset(19, 46);
+
+    this.createInteriorCollisions();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.createTouchControls();
@@ -142,9 +152,6 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
       this.player.setTexture(`${this.cabinConfig.assetPrefix}-player-${this.facing === 'side' ? 'side' : this.facing}`);
     }
 
-    // No resincronizamos manualmente el body con el sprite: Arcade Physics debe
-    // aplicar la velocidad libremente. El propio world bound contiene al jugador.
-    // Más adelante añadiremos las colisiones del mobiliario mediante el grid.
     this.checkChest();
     this.checkDoor();
   }
@@ -162,10 +169,50 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     }
   }
 
+  private createInteriorCollisions(): void {
+    if (this.cabinConfig.sceneKey !== 'CabinOneScene') return;
+
+    this.interiorBlockers = this.physics.add.staticGroup();
+
+    // Rango inclusivo de celdas C/F, usando exactamente el grid visible 30x15.
+    const blockRange = (c1: number, f1: number, c2: number, f2: number): void => {
+      const left = (c1 - 1) * INTERIOR_CELL_WIDTH;
+      const top = (f1 - 1) * INTERIOR_CELL_HEIGHT;
+      const width = (c2 - c1 + 1) * INTERIOR_CELL_WIDTH;
+      const height = (f2 - f1 + 1) * INTERIOR_CELL_HEIGHT;
+      const blocker = this.add.rectangle(left + width / 2, top + height / 2, width, height, 0x000000, 0);
+      this.physics.add.existing(blocker, true);
+      this.interiorBlockers!.add(blocker);
+    };
+
+    // Pared superior: F1-F5 completas.
+    blockRange(1, 1, 30, 5);
+
+    // Laterales: C1-C4 y C27-C30.
+    blockRange(1, 6, 4, 12);
+    blockRange(27, 6, 30, 12);
+
+    // Zona inferior: F13-F15 bloqueadas, dejando libre el pasillo C14-C17.
+    blockRange(1, 13, 13, 15);
+    blockRange(18, 13, 30, 15);
+
+    // Cama.
+    blockRange(5, 6, 8, 8);
+
+    // Mesa y sillas de la derecha.
+    blockRange(24, 7, 27, 10);
+
+    this.physics.add.collider(this.player, this.interiorBlockers);
+  }
+
   private createChest(): void {
     const p = this.cabinConfig.assetPrefix;
     const positions: Record<string, Phaser.Math.Vector2> = {
-      CabinOneScene: new Phaser.Math.Vector2(650, 320),
+      // C20/F5, centro exacto de la celda del grid 30x15.
+      CabinOneScene: new Phaser.Math.Vector2(
+        (20 - 0.5) * INTERIOR_CELL_WIDTH,
+        (5 - 0.5) * INTERIOR_CELL_HEIGHT
+      ),
       CabinTwoScene: new Phaser.Math.Vector2(300, 315),
       CabinThreeScene: new Phaser.Math.Vector2(650, 320)
     };
