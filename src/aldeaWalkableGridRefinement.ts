@@ -117,15 +117,9 @@ export function installAldeaWalkableGridRefinement(): void {
   prototype.create = function createWithGridOwnedCollision(this: AldeaRuntime): void {
     originalCreate.call(this);
 
-    // El grid positivo es la única autoridad para el movimiento del jugador.
-    // Desactivamos todos los cuerpos estáticos heredados de la etapa anterior porque
-    // pueden bloquear físicamente una celda que el mapa positivo declara jugable.
-    const staticBodies = Array.from(this.physics.world.staticBodies.values());
-    staticBodies.forEach((body) => {
-      const gameObject = body.gameObject;
-      if (gameObject && gameObject !== this.player) this.physics.world.disable(gameObject);
-    });
-
+    // Solo retiramos los blockers que Aldea registra de forma explícita.
+    // No recorremos la colección interna de cuerpos físicos de Phaser: hacerlo
+    // provocaba una excepción en runtime y detenía por completo el update de la escena.
     this.worldColliders.forEach((blocker) => {
       if (blocker.active) blocker.destroy();
     });
@@ -139,8 +133,6 @@ export function installAldeaWalkableGridRefinement(): void {
 
   const originalUpdate = prototype.update;
   prototype.update = function updateWithExactGridEntrances(this: AldeaRuntime, time: number, delta: number): void {
-    // Los refinamientos antiguos de entradas usaban distancias/radios. Los anulamos
-    // durante este update y aplicamos después únicamente las celdas exactas del grid.
     const villageWasTransitioning = this.__villageCabinTransitioning ?? false;
     const c26WasTransitioning = this.__c26CabinTransitioning ?? false;
     const churchWasTransitioning = this.__churchTransitioning ?? false;
@@ -149,11 +141,13 @@ export function installAldeaWalkableGridRefinement(): void {
     this.__c26CabinTransitioning = true;
     this.__churchTransitioning = true;
 
-    originalUpdate.call(this, time, delta);
-
-    this.__villageCabinTransitioning = villageWasTransitioning;
-    this.__c26CabinTransitioning = c26WasTransitioning;
-    this.__churchTransitioning = churchWasTransitioning;
+    try {
+      originalUpdate.call(this, time, delta);
+    } finally {
+      this.__villageCabinTransitioning = villageWasTransitioning;
+      this.__c26CabinTransitioning = c26WasTransitioning;
+      this.__churchTransitioning = churchWasTransitioning;
+    }
 
     if (this.exitStarted || this.__aldeaGridTransitioning || this.__villageDialogueOpen || !this.scene.isActive()) return;
 
