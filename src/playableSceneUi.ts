@@ -7,23 +7,17 @@ const LOGICAL_WIDTH = 960;
 const LOGICAL_HEIGHT = 540;
 const PHYSICAL_WIDTH = LOGICAL_WIDTH * HD_SCALE;
 const PHYSICAL_HEIGHT = LOGICAL_HEIGHT * HD_SCALE;
-const ENERGY_FRAME_CENTER_X = 190 * HD_SCALE;
-const ENERGY_FRAME_CENTER_Y = 105 * HD_SCALE;
-const ENERGY_FRAME_WIDTH = 264 * HD_SCALE;
-const ENERGY_FRAME_HEIGHT = 34 * HD_SCALE;
-const ENERGY_FULL_WIDTH = 220 * HD_SCALE;
-const ENERGY_FILL_HEIGHT = 16 * HD_SCALE;
-// El PNG del relleno tiene su masa visual ligeramente baja dentro del lienzo.
-// Este pequeño ajuste centra VISUALMENTE el relleno dentro del marco.
-const ENERGY_FILL_VISUAL_OFFSET_Y = -3 * HD_SCALE;
-const ENERGY_FILL_LEFT_X = ENERGY_FRAME_CENTER_X - ENERGY_FULL_WIDTH / 2;
-const ENERGY_FILL_CENTER_Y = ENERGY_FRAME_CENTER_Y + ENERGY_FILL_VISUAL_OFFSET_Y;
+const ENERGY_CENTER_X = 190 * HD_SCALE;
+const ENERGY_CENTER_Y = 105 * HD_SCALE;
+const ENERGY_MAX_WIDTH = 300 * HD_SCALE;
+const ENERGY_MAX_HEIGHT = 74 * HD_SCALE;
 const DPAD_CENTER_X = 112 * HD_SCALE;
 const DPAD_CENTER_Y = (LOGICAL_HEIGHT - 108) * HD_SCALE;
 const DPAD_SPACING = 56 * HD_SCALE;
 const MAGIC_X = (LOGICAL_WIDTH - 105) * HD_SCALE;
 const MAGIC_Y = (LOGICAL_HEIGHT - 105) * HD_SCALE;
 const UI_DEPTH = 1200;
+const ENERGY_LEVELS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] as const;
 
 type TouchDirection = 'left' | 'right' | 'up' | 'down';
 
@@ -36,11 +30,29 @@ export interface PlayableUiController {
   ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => void;
 }
 
+function energyTextureKey(level: number): string {
+  return `playable-energy-${level}`;
+}
+
+function energyLevelFor(value: number): number {
+  const clamped = Phaser.Math.Clamp(value, 0, 100);
+  return Phaser.Math.Clamp(Math.round(clamped / 10) * 10, 0, 100);
+}
+
+function fitEnergySprite(image: Phaser.GameObjects.Image): void {
+  const source = image.texture.getSourceImage() as { width: number; height: number };
+  const scale = Math.min(ENERGY_MAX_WIDTH / source.width, ENERGY_MAX_HEIGHT / source.height);
+  image.setDisplaySize(source.width * scale, source.height * scale);
+}
+
 export function preloadPlayableUiAssets(scene: Phaser.Scene): void {
   scene.load.image('playable-hudFrame', './assets/environment/hud-frame.png');
-  scene.load.image('playable-energyFrame', './assets/environment/energy-bar-frame.png');
-  scene.load.image('playable-energyGold', './assets/environment/energy-bar-fill-gold.png');
-  scene.load.image('playable-energyRed', './assets/environment/energy-bar-fill-red.png');
+  ENERGY_LEVELS.forEach((level) => {
+    scene.load.image(
+      energyTextureKey(level),
+      `./assets/ui/hud/energy/energy-bar-frame-${level}.png`
+    );
+  });
   scene.load.image('playable-coin', './assets/environment/coin-gold-01.png');
   scene.load.image('playable-menu', './assets/environment/menu-icon-01.png');
   scene.load.image('playable-magicRayGold', './assets/effects/magic-ray-gold-01.png');
@@ -81,22 +93,16 @@ export function createPlayableUi(
     strokeThickness: 2 * HD_SCALE
   }).setOrigin(0.5).setScrollFactor(0).setDepth(1005));
 
-  // El relleno se calcula siempre a partir del centro del marco. Así el 100 % queda
-  // centrado en X y el offset Y compensa únicamente el margen visual del propio PNG.
-  const energyGold = remember(scene.add.image(ENERGY_FILL_LEFT_X, ENERGY_FILL_CENTER_Y, 'playable-energyGold')
-    .setOrigin(0, 0.5)
-    .setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT)
-    .setScrollFactor(0)
-    .setDepth(1003));
-  const energyRed = remember(scene.add.image(ENERGY_FILL_LEFT_X, ENERGY_FILL_CENTER_Y, 'playable-energyRed')
-    .setOrigin(0, 0.5)
-    .setDisplaySize(ENERGY_FULL_WIDTH, ENERGY_FILL_HEIGHT)
-    .setScrollFactor(0)
-    .setDepth(1003));
-  remember(scene.add.image(ENERGY_FRAME_CENTER_X, ENERGY_FRAME_CENTER_Y, 'playable-energyFrame')
-    .setDisplaySize(ENERGY_FRAME_WIDTH, ENERGY_FRAME_HEIGHT)
+  const initialLevel = energyLevelFor(initialEnergy);
+  const energyImage = remember(scene.add.image(
+    ENERGY_CENTER_X,
+    ENERGY_CENTER_Y,
+    energyTextureKey(initialLevel)
+  )
+    .setOrigin(0.5)
     .setScrollFactor(0)
     .setDepth(1004));
+  fitEnergySprite(energyImage);
 
   remember(scene.add.image((LOGICAL_WIDTH - 190) * HD_SCALE, 41 * HD_SCALE, 'playable-coin')
     .setDisplaySize(25 * HD_SCALE, 25 * HD_SCALE)
@@ -219,23 +225,14 @@ export function createPlayableUi(
   scene.cameras.main.ignore(uiObjects);
   uiCamera.ignore(worldObjects);
 
+  let currentEnergyLevel = initialLevel;
   const updateEnergy = (energy: number): void => {
-    const clamped = Phaser.Math.Clamp(energy, 0, 100);
-    const fillWidth = ENERGY_FULL_WIDTH * (clamped / 100);
-    const isCritical = clamped < 30;
-
-    energyGold
-      .setPosition(ENERGY_FILL_LEFT_X, ENERGY_FILL_CENTER_Y)
-      .setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT)
-      .clearTint()
-      .setVisible(!isCritical);
-    energyRed
-      .setPosition(ENERGY_FILL_LEFT_X, ENERGY_FILL_CENTER_Y)
-      .setDisplaySize(fillWidth, ENERGY_FILL_HEIGHT)
-      .clearTint()
-      .setVisible(isCritical);
+    const nextLevel = energyLevelFor(energy);
+    if (nextLevel === currentEnergyLevel) return;
+    currentEnergyLevel = nextLevel;
+    energyImage.setTexture(energyTextureKey(nextLevel));
+    fitEnergySprite(energyImage);
   };
-  updateEnergy(initialEnergy);
 
   return {
     touchDirections,
