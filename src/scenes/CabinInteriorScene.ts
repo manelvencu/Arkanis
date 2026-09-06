@@ -1,6 +1,13 @@
 import * as Phaser from 'phaser';
 import type { CharacterId } from '../gameData';
 import { getTrainingProgress, markTrainingChestRead } from '../trainingProgress';
+import { TRAINING_CABIN_COLLISION_MAPS } from '../interiorCollisionMaps';
+import {
+  buildBlockedCellSet,
+  moveOnInteriorGrid,
+  type FootprintDefinition,
+  type InteriorGridDefinition
+} from '../interiorGridCollision';
 
 export interface CabinInteriorData {
   characterId: CharacterId;
@@ -32,6 +39,15 @@ const INTERIOR_GRID_COLUMNS = 30;
 const INTERIOR_GRID_ROWS = 15;
 const INTERIOR_CELL_WIDTH = ROOM_WIDTH / INTERIOR_GRID_COLUMNS;
 const INTERIOR_CELL_HEIGHT = ROOM_HEIGHT / INTERIOR_GRID_ROWS;
+
+// El grid se valida contra esta huella lógica de los pies, no contra todo el sprite.
+// Esto hace que una celda marcada como bloqueada sea una frontera absoluta desde
+// cualquier dirección, incluso en movimiento diagonal o manteniendo una tecla pulsada.
+const PLAYER_FOOTPRINT: FootprintDefinition = {
+  width: 30,
+  height: 18,
+  offsetY: 25
+};
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -69,7 +85,8 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
   private chestOpened = false;
   private chestInRange = false;
   private exiting = false;
-  private interiorBlockers?: Phaser.Physics.Arcade.StaticGroup;
+  private gridDefinition!: InteriorGridDefinition;
+  private blockedCells: ReadonlySet<string> = new Set<string>();
   private touchDirections: Record<TouchDirection, boolean> = { left: false, right: false, up: false, down: false };
 
   protected constructor(config: CabinInteriorConfig) {
@@ -83,9 +100,14 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     this.chestInRange = false;
     this.exiting = false;
     this.facing = 'up';
-    this.interiorBlockers = undefined;
     this.touchDirections = { left: false, right: false, up: false, down: false };
     this.chestOpened = getTrainingProgress().readChestIds.includes(this.cabinConfig.chestId);
+
+    this.gridDefinition = TRAINING_CABIN_COLLISION_MAPS[this.cabinConfig.sceneKey];
+    if (!this.gridDefinition) {
+      throw new Error(`Missing interior collision map for ${this.cabinConfig.sceneKey}`);
+    }
+    this.blockedCells = buildBlockedCellSet(this.gridDefinition);
   }
 
   preload(): void {
@@ -118,19 +140,18 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     this.createChest();
 
     this.player = this.physics.add.sprite(DOOR_X, 454, `${p}-player-up`);
-    this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(30).setCollideWorldBounds(true);
-    // El cuerpo físico está concentrado en la parte baja del sprite para que las
-    // colisiones del grid respondan principalmente a los pies del personaje.
-    (this.player.body as Phaser.Physics.Arcade.Body).setSize(30, 20).setOffset(19, 46);
-
-    this.createInteriorCollisions();
+    this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE).setDepth(30);
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    body.setSize(30, 20).setOffset(19, 46);
+    body.setAllowGravity(false);
+    body.setImmovable(false);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.createTouchControls();
     this.cameras.main.fadeIn(220, 18, 12, 8);
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(0);
     if (this.exiting || this.messageOpen) return;
@@ -142,18 +163,45 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     if (this.cursors.up.isDown || this.touchDirections.up) y -= 1;
     if (this.cursors.down.isDown || this.touchDirections.down) y += 1;
 
+    let moved = false;
+    let movingDown = false;
+
     if (x !== 0 || y !== 0) {
       const movement = new Phaser.Math.Vector2(x, y).normalize();
-      body.setVelocity(movement.x * PLAYER_SPEED, movement.y * PLAYER_SPEED);
       this.setFacingFromMovement(movement);
-      this.player.anims.play(`${this.cabinConfig.assetPrefix}-walk-${this.facing}`, true);
+      movingDown = movement.y > 0;
+
+      // Limitamos un frame excepcionalmente largo y dividimos el desplazamiento en
+      // pasos de máximo 4 px dentro del motor de grid. Así no existe tunnelling:
+      // no se puede saltar una celda bloqueada ni siquiera con lag o en diagonal.
+      const safeDelta = Math.min(delta, 50);
+      const distance = PLAYER_SPEED * (safeDelta / 1000);
+      const result = moveOnInteriorGrid(
+        this.player.x,
+        this.player.y,
+        movement.x * distance,
+        movement.y * distance,
+        this.gridDefinition,
+        this.blockedCells,
+        PLAYER_FOOTPRINT
+      );
+
+      moved = Math.abs(result.movedX) > 0.001 || Math.abs(result.movedY) > 0.001;
+      if (moved) {
+        this.player.setPosition(result.x, result.y);
+        body.updateFromGameObject();
+        this.player.anims.play(`${this.cabinConfig.assetPrefix}-walk-${this.facing}`, true);
+      } else {
+        this.player.anims.stop();
+        this.player.setTexture(`${this.cabinConfig.assetPrefix}-player-${this.facing === 'side' ? 'side' : this.facing}`);
+      }
     } else {
       this.player.anims.stop();
       this.player.setTexture(`${this.cabinConfig.assetPrefix}-player-${this.facing === 'side' ? 'side' : this.facing}`);
     }
 
     this.checkChest();
-    this.checkDoor();
+    this.checkDoor(movingDown && moved);
   }
 
   private setFacingFromMovement(movement: Phaser.Math.Vector2): void {
@@ -169,51 +217,18 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     }
   }
 
-  private createInteriorCollisions(): void {
-    if (this.cabinConfig.sceneKey !== 'CabinOneScene') return;
-
-    this.interiorBlockers = this.physics.add.staticGroup();
-
-    // Rango inclusivo de celdas C/F, usando exactamente el grid visible 30x15.
-    const blockRange = (c1: number, f1: number, c2: number, f2: number): void => {
-      const left = (c1 - 1) * INTERIOR_CELL_WIDTH;
-      const top = (f1 - 1) * INTERIOR_CELL_HEIGHT;
-      const width = (c2 - c1 + 1) * INTERIOR_CELL_WIDTH;
-      const height = (f2 - f1 + 1) * INTERIOR_CELL_HEIGHT;
-      const blocker = this.add.rectangle(left + width / 2, top + height / 2, width, height, 0x000000, 0);
-      this.physics.add.existing(blocker, true);
-      this.interiorBlockers!.add(blocker);
-    };
-
-    // Pared superior: F1-F5 completas.
-    blockRange(1, 1, 30, 5);
-
-    // Laterales: C1-C4 y C27-C30.
-    blockRange(1, 6, 4, 12);
-    blockRange(27, 6, 30, 12);
-
-    // Zona inferior: F13-F15 bloqueadas, dejando libre el pasillo C14-C17.
-    blockRange(1, 13, 13, 15);
-    blockRange(18, 13, 30, 15);
-
-    // Cama.
-    blockRange(5, 6, 8, 8);
-
-    // Mesa y sillas de la derecha.
-    blockRange(24, 7, 27, 10);
-
-    this.physics.add.collider(this.player, this.interiorBlockers);
-  }
-
   private createChest(): void {
     const p = this.cabinConfig.assetPrefix;
     const positions: Record<string, Phaser.Math.Vector2> = {
-      // C20/F5, centro exacto de la celda del grid 30x15.
       CabinOneScene: new Phaser.Math.Vector2(
         (20 - 0.5) * INTERIOR_CELL_WIDTH,
         (5 - 0.5) * INTERIOR_CELL_HEIGHT
       ),
-      CabinTwoScene: new Phaser.Math.Vector2(300, 315),
+      // Entre F5C11 y F5C12, sobre la divisoria vertical.
+      CabinTwoScene: new Phaser.Math.Vector2(
+        11 * INTERIOR_CELL_WIDTH,
+        (5 - 0.5) * INTERIOR_CELL_HEIGHT
+      ),
       CabinThreeScene: new Phaser.Math.Vector2(650, 320)
     };
     const pos = positions[this.cabinConfig.sceneKey] ?? new Phaser.Math.Vector2(650, 320);
@@ -265,9 +280,8 @@ export abstract class CabinInteriorScene extends Phaser.Scene {
     this.input.keyboard?.once('keydown-ENTER', dismiss);
   }
 
-  private checkDoor(): void {
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    if (body.velocity.y <= 0) return;
+  private checkDoor(movingDown: boolean): void {
+    if (!movingDown) return;
     if (Math.abs(this.player.x - DOOR_X) > DOOR_HALF_WIDTH) return;
     if (this.player.y < EXIT_Y) return;
     this.exitCabin();
