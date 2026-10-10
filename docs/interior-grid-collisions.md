@@ -1,147 +1,184 @@
 # Estándar de colisiones por grid en interiores
 
-Este documento define cómo deben construirse a partir de ahora las colisiones de cabañas, tiendas, iglesias y cualquier interior similar de Arkanis.
+## Regla principal
 
-## Principio principal
+Los interiores se definen mediante **área jugable positiva**.
 
-La rejilla visual y la colisión son dos cosas distintas.
+- por defecto una celda es no jugable;
+- solo las celdas declaradas como jugables pueden ser pisadas;
+- la autoridad es el **centro entre los pies**;
+- la grid visual es únicamente una herramienta temporal de diseño.
 
-- La rejilla visible sirve únicamente para marcar y revisar celdas.
-- La colisión real se guarda como datos de **área jugable**.
-- Por defecto, una celda es **NO JUGABLE**.
-- Solo las celdas declaradas expresamente como jugables pueden ser pisadas.
-- No se deben crear parches independientes para izquierda, derecha, arriba o abajo.
+## Grid estándar
 
-Esta es la convención preferida para todos los interiores nuevos.
+- tamaño lógico: 960 × 540 px;
+- columnas: 30;
+- filas: 15;
+- ancho de celda: 32 px;
+- alto de celda: 36 px.
 
-## Grid estándar actual
+## Punto de referencia
 
-Los interiores actuales usan:
+El centro entre los pies se calcula actualmente con un offset vertical aproximado de +25 px desde el centro lógico del sprite.
 
-- Tamaño lógico: 960 x 540 px.
-- 30 columnas: C1 a C30.
-- 15 filas: F1 a F15.
-- Ancho de celda: 32 px.
-- Alto de celda: 36 px.
+El cuerpo del personaje puede solaparse visualmente con muebles por perspectiva. Lo que nunca puede entrar en una celda bloqueada es el punto de pies.
 
-La guía visual puede ocultarse con G sin alterar las colisiones.
-
-## Punto de referencia del personaje
-
-La autoridad de movimiento es un único punto: **el centro entre los pies del personaje**.
-
-Al definir un mapa no hay que pensar en la cabeza, hombros ni anchura visual del sprite. Es normal que, por perspectiva, parte del personaje pueda solaparse visualmente con una cama, mesa o pared. Lo que nunca puede ocurrir es que el punto central entre sus pies entre en una celda no jugable.
-
-En las escenas actuales ese punto se calcula con un desplazamiento vertical de +25 px desde el centro lógico del sprite.
-
-## Cómo se define el área jugable
-
-Las zonas jugables se expresan mediante rangos inclusivos de celdas:
-
-```ts
-cellRange(9, 6, 26, 6)    // F6C9 a F6C26
-cellRange(5, 9, 23, 10)   // F9-F10, C5-C23
-cellRange(14, 13, 17, 15) // pasillo de salida F13-F15, C14-C17
-```
-
-**Todo lo que no aparezca en esos rangos queda automáticamente prohibido.**
-
-Los mapas están centralizados en:
-
-`src/interiorCollisionMaps.ts`
-
-El motor reutilizable está en:
+## Motor compartido
 
 `src/interiorGridCollision.ts`
 
-## Regla de movimiento
+Responsabilidades:
 
-No confiamos en que Arcade Physics empuje al personaje fuera de rectángulos físicos.
+- construir el conjunto de celdas permitidas;
+- comprobar el punto de pies;
+- resolver movimiento por ejes;
+- permitir deslizamiento contra límites;
+- subdividir movimientos largos para evitar atravesar celdas por lag o velocidad.
 
-Antes de aplicar cada desplazamiento:
+Velocidad de referencia actual en interiores:
 
-1. Se calcula la nueva posición propuesta.
-2. Se calcula el punto central entre los pies.
-3. Se obtiene la celda del grid que contiene ese punto.
-4. Si esa celda no está declarada como jugable, ese componente del desplazamiento no se aplica.
-5. El movimiento diagonal se resuelve por ejes, permitiendo deslizarse por una pared sin atravesarla.
-6. Cada frame se divide internamente en pasos de máximo 4 px para evitar saltarse una celda por velocidad alta o lag.
+**135 px/s**
 
-Por tanto, una celda no jugable no puede pisarse ni atravesarse lateralmente, perpendicularmente ni en diagonal.
+## Mapas
 
-## Velocidad de movimiento en interiores
+### Zona de Entrenamiento
 
-La velocidad actual de referencia para estas cabañas es de **135 px/s**.
+`src/interiorCollisionMaps.ts`
 
-El movimiento se calcula con `delta`, por lo que la velocidad no depende de los FPS. Si en el futuro se ajusta la sensación de movimiento, debe modificarse la constante común de velocidad del interior y no añadir multiplicadores distintos por cabaña.
+Cabaña 1 y Cabaña 3 comparten mapa.
 
-## Flujo para crear un nuevo interior
+Cabaña 2 tiene mapa propio.
 
-1. Crear o reutilizar el fondo 960 x 540.
-2. Mostrar la guía 30 x 15.
-3. Recorrer visualmente la habitación tomando siempre como referencia el **centro entre los pies**.
-4. Anotar únicamente las celdas o rangos JUGABLES.
-5. Añadir esos rangos al mapa del interior.
-6. Todo el resto queda no jugable automáticamente.
-7. Probar los bordes desde los cuatro lados y en diagonal.
-8. Ocultar la guía y repetir una prueba rápida: el comportamiento debe ser idéntico.
+### La Aldea
 
-## Formato recomendado al definir una habitación
+`src/villageInteriorCollisionMaps.ts`
 
-Ejemplo:
+Mapas:
 
-```text
-Área jugable:
-F6C9 a F6C26
-F7C9 a F8C23
-F9C5 a F10C23
-F11C5 a F11C26
-F12C6 a F12C26
-F13C14 a F15C17
+- `coins`;
+- `wine`;
+- `blessing`.
 
-Todo lo demás no es jugable.
-```
+### Iglesia
 
-Ese formato es suficiente para construir el mapa.
+`src/churchInteriorCollisionMap.ts`
 
-## Caso validado: Cabaña 1 y Cabaña 3 de ZE
+Pasillo jugable:
 
-Cabaña 1 y Cabaña 3 comparten la misma distribución visual y reutilizan exactamente el mismo mapa jugable:
+`F8 C14-C17` hasta `F15 C14-C17`.
+
+## Cabaña 1 y 3 de ZE
 
 ```text
-F6C9 a F6C26
-F7C9 a F7C23
-F8C9 a F8C23
-F9C5 a F9C23
-F10C5 a F10C23
-F11C5 a F11C26
-F12C6 a F12C26
-F13C14 a F13C17
-F14C14 a F14C17
-F15C14 a F15C17
+F6  C9-C26
+F7  C9-C23
+F8  C9-C23
+F9  C5-C23
+F10 C5-C23
+F11 C5-C26
+F12 C6-C26
+F13 C14-C17
+F14 C14-C17
+F15 C14-C17
 ```
 
-Todo lo demás es no jugable.
+## Cabaña 2 de ZE
 
-Este caso se considera la referencia validada para futuros interiores con requisitos equivalentes.
+```text
+F6  C6-C22
+F7  C8-C22
+F8  C8-C23
+F9  C8-C26
+F10 C8-C26
+F11 C4-C26
+F12 C4-C26
+F13 C14-C17
+F14 C14-C17
+F15 C14-C17
+```
+
+## Cabaña coins de La Aldea
+
+```text
+F6  C9-C25
+F7  C9-C23
+F8  C8-C23
+F9  C5-C23
+F10 C5-C23
+F11 C6-C27
+F12 C6-C26
+F13 C14-C17
+F14 C14-C17
+F15 C14-C17
+```
+
+## Tienda de vino
+
+```text
+F6  C8-C22
+F7  C8-C24
+F8  C9-C21
+F9  C10-C22
+F10 C10-C22
+F11 C12-C22
+F12 C13-C22
+F13 C14-C17
+F14 C14-C17
+F15 C14-C17
+```
+
+## Cabaña blessing
+
+```text
+F5  C7-C21
+F6  C5-C22
+F7  C8-C23
+F8  C8-C23
+F9  C8-C26
+F10 C8-C26
+F11 C4-C26
+F12 C4-C26
+F13 C14-C17
+F14 C14-C17
+F15 C14-C17
+```
+
+## Iglesia
+
+```text
+F8-F15 C14-C17
+```
+
+## Grid visual
+
+Las grids visibles de las cabañas de ZE, las cabañas de La Aldea y la iglesia se retiraron una vez validadas las zonas jugables.
+
+No deben reactivarse para juego normal.
+
+Si hay que definir un interior nuevo puede mostrarse temporalmente una guía visual y retirarla al terminar.
+
+## Flujo para un interior nuevo
+
+1. preparar fondo 960 × 540;
+2. mostrar grid temporal 30 × 15;
+3. medir con el centro entre los pies;
+4. anotar únicamente rangos jugables;
+5. añadir el mapa de datos;
+6. comprobar los cuatro lados y diagonales;
+7. comprobar salida;
+8. retirar grid visual.
 
 ## Qué no hacer
 
-- No definir primero todo como jugable y después intentar cerrar decenas de zonas con parches.
-- No crear un collider distinto para cada lado de una pared.
-- No añadir límites X/Y manuales específicos para corregir una fuga.
-- No depender de rectángulos Arcade solapados para representar las celdas no jugables.
-- No usar la imagen de la rejilla como sistema de colisión.
-- No usar el centro visual del personaje como referencia de suelo.
+- no construir límites con una colección creciente de rectángulos físicos;
+- no usar el centro visual del sprite;
+- no usar la grid dibujada como collider;
+- no crear reglas especiales por dirección para tapar fugas;
+- no duplicar mapas idénticos;
+- no reintroducir blockers que contradigan una whitelist positiva.
 
-## Compatibilidad temporal
+## Documento relacionado
 
-Algunos interiores anteriores pueden conservar durante la migración una lista de celdas bloqueadas. El motor puede convertir temporalmente ese formato a celdas permitidas, pero los interiores nuevos y los que vayamos afinando deben pasar al modelo positivo de **área jugable**.
+Para exteriores, entradas exactas y regla general:
 
-## Reutilización
-
-Si dos interiores usan exactamente la misma distribución, deben reutilizar el mismo conjunto de rangos, no copiar dos listas independientes. Así cualquier corrección futura se aplica a ambos automáticamente.
-
-Cabaña 1 y Cabaña 3 de ZE ya siguen este criterio compartiendo el mismo conjunto `CABIN_ONE_WALKABLE` en `src/interiorCollisionMaps.ts`.
-
-Cuando definamos las cabañas de La Aldea, la tienda de vino, la iglesia y futuros interiores, deben incorporarse a este mismo sistema de datos y validación.
+`docs/grid-navigation-standard.md`
