@@ -430,10 +430,6 @@ export class DesertScene extends Phaser.Scene {
     body.setVelocityX(-SNAKE_SPEED);
 
     snake.play('desert-snake-slither');
-
-    this.physics.add.overlap(this.player, snake, () => {
-      this.damagePlayerFromSnake();
-    });
   }
 
   private updateSnake(): void {
@@ -455,6 +451,14 @@ export class DesertScene extends Phaser.Scene {
       snake.setFlipX(false);
       body.setVelocityX(-SNAKE_SPEED);
     }
+
+    const touchingPlayer =
+      Math.abs(snake.x - this.player.x) <= (SNAKE_WIDTH + 28) / 2 &&
+      Math.abs(snake.y - (this.player.y + PLAYER_FOOT_OFFSET_Y)) <= (SNAKE_HEIGHT + 24) / 2;
+
+    if (touchingPlayer) {
+      this.damagePlayerFromSnake();
+    }
   }
 
   private damagePlayerFromSnake(): void {
@@ -469,11 +473,6 @@ export class DesertScene extends Phaser.Scene {
     setVillageEnergy(nextEnergy);
     this.registry.set(REGISTRY_ENERGY_KEY, nextEnergy);
     this.ui.updateEnergy(nextEnergy);
-
-    this.player.setTintFill(0xff6b5f);
-    this.time.delayedCall(160, () => {
-      if (this.player.active) this.player.clearTint();
-    });
   }
 
   private createPlayer(): void {
