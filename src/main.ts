@@ -11,6 +11,7 @@ import { ChurchInteriorScene } from './scenes/ChurchInteriorScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { AldeaScene } from './scenes/AldeaScene';
+import { DesertScene } from './scenes/DesertScene';
 import { DevMenuScene } from './scenes/DevMenuScene';
 import { installTrainingGameOverHook } from './gameOverHook';
 import { installTrainingTerrainRefinement } from './trainingTerrainRefinement';
@@ -85,6 +86,7 @@ const config: Phaser.Types.Core.GameConfig = {
     ChurchInteriorScene,
     WorldMapScene,
     AldeaScene,
+    DesertScene,
     DevMenuScene,
     GameOverScene
   ]
