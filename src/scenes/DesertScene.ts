@@ -25,8 +25,8 @@ const DESERT_BUILDINGS = [
   {
     key: 'desert-building-house-awning-01',
     path: './assets/world/desert/buildings/Mercado de adobe del desierto.png',
-    column: 11,
-    row: 13,
+    column: 13,
+    row: 11,
     width: 160,
     height: 144
   },
@@ -41,16 +41,16 @@ const DESERT_BUILDINGS = [
   {
     key: 'desert-building-dome-01',
     path: './assets/world/desert/buildings/Casa desértica isométrica con cúpula y toldos.png',
-    column: 23,
-    row: 14,
+    column: 27,
+    row: 12,
     width: 144,
     height: 176
   },
   {
     key: 'desert-building-market-tent-01',
     path: './assets/world/desert/buildings/Mercado desértico bajo una carpa roja.png',
-    column: 14,
-    row: 19,
+    column: 19,
+    row: 18,
     width: 144,
     height: 128
   }
