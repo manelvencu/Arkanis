@@ -453,8 +453,10 @@ export class DesertScene extends Phaser.Scene {
       body.setVelocityX(-SNAKE_SPEED);
     }
 
-    const snakeColumn = Math.floor(snake.x / GRID_SIZE) + 1;
-    const snakeRow = Math.floor(snake.y / GRID_SIZE) + 1;
+    const snakeGroundX = snake.x;
+    const snakeGroundY = snake.y + SNAKE_HEIGHT / 2;
+    const snakeColumn = Math.floor(snakeGroundX / GRID_SIZE) + 1;
+    const snakeRow = Math.floor(snakeGroundY / GRID_SIZE) + 1;
     const playerFootX = this.player.x;
     const playerFootY = this.player.y + PLAYER_FOOT_OFFSET_Y;
     const playerColumn = Math.floor(playerFootX / GRID_SIZE) + 1;
