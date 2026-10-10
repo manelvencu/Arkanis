@@ -1,76 +1,173 @@
-# Aldea: NPC, diálogos y cabañas
+# La Aldea — estado jugable actual
 
-## Animación de personajes y NPC
+## Papel de La Aldea
 
-La Aldea debe respetar el estándar general de animación de personajes definido para el juego.
+La Aldea es la primera zona jugable después de la Zona de Entrenamiento y de la transición por el mapa del mundo.
 
-- Derecha: `walk-right-01 -> idle-right -> walk-right-02 -> idle-right -> ...`.
-- Izquierda: reutiliza exactamente la animación de derecha con espejo horizontal (`flipX`).
-- Arriba: alterna `walk-up-01 -> walk-up-02` y al detenerse usa `idle-up`.
-- Abajo: alterna `walk-down-01 -> walk-down-02` y al detenerse usa `idle-down`.
-- El mismo criterio se aplica tanto a Tiana/Lupe como a los NPC móviles.
+Funciona como espacio de exploración, interacción con NPC y acceso a interiores.
 
-## NPC móviles de la Aldea
+## Estado global
 
-Se reutilizan y pueden replicarse los dos NPC disponibles en `public/assets/characters/npcs/`:
+Al entrar desde ZE deben conservarse:
 
-- `npc-boy-explorer...`
-- `npc-girl-braids...`
+- energía;
+- monedas.
 
-Los NPC siguen un ciclo autónomo:
+La sincronización usa Phaser Registry y `src/playerProgressBridge.ts`.
 
-`DENTRO -> SALE -> CAMINA -> ENTRA -> ESPERA -> SALE`
+Entrar y salir de interiores tampoco debe reiniciar estos valores.
 
-Al entrar en una cabaña desaparecen visualmente y permanecen dentro un mínimo de **5 segundos** antes de volver a salir. El siguiente destino se elige aleatoriamente entre las otras cabañas.
+## Navegación exterior
 
-Al acercarse el jugador a un NPC que está caminando, el NPC se detiene. Los mensajes forman una secuencia global, independiente del NPC concreto:
+La Aldea usa una whitelist positiva de celdas jugables.
 
-1. `Hay ocho mundos que deberás ir visitando. En cada uno deberás conseguir un fragmento de la Joya de Arkanis.`
-2. `Cuando reúnas los ocho fragmentos de la Joya de Arkanis, los tienes que llevar a la torre más alta del Castillo de Arkanis.`
-3. `¡Toma explorador! Aquí debes colocar todos los fragmentos de la Joya de Arkanis.`
+- grid: 30 × 22;
+- celda: 32 × 32 px;
+- mundo lógico: 960 × 704 px;
+- autoridad: centro entre los pies;
+- offset de referencia exterior: aproximadamente +20 px.
 
-Después del tercer mensaje ningún NPC vuelve a mostrar texto. El tercer diálogo deja registrado que el jugador ha recibido el futuro **portaobjetos para los fragmentos**. Su imagen y presentación visual quedan pendientes de crear y definir; cuando exista el asset, se mostrará en ese punto.
+Fuente de verdad:
 
-## Cabañas jugables
+- `src/aldeaWalkableGrid.ts`
+- `src/aldeaWalkableGridRefinement.ts`
 
-### Cabaña de las monedas
+Todo lo no declarado como jugable está bloqueado.
 
-Reutiliza el estilo de interior de la zona de entrenamiento. Contiene **10 monedas** repartidas por la habitación. Cada moneda solo puede recogerse una vez y se suma al contador global de la Aldea.
+Los antiguos blockers físicos no deben contradecir una celda permitida por la whitelist.
 
-### Cabaña del vino
+## Entradas exactas
 
-Contiene un barril de vino y el NPC niño estático junto a él. Al acercarse al barril se muestra:
+Toda celda de entrada se añade automáticamente al conjunto jugable.
 
-`Toma de nuestro vino y retoma fuerzas para el camino`
+La transición exige:
 
-Si la energía es inferior al 100 %, se restaura al 100 % y se muestra un efecto visual llamativo asociado a la recuperación de energía.
+1. centro entre los pies dentro de la celda;
+2. intención de caminar hacia arriba;
+3. ninguna otra transición activa.
 
-### Cabaña de la pareja
+Entradas:
 
-Contiene al NPC niño y al NPC niña estáticos. Al entrar se muestra:
+### Iglesia
 
-`Te deseamos el mejor de los caminos y que la suerte te acompañe.`
+- `C18F7`
+- `C19F7`
 
-## Estado compartido de la Aldea
+### Cabaña derecha superior / blessing
 
-El progreso de la Aldea mantiene:
+- `C26F13`
 
-- índice del siguiente mensaje de NPC;
-- entrega del futuro portaobjetos;
-- monedas recogidas;
-- energía actual;
-- monedas de la cabaña ya recogidas.
+### Tienda de vino / wine
 
-Así el jugador conserva estos datos al entrar y salir de las cabañas.
+- `C22F19`
+- `C22F20`
 
-## Mapa del mundo
+### Cabaña inferior izquierda / coins
 
-El zoom de entrada hacia La Aldea se mantiene. No debe mostrarse ningún círculo amarillo, pulso o destello circular sobre el mapa.
+- `C5F18`
+- `C5F19`
 
-## GAME OVER
+## NPC móviles
 
-La pantalla de GAME OVER se considera interfaz de pantalla y debe permanecer centrada respecto a la resolución física del juego, sin depender del scroll ni del zoom de la cámara de la zona de entrenamiento.
+La Aldea reutiliza NPC niño y niña.
 
-## Fuente de la plaza
+Los NPC pueden:
 
-Pendiente de asset. Se integrará como animación de cuatro PNG transparentes cuando estén disponibles los cuatro frames de la fuente.
+- salir de una construcción;
+- recorrer la Aldea;
+- entrar en otra;
+- permanecer dentro;
+- volver a salir.
+
+Cuando el jugador se aproxima, el NPC se detiene y puede mostrar el siguiente diálogo global disponible.
+
+La secuencia narrativa actual introduce:
+
+- los ocho mundos;
+- los ocho fragmentos de la Joya de Arkanis;
+- el objetivo de llevarlos al Castillo de Arkanis;
+- el futuro portaobjetos de fragmentos.
+
+## Cabaña de monedas
+
+`kind: coins`
+
+Interior visual:
+
+`public/assets/environment/interiors/cabin/cabin-interior-furnished-01.png`
+
+Contiene 10 monedas.
+
+Las monedas ya recogidas deben permanecer registradas para no reaparecer al volver a entrar.
+
+Zona jugable definida en `src/villageInteriorCollisionMaps.ts`.
+
+## Tienda de vino
+
+`kind: wine`
+
+Interior visual:
+
+`public/assets/environment/interiors/cabin/cabin-interior-wine-shop-01.png`
+
+Incluye NPC y recuperación de energía.
+
+Mensaje:
+
+> Toma de nuestro vino y retoma fuerzas para el camino
+
+Zona jugable definida y validada en `src/villageInteriorCollisionMaps.ts`.
+
+El pasillo de salida incluye F15 C14–C17.
+
+## Cabaña de bendición
+
+`kind: blessing`
+
+Interior visual:
+
+`public/assets/environment/interiors/cabin/cabin-interior-furnished-02.png`
+
+Incluye NPC niño y niña.
+
+Mensaje:
+
+> Te deseamos el mejor de los caminos y que la suerte te acompañe.
+
+Zona jugable definida y validada en `src/villageInteriorCollisionMaps.ts`.
+
+## Iglesia
+
+Interior visual:
+
+`public/assets/environment/interiors/church/church-interior-furnished-01.png`
+
+La zona jugable es exclusivamente el pasillo central:
+
+`F8C14 a F15C17`
+
+Definición:
+
+`src/churchInteriorCollisionMap.ts`
+
+## Grid visual
+
+Las plantillas visuales de grid utilizadas para definir las cabañas y la iglesia ya fueron retiradas.
+
+Las colisiones continúan funcionando porque el grid visible nunca fue la colisión real.
+
+## HUD
+
+La Aldea y sus interiores usan el HUD común de:
+
+`src/playableSceneUi.ts`
+
+No deben crear barras de energía, contadores o controles propios.
+
+## Siguiente transición
+
+La próxima salida narrativa de La Aldea debe volver a mostrar el mapa general de Arkanis.
+
+Al recibir una pulsación/clic/toque se realizará zoom hacia **Las Tierras del Fuego**, terminando con el nombre de esa zona centrado antes de continuar al siguiente nivel.
+
+Esta transición está definida como próximo bloque de trabajo, no como funcionalidad cerrada.
