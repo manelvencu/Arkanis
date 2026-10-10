@@ -72,6 +72,65 @@ const DESERT_BUILDINGS = [
   }
 ] as const;
 
+const DESERT_PALMS = [
+  {
+    key: 'desert-palm-tall-01',
+    path: './assets/world/desert/vegetation/Palmera desértica en estilo píxel.png',
+    column: 10,
+    row: 7,
+    width: 92,
+    height: 192
+  },
+  {
+    key: 'desert-palm-medium-01',
+    path: './assets/world/desert/vegetation/Palmera tropical en terreno arenoso.png',
+    column: 11,
+    row: 10,
+    width: 82,
+    height: 160
+  },
+  {
+    key: 'desert-palm-tall-01',
+    path: './assets/world/desert/vegetation/Palmera desértica en estilo píxel.png',
+    column: 11,
+    row: 12,
+    width: 92,
+    height: 192
+  },
+  {
+    key: 'desert-palm-medium-01',
+    path: './assets/world/desert/vegetation/Palmera tropical en terreno arenoso.png',
+    column: 27,
+    row: 5,
+    width: 82,
+    height: 160
+  },
+  {
+    key: 'desert-palm-tall-01',
+    path: './assets/world/desert/vegetation/Palmera desértica en estilo píxel.png',
+    column: 26,
+    row: 7,
+    width: 92,
+    height: 192
+  },
+  {
+    key: 'desert-palm-medium-01',
+    path: './assets/world/desert/vegetation/Palmera tropical en terreno arenoso.png',
+    column: 30,
+    row: 11,
+    width: 82,
+    height: 160
+  },
+  {
+    key: 'desert-palm-tall-01',
+    path: './assets/world/desert/vegetation/Palmera desértica en estilo píxel.png',
+    column: 20,
+    row: 16,
+    width: 92,
+    height: 192
+  }
+] as const;
+
 const PLAYER_SIZE = 64;
 const PLAYER_SPEED = 180;
 const PLAYER_FOOT_OFFSET_Y = 20;
@@ -161,6 +220,13 @@ export class DesertScene extends Phaser.Scene {
       this.load.image(building.key, building.path);
     });
 
+    const loadedPalmKeys = new Set<string>();
+    DESERT_PALMS.forEach((palm) => {
+      if (loadedPalmKeys.has(palm.key)) return;
+      loadedPalmKeys.add(palm.key);
+      this.load.image(palm.key, palm.path);
+    });
+
     preloadPlayableUiAssets(this);
 
     const characterKey = this.characterId === 'lupe' ? 'lupe' : 'tiana';
@@ -176,6 +242,7 @@ export class DesertScene extends Phaser.Scene {
 
     this.createWorldBackground();
     this.createBuildings();
+    this.createPalms();
     this.createGridGuide();
     this.createPlayer();
 
@@ -270,6 +337,18 @@ export class DesertScene extends Phaser.Scene {
       this.add.image(x, baseY, building.key)
         .setOrigin(0.5, 1)
         .setDisplaySize(building.width, building.height)
+        .setDepth(baseY);
+    });
+  }
+
+  private createPalms(): void {
+    DESERT_PALMS.forEach((palm) => {
+      const x = (palm.column - 0.5) * GRID_SIZE;
+      const baseY = palm.row * GRID_SIZE;
+
+      this.add.image(x, baseY, palm.key)
+        .setOrigin(0.5, 1)
+        .setDisplaySize(palm.width, palm.height)
         .setDepth(baseY);
     });
   }
