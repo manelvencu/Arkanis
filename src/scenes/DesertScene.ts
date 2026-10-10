@@ -145,6 +145,12 @@ const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
 
+const SNAKE_START_CELL = { column: 77, row: 13 } as const;
+const SNAKE_END_CELL = { column: 13, row: 13 } as const;
+const SNAKE_SPEED = 72;
+const SNAKE_WIDTH = 32;
+const SNAKE_HEIGHT = 16;
+
 const REGISTRY_ENERGY_KEY = 'arkanis.player.energy';
 const REGISTRY_COINS_KEY = 'arkanis.player.coins';
 
@@ -195,6 +201,7 @@ export class DesertScene extends Phaser.Scene {
   private facing: Facing = 'side';
   private direction = new Phaser.Math.Vector2(1, 0);
   private lastShotAt = 0;
+  private snake?: Phaser.Physics.Arcade.Sprite;
 
   constructor() {
     super('DesertScene');
@@ -205,6 +212,7 @@ export class DesertScene extends Phaser.Scene {
     this.facing = 'side';
     this.direction.set(1, 0);
     this.lastShotAt = 0;
+    this.snake = undefined;
   }
 
   preload(): void {
@@ -227,6 +235,15 @@ export class DesertScene extends Phaser.Scene {
       this.load.image(palm.key, palm.path);
     });
 
+    this.load.image(
+      'desert-snake-01',
+      './assets/world/desert/enemies/snakes/serpiente-01.png'
+    );
+    this.load.image(
+      'desert-snake-02',
+      './assets/world/desert/enemies/snakes/serpiente-02.png'
+    );
+
     preloadPlayableUiAssets(this);
 
     const characterKey = this.characterId === 'lupe' ? 'lupe' : 'tiana';
@@ -245,6 +262,7 @@ export class DesertScene extends Phaser.Scene {
     this.createPalms();
     this.createGridGuide();
     this.createPlayer();
+    this.createSnake();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -309,6 +327,7 @@ export class DesertScene extends Phaser.Scene {
 
     this.applyTempleStairsScale();
     this.updateWorldDepths();
+    this.updateSnake();
 
     const keyboardShot = Phaser.Input.Keyboard.JustDown(this.spaceKey);
     const touchShot = this.ui.consumeShootRequest();
@@ -375,6 +394,50 @@ export class DesertScene extends Phaser.Scene {
     this.player.setDepth(footY);
   }
 
+  private createSnake(): void {
+    const startX = (SNAKE_START_CELL.column - 0.5) * GRID_SIZE;
+    const startY = (SNAKE_START_CELL.row - 0.5) * GRID_SIZE;
+    const endX = (SNAKE_END_CELL.column - 0.5) * GRID_SIZE;
+
+    if (!this.anims.exists('desert-snake-slither')) {
+      this.anims.create({
+        key: 'desert-snake-slither',
+        frames: [
+          { key: 'desert-snake-01' },
+          { key: 'desert-snake-02' }
+        ],
+        frameRate: 5,
+        repeat: -1
+      });
+    }
+
+    this.snake = this.physics.add.sprite(startX, startY, 'desert-snake-01');
+    this.snake
+      .setDisplaySize(SNAKE_WIDTH, SNAKE_HEIGHT)
+      .setDepth(startY)
+      .setData('endX', endX);
+
+    const body = this.snake.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    body.setSize(SNAKE_WIDTH * 0.8, SNAKE_HEIGHT * 0.7, true);
+    body.setVelocityX(-SNAKE_SPEED);
+
+    this.snake.play('desert-snake-slither');
+  }
+
+  private updateSnake(): void {
+    const snake = this.snake;
+    if (!snake?.active) return;
+
+    const endX = snake.getData('endX') as number;
+    snake.setDepth(snake.y);
+
+    if (snake.x <= endX) {
+      snake.destroy();
+      this.snake = undefined;
+    }
+  }
+
   private createPlayer(): void {
     const makeAnimation = (key: Facing, frames: string[]): void => {
       const animationKey = `desert-walk-${key}`;
@@ -436,6 +499,15 @@ export class DesertScene extends Phaser.Scene {
       shotDirection.x * MAGIC_RAY_SPEED,
       shotDirection.y * MAGIC_RAY_SPEED
     );
+
+    const snake = this.snake;
+    if (snake?.active) {
+      this.physics.add.overlap(ray, snake, () => {
+        if (ray.active) ray.destroy();
+        if (snake.active) snake.destroy();
+        if (this.snake === snake) this.snake = undefined;
+      });
+    }
 
     this.time.delayedCall(MAGIC_RAY_LIFETIME, () => {
       if (ray.active) ray.destroy();
