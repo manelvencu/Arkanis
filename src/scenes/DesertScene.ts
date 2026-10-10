@@ -415,21 +415,23 @@ export class DesertScene extends Phaser.Scene {
       });
     }
 
-    this.snake = this.physics.add.sprite(startX, startY, 'desert-snake-01');
-    this.snake
+    const snake = this.physics.add.sprite(startX, startY, 'desert-snake-01');
+    this.snake = snake;
+
+    snake
       .setDisplaySize(SNAKE_WIDTH, SNAKE_HEIGHT)
       .setDepth(startY)
       .setData('startX', startX)
       .setData('endX', endX);
 
-    const body = this.snake.body as Phaser.Physics.Arcade.Body;
+    const body = snake.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.setSize(SNAKE_WIDTH * 0.8, SNAKE_HEIGHT * 0.7, true);
     body.setVelocityX(-SNAKE_SPEED);
 
-    this.snake.play('desert-snake-slither');
+    snake.play('desert-snake-slither');
 
-    this.physics.add.overlap(this.player, this.snake, () => {
+    this.physics.add.overlap(this.player, snake, () => {
       this.damagePlayerFromSnake();
     });
   }
