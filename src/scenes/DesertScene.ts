@@ -5,7 +5,7 @@ import {
   preloadPlayableUiAssets,
   type PlayableUiController
 } from '../playableSceneUi';
-import { getVillageProgress } from '../villageProgress';
+import { getVillageProgress, setVillageEnergy } from '../villageProgress';
 
 interface DesertSceneData {
   characterId?: CharacterId;
@@ -148,8 +148,10 @@ const MAGIC_RAY_LIFETIME = 900;
 const SNAKE_START_CELL = { column: 77, row: 13 } as const;
 const SNAKE_END_CELL = { column: 13, row: 13 } as const;
 const SNAKE_SPEED = 72;
-const SNAKE_WIDTH = 32;
-const SNAKE_HEIGHT = 16;
+const SNAKE_WIDTH = 38;
+const SNAKE_HEIGHT = 19;
+const SNAKE_DAMAGE = 10;
+const SNAKE_DAMAGE_COOLDOWN_MS = 1000;
 
 const REGISTRY_ENERGY_KEY = 'arkanis.player.energy';
 const REGISTRY_COINS_KEY = 'arkanis.player.coins';
@@ -202,6 +204,7 @@ export class DesertScene extends Phaser.Scene {
   private direction = new Phaser.Math.Vector2(1, 0);
   private lastShotAt = 0;
   private snake?: Phaser.Physics.Arcade.Sprite;
+  private snakeDamageCooldownUntil = 0;
 
   constructor() {
     super('DesertScene');
@@ -213,6 +216,7 @@ export class DesertScene extends Phaser.Scene {
     this.direction.set(1, 0);
     this.lastShotAt = 0;
     this.snake = undefined;
+    this.snakeDamageCooldownUntil = 0;
   }
 
   preload(): void {
@@ -415,6 +419,7 @@ export class DesertScene extends Phaser.Scene {
     this.snake
       .setDisplaySize(SNAKE_WIDTH, SNAKE_HEIGHT)
       .setDepth(startY)
+      .setData('startX', startX)
       .setData('endX', endX);
 
     const body = this.snake.body as Phaser.Physics.Arcade.Body;
@@ -423,19 +428,50 @@ export class DesertScene extends Phaser.Scene {
     body.setVelocityX(-SNAKE_SPEED);
 
     this.snake.play('desert-snake-slither');
+
+    this.physics.add.overlap(this.player, this.snake, () => {
+      this.damagePlayerFromSnake();
+    });
   }
 
   private updateSnake(): void {
     const snake = this.snake;
     if (!snake?.active) return;
 
+    const startX = snake.getData('startX') as number;
     const endX = snake.getData('endX') as number;
+    const body = snake.body as Phaser.Physics.Arcade.Body;
+
     snake.setDepth(snake.y);
 
     if (snake.x <= endX) {
-      snake.destroy();
-      this.snake = undefined;
+      snake.setX(endX);
+      snake.setFlipX(true);
+      body.setVelocityX(SNAKE_SPEED);
+    } else if (snake.x >= startX) {
+      snake.setX(startX);
+      snake.setFlipX(false);
+      body.setVelocityX(-SNAKE_SPEED);
     }
+  }
+
+  private damagePlayerFromSnake(): void {
+    const now = this.time.now;
+    if (now < this.snakeDamageCooldownUntil) return;
+
+    this.snakeDamageCooldownUntil = now + SNAKE_DAMAGE_COOLDOWN_MS;
+
+    const progress = getVillageProgress();
+    const nextEnergy = Math.max(0, progress.energy - SNAKE_DAMAGE);
+
+    setVillageEnergy(nextEnergy);
+    this.registry.set(REGISTRY_ENERGY_KEY, nextEnergy);
+    this.ui.updateEnergy(nextEnergy);
+
+    this.player.setTintFill(0xff6b5f);
+    this.time.delayedCall(160, () => {
+      if (this.player.active) this.player.clearTint();
+    });
   }
 
   private createPlayer(): void {
