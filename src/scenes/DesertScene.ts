@@ -493,6 +493,12 @@ export class DesertScene extends Phaser.Scene {
     setVillageEnergy(nextEnergy);
     this.registry.set(REGISTRY_ENERGY_KEY, nextEnergy);
     this.ui.updateEnergy(nextEnergy);
+
+    this.cameras.main.shake(180, 0.007);
+    this.player.setTint(0xff5544);
+    this.time.delayedCall(180, () => {
+      if (this.player.active) this.player.clearTint();
+    });
   }
 
   private createPlayer(): void {
