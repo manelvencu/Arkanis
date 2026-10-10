@@ -1,18 +1,27 @@
 import * as Phaser from 'phaser';
 
 const MAP_TIMEOUT_MS = 60_000;
-// Punto central del rótulo «La Aldea» en arkanis-world-map.png.
-// Imagen de referencia: 1220×1567; centro aproximado del rótulo: x=510, y=907.
-const ALDEA_TARGET = { x: 510 / 1220, y: 907 / 1567 };
+// Puntos centrales de los rótulos sobre arkanis-world-map.png.
+// La Aldea: referencia histórica validada.
+// El Desierto de Mil Soles: parametrizado a partir de la captura de referencia
+// aportada por el usuario, apuntando al centro visual del nombre.
+const MAP_TARGETS = {
+  aldea: { x: 510 / 1220, y: 907 / 1567 },
+  desert: { x: 125 / 1220, y: 755 / 1567 }
+} as const;
+
+type WorldMapDestination = keyof typeof MAP_TARGETS;
 
 interface WorldMapData {
   characterId?: string;
   startAtMap?: boolean;
+  destination?: WorldMapDestination;
 }
 
 export class WorldMapScene extends Phaser.Scene {
   private characterId = 'tiana';
   private startAtMap = false;
+  private destination: WorldMapDestination = 'aldea';
   private mapContainer?: Phaser.GameObjects.Container;
   private mapImage?: Phaser.GameObjects.Image;
   private mapTimeout?: Phaser.Time.TimerEvent;
@@ -26,6 +35,7 @@ export class WorldMapScene extends Phaser.Scene {
   init(data: WorldMapData): void {
     this.characterId = data.characterId ?? 'tiana';
     this.startAtMap = data.startAtMap ?? false;
+    this.destination = data.destination ?? 'aldea';
     this.canContinue = false;
     this.transitioning = false;
   }
@@ -178,8 +188,10 @@ export class WorldMapScene extends Phaser.Scene {
       onComplete: () => {
         this.canContinue = true;
         this.installContinueInput();
-        this.pulseAldea();
-        this.mapTimeout = this.time.delayedCall(MAP_TIMEOUT_MS, () => this.beginAldeaTransition());
+        if (this.destination === 'aldea') {
+          this.pulseAldea();
+          this.mapTimeout = this.time.delayedCall(MAP_TIMEOUT_MS, () => this.beginMapTransition());
+        }
       }
     });
 
@@ -188,7 +200,7 @@ export class WorldMapScene extends Phaser.Scene {
 
   private pulseAldea(): void {
     if (!this.mapContainer || !this.mapImage) return;
-    const local = this.aldeaLocalPoint();
+    const local = this.destinationLocalPoint();
     const glow = this.add.circle(local.x, local.y, 70, 0xffe28a, 0.08)
       .setStrokeStyle(8, 0xffdc78, 0.88);
     this.mapContainer.add(glow);
@@ -204,12 +216,12 @@ export class WorldMapScene extends Phaser.Scene {
   }
 
   private installContinueInput(): void {
-    const go = (): void => this.beginAldeaTransition();
+    const go = (): void => this.beginMapTransition();
     this.input.keyboard?.once('keydown', go);
     this.input.once('pointerdown', go);
   }
 
-  private beginAldeaTransition(): void {
+  private beginMapTransition(): void {
     if (!this.canContinue || this.transitioning || !this.mapContainer || !this.mapImage) return;
     this.transitioning = true;
     this.mapTimeout?.remove(false);
@@ -240,17 +252,30 @@ export class WorldMapScene extends Phaser.Scene {
       onComplete: () => {
         this.cameras.main.fadeOut(850, 3, 2, 8);
         this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-          this.scene.start('AldeaScene', { characterId: this.characterId });
+          if (this.destination === 'desert') {
+            this.scene.start('DesertScene', { characterId: this.characterId });
+          } else {
+            this.scene.start('AldeaScene', { characterId: this.characterId });
+          }
         });
       }
     });
   }
 
   private aldeaLocalPoint(): Phaser.Math.Vector2 {
+    return this.targetLocalPoint('aldea');
+  }
+
+  private destinationLocalPoint(): Phaser.Math.Vector2 {
+    return this.targetLocalPoint(this.destination);
+  }
+
+  private targetLocalPoint(destination: WorldMapDestination): Phaser.Math.Vector2 {
     if (!this.mapImage) return new Phaser.Math.Vector2(0, 0);
+    const target = MAP_TARGETS[destination];
     return new Phaser.Math.Vector2(
-      (ALDEA_TARGET.x - 0.5) * this.mapImage.displayWidth,
-      (ALDEA_TARGET.y - 0.5) * this.mapImage.displayHeight
+      (target.x - 0.5) * this.mapImage.displayWidth,
+      (target.y - 0.5) * this.mapImage.displayHeight
     );
   }
 
