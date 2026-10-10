@@ -139,6 +139,12 @@ export class DevMenuScene extends Phaser.Scene {
         entries: [
           { label: 'Entrada a La Aldea', sceneKey: 'AldeaScene', data: characterData }
         ]
+      },
+      {
+        title: 'MUNDO 2 — EL DESIERTO DE MIL SOLES',
+        entries: [
+          { label: 'Entrada al Desierto', sceneKey: 'DesertScene', data: characterData }
+        ]
       }
     ];
   }
