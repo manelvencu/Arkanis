@@ -226,18 +226,20 @@ function showNpcMessage(scene: AldeaRuntime, npc: VillageNpc): void {
   scene.__villageDialogueOpen = true;
   setNpcIdle(npc);
 
+  // Los diálogos son UI contextual: siempre aparecen centrados en la pantalla
+  // visible, independientemente de dónde estén el jugador o el NPC en el mundo.
   const center = scene.cameras.main.midPoint;
-  const box = scene.add.rectangle(center.x, center.y + 135, 760, 170, 0x17100c, 0.97)
+  const box = scene.add.rectangle(center.x, center.y, 760, 170, 0x17100c, 0.97)
     .setStrokeStyle(4, 0xd6a84b, 1)
     .setDepth(500);
-  const text = scene.add.text(center.x, center.y + 112, next.message, {
+  const text = scene.add.text(center.x, center.y - 22, next.message, {
     fontFamily: 'Georgia, Times New Roman, serif',
     fontSize: '24px',
     color: '#fff0c7',
     align: 'center',
     wordWrap: { width: 700 }
   }).setOrigin(0.5).setDepth(501);
-  const close = scene.add.text(center.x, center.y + 185, 'Pulsa ESPACIO, ENTER o toca para continuar', {
+  const close = scene.add.text(center.x, center.y + 55, 'Pulsa ESPACIO, ENTER o toca para continuar', {
     fontFamily: 'Arial', fontSize: '16px', color: '#d6a84b'
   }).setOrigin(0.5).setDepth(501);
 
