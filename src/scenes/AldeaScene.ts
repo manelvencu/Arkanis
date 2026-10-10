@@ -26,7 +26,6 @@ const PLAYER_START = { x: 92, y: WORLD_HEIGHT - 86 };
 const ROAD_WIDTH = 105;
 const CABIN_PATH_WIDTH = GRID * 2;
 const CABIN_PATH_OVERLAP = 48;
-const GRID_TEXTURE_KEY = 'aldea-grid-debug-overlay';
 const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
@@ -213,7 +212,6 @@ export class AldeaScene extends Phaser.Scene {
     this.createForestEdge();
     this.createPathBorderDecorations();
     this.createBuildings();
-    this.createGridOverlay();
     this.createPlayer();
     this.createWorldCollisions();
 
@@ -556,52 +554,4 @@ export class AldeaScene extends Phaser.Scene {
     });
   }
 
-  private createGridOverlay(): void {
-    if (this.textures.exists(GRID_TEXTURE_KEY)) this.textures.remove(GRID_TEXTURE_KEY);
-    const texture = this.textures.createCanvas(GRID_TEXTURE_KEY, WORLD_WIDTH, WORLD_HEIGHT);
-    if (!texture) return;
-
-    const context = texture.context;
-    context.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    context.textBaseline = 'top';
-    context.font = '7px Arial';
-
-    for (let column = 0; column <= WORLD_COLUMNS; column += 1) {
-      const x = column * GRID + 0.5;
-      context.beginPath();
-      context.strokeStyle = column % 5 === 0 ? 'rgba(255,245,175,0.52)' : 'rgba(255,255,255,0.24)';
-      context.lineWidth = column % 5 === 0 ? 1.5 : 1;
-      context.moveTo(x, 0);
-      context.lineTo(x, WORLD_HEIGHT);
-      context.stroke();
-    }
-
-    for (let row = 0; row <= WORLD_ROWS; row += 1) {
-      const y = row * GRID + 0.5;
-      context.beginPath();
-      context.strokeStyle = row % 5 === 0 ? 'rgba(255,245,175,0.52)' : 'rgba(255,255,255,0.24)';
-      context.lineWidth = row % 5 === 0 ? 1.5 : 1;
-      context.moveTo(0, y);
-      context.lineTo(WORLD_WIDTH, y);
-      context.stroke();
-    }
-
-    for (let row = 1; row <= WORLD_ROWS; row += 1) {
-      for (let column = 1; column <= WORLD_COLUMNS; column += 1) {
-        const x = (column - 1) * GRID + 2;
-        const y = (row - 1) * GRID + 2;
-        const label = `C${String(column).padStart(2, '0')}/F${String(row).padStart(2, '0')}`;
-        context.lineWidth = 2;
-        context.strokeStyle = 'rgba(0,0,0,0.72)';
-        context.strokeText(label, x, y);
-        context.fillStyle = 'rgba(255,244,170,0.82)';
-        context.fillText(label, x, y);
-      }
-    }
-
-    texture.refresh();
-    this.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, GRID_TEXTURE_KEY)
-      .setDepth(900)
-      .setAlpha(0.9);
-  }
 }
