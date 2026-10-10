@@ -1,134 +1,174 @@
 # HUD y sistemas base
 
-## Regla general para escenas jugables
+## Regla general
 
-A partir de la incorporación de La Aldea, la HUD y los controles dejan de considerarse elementos exclusivos del entrenamiento.
+Toda escena jugable de Arkanis debe reutilizar la misma implementación base de HUD y controles.
 
-Toda escena jugable de Arkanis debe compartir como mínimo:
-
-- HUD superior común.
-- Nombre del personaje.
-- Barra de energía.
-- Contador de monedas.
-- Icono de menú.
-- Movimiento por teclado.
-- Cruceta táctil.
-- Botón táctil de disparo.
-- Disparo mediante barra espaciadora.
-- Rayo mágico usando el asset real del juego.
-
-No deben crearse variantes independientes del HUD o de los controles para cada mundo salvo decisión explícita de diseño.
-
-`TrainingScene` continúa siendo la referencia visual validada. Las nuevas escenas deben reutilizar la implementación compartida disponible en `src/playableSceneUi.ts`.
-
-## HUD fija
-
-La HUD permanece anclada a una cámara de interfaz y ocupa casi todo el ancho visible. `hud-frame.png` incorpora su propio fondo interior y no se añade ningún rectángulo de color adicional detrás.
-
-La distribución base queda así:
-
-- **Izquierda dentro de `hud-frame`:** nombre del personaje.
-- **Centro:** contenido contextual de progreso cuando la escena lo necesite.
-- **Derecha:** moneda, contador e icono de menú.
-- **Debajo de `hud-frame`, zona inferior izquierda:** barra de energía completa.
-
-El marco decorativo es la base visual de la HUD y los elementos funcionales se dibujan por delante mediante profundidades superiores.
-
-## Cámara de interfaz
-
-Las escenas jugables nuevas deben separar mundo e interfaz mediante cámaras:
-
-- cámara principal para escenario, personaje, proyectiles y elementos físicos;
-- cámara UI para HUD, energía, monedas, menú y controles táctiles.
-
-La cámara principal ignora los objetos UI y la cámara UI ignora los objetos del mundo.
-
-De esta forma la interfaz permanece fija y conserva tamaño y posición aunque el mundo utilice zoom o seguimiento de cámara.
-
-## Energía
-
-- Máximo y valor inicial normal: **100**.
-- Entre 100 y 30 puntos se usa el relleno dorado.
-- Por debajo de 30 puntos se usa el relleno rojo.
-- El ancho del relleno se calcula dinámicamente a partir del porcentaje actual.
-
-Las reglas de daño pueden variar por escena. En entrenamiento, por ejemplo, cada contacto con pinchos resta 20 puntos y existe una ventana de invulnerabilidad posterior.
-
-## Monedas
-
-El contador de monedas forma parte del HUD común y debe existir también en escenas donde todavía no haya monedas recogibles. El valor mostrado puede comenzar en 0 o recibir en el futuro el saldo global del jugador.
-
-La tienda de La Aldea todavía no tiene economía definitiva, por lo que su diseño no altera por ahora este sistema base.
-
-## Menú
-
-El icono de menú forma parte del mínimo común de una pantalla jugable.
-
-Durante el desarrollo, cuando `DEV_MODE = true`, abre `DevMenuScene`, que permite saltar entre escenas del proyecto.
-
-En una versión final de producción este mismo icono podrá conectarse al menú real del juego sin alterar el resto del HUD.
-
-## Rayo mágico
-
-El proyectil base usa:
-
-`public/assets/effects/magic-ray-gold-01.png`
-
-Se mantiene una única imagen orientada originalmente hacia la derecha y Phaser la rota según la dirección de disparo.
-
-Características comunes:
-
-- disparo con barra espaciadora;
-- disparo con botón táctil;
-- orientación según dirección actual del personaje;
-- física independiente;
-- velocidad y tiempo de vida controlados por código;
-- debe ser un proyectil real, no una forma geométrica provisional.
-
-Las colisiones y efectos específicos dependerán de cada mundo.
-
-## Controles táctiles
-
-La cruceta y el botón de magia deben conservar la misma posición, escala y estilo visual utilizados en entrenamiento.
-
-Los controles táctiles se dibujan en la cámara UI y admiten movimiento diagonal mediante lectura combinada de direcciones.
-
-## Módulo compartido `playableSceneUi.ts`
-
-Las nuevas escenas jugables reutilizan:
+La fuente de verdad es:
 
 `src/playableSceneUi.ts`
 
-Funciones principales:
+No deben crearse HUD independientes por mundo.
 
-### `preloadPlayableUiAssets(scene)`
+## Elementos comunes
 
-Carga los assets comunes de HUD, energía, moneda, menú y rayo.
+El controlador compartido incluye:
 
-### `createPlayableUi(...)`
+- nombre del personaje;
+- energía;
+- monedas;
+- texto contextual;
+- icono de menú;
+- cruceta táctil;
+- botón de rayo;
+- soporte de teclado;
+- cámara UI independiente.
 
-Construye la interfaz y devuelve un controlador con:
+## Cámara de interfaz
 
-- `touchDirections`
-- `consumeShootRequest()`
+Las escenas jugables separan mundo e interfaz:
+
+- cámara principal: escenario, personaje, NPC, proyectiles y objetos físicos;
+- cámara UI: HUD y controles.
+
+La cámara principal ignora los objetos UI y la cámara UI ignora el mundo.
+
+Esto evita que el zoom o el seguimiento de la cámara desplacen la interfaz.
+
+## Barra de energía — sistema actual
+
+La implementación anterior usaba:
+
+- un frame independiente;
+- un relleno dorado o rojo;
+- escalado dinámico del ancho.
+
+Ese modelo fue sustituido porque podía generar desalineaciones visuales.
+
+### Sistema vigente
+
+Cada nivel de energía usa una **imagen completa**, que contiene frame y relleno ya alineados.
+
+Ruta:
+
+`public/assets/ui/hud/energy/`
+
+Convención:
+
+`energy-bar-frame-{nivel}.png`
+
+Niveles previstos:
+
+- 0
+- 10
+- 20
+- 30
+- 40
+- 50
+- 60
+- 70
+- 80
+- 90
+- 100
+
+El juego precarga estas once texturas.
+
+El valor real se limita a 0–100 y se redondea al múltiplo de 10 más cercano:
+
+- 84 -> 80;
+- 86 -> 90;
+- 95 -> 100.
+
+La imagen se cambia con `setTexture()`, conservando una única posición central.
+
+### Posición actual
+
+En `playableSceneUi.ts`:
+
+- `ENERGY_CENTER_X = 150 * HD_SCALE`
+- `ENERGY_CENTER_Y = 90 * HD_SCALE`
+
+La barra completa se escala conservando proporciones dentro de un máximo aproximado de:
+
+- 300 px lógicos de ancho;
+- 74 px lógicos de alto.
+
+### Regla de assets
+
+Los once PNG deben tener:
+
+- fondo transparente;
+- mismo lienzo;
+- mismas dimensiones;
+- marco en la misma posición;
+- únicamente cambia la cantidad/color de energía.
+
+Así cada estado puede sustituirse sin saltos de posición ni escala.
+
+## Estado de energía
+
+Máximo normal: 100.
+
+La lógica jugable mantiene el valor numérico real aunque la representación visual se cuantice en pasos de 10.
+
+No debe inferirse el valor del jugador a partir de la textura mostrada.
+
+## Monedas
+
+El contador forma parte del HUD compartido y debe persistir entre escenas cuando corresponda.
+
+La sincronización entre ZE y La Aldea usa Phaser Registry y el bridge de progreso.
+
+## Estado contextual
+
+`PlayableUiController` expone:
+
 - `updateEnergy()`
 - `updateCoins()`
+- `updateStatus()`
+- `consumeShootRequest()`
 - `ignoreWorldObject()`
 
-Este módulo se creó para evitar que cada nueva pantalla reproduzca manualmente el sistema del entrenamiento.
+En ZE, por ejemplo, `updateStatus()` muestra el progreso de vasijas.
 
-## Compatibilidad con entrenamiento
+## TrainingScene
 
-`TrainingScene` conserva actualmente su implementación validada y sus refinamientos HD en `hdRenderingRefinement.ts`.
+TrainingScene **ya utiliza el HUD común**.
 
-No se migrará de forma agresiva a la nueva base compartida mientras exista riesgo de introducir regresiones. El estándar visual y funcional, sin embargo, es el mismo.
+`hdRenderingRefinement.ts` elimina el HUD histórico creado por la escena y monta `createPlayableUi()`, manteniendo intacta la lógica de juego de entrenamiento.
 
-## Game Over
+Por tanto, cualquier cambio visual del HUD compartido debe reflejarse también en ZE, La Aldea e interiores jugables.
 
-El comportamiento de Game Over sigue documentado de forma específica en `docs/13-game-over.md`.
+## Controles
 
-## Documentación relacionada
+### Teclado
 
-Para la evolución completa desde la salida del entrenamiento hasta La Aldea, menú técnico y decisiones de arquitectura, consultar:
+- cursores: movimiento;
+- espacio: rayo.
 
-`docs/23-flujo-transicion-menu-dev-aldea-y-estandar-jugable.md`
+### Táctil
+
+- cruceta inferior izquierda;
+- botón de magia inferior derecha;
+- soporte multitáctil;
+- movimiento diagonal.
+
+## Menú
+
+En `DEV_MODE`, el icono de menú abre `DevMenuScene`.
+
+La versión final podrá reutilizar el mismo icono para el menú real sin modificar el resto del HUD.
+
+## Rayo mágico
+
+Asset común:
+
+`public/assets/effects/magic-ray-gold-01.png`
+
+El proyectil es una entidad física independiente y se orienta según la dirección del personaje.
+
+## Regla de evolución
+
+Cualquier nuevo nivel debe usar este módulo compartido.
+
+Si una escena necesita información específica, debe añadirla mediante el controlador común o una extensión compatible, no creando una segunda HUD.
