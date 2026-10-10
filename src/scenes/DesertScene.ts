@@ -24,10 +24,10 @@ const DESERT_BACKGROUND_KEY = 'desert-world-01';
 const PLAYER_SIZE = 64;
 const PLAYER_SPEED = 180;
 const PLAYER_FOOT_OFFSET_Y = 20;
-const PLAYER_START_CELL = { column: 5, row: 11 } as const;
+const PLAYER_START_CELL = { column: 5, row: 12 } as const;
 const PLAYER_START = {
   x: (PLAYER_START_CELL.column - 0.5) * GRID_SIZE,
-  // Colocamos el centro entre los pies exactamente en C5/F11.
+  // Colocamos el centro entre los pies exactamente en C5/F12.
   y: (PLAYER_START_CELL.row - 0.5) * GRID_SIZE - PLAYER_FOOT_OFFSET_Y
 } as const;
 
