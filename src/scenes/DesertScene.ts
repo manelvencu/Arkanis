@@ -173,8 +173,8 @@ const DESERT_SNAKE_PATROLS = [
   {
     points: [
       { column: 82, row: 15 },
-      { column: 82, row: 16 },
-      { column: 76, row: 16 },
+      { column: 82, row: 14 },
+      { column: 76, row: 14 },
       { column: 76, row: 15 }
     ]
   }
@@ -191,10 +191,51 @@ const DESERT_ROCKS = [
   { column: 76, row: 15 }
 ] as const;
 
+const DESERT_SCORPION_PATROLS = [
+  {
+    points: [
+      { column: 76, row: 15 },
+      { column: 76, row: 13 }
+    ]
+  },
+  {
+    points: [
+      { column: 68, row: 14 },
+      { column: 68, row: 11 }
+    ]
+  },
+  {
+    points: [
+      { column: 56, row: 14 },
+      { column: 57, row: 12 }
+    ]
+  },
+  {
+    points: [
+      { column: 39, row: 12 },
+      { column: 39, row: 14 }
+    ]
+  },
+  {
+    points: [
+      { column: 16, row: 14 }
+    ]
+  },
+  {
+    points: [
+      { column: 16, row: 17 }
+    ]
+  }
+] as const;
+
 const SNAKE_SPEED = 72;
 const SNAKE_WIDTH = 38;
 const SNAKE_HEIGHT = 19;
 const SNAKE_DAMAGE = 10;
+
+const SCORPION_SPEED = 58;
+const SCORPION_SIZE = 20;
+const SCORPION_DAMAGE = 10;
 
 const REGISTRY_ENERGY_KEY = 'arkanis.player.energy';
 const REGISTRY_COINS_KEY = 'arkanis.player.coins';
@@ -247,6 +288,7 @@ export class DesertScene extends Phaser.Scene {
   private direction = new Phaser.Math.Vector2(1, 0);
   private lastShotAt = 0;
   private snakes: Phaser.Physics.Arcade.Sprite[] = [];
+  private scorpions: Phaser.Physics.Arcade.Sprite[] = [];
   private magicRays: Phaser.Physics.Arcade.Image[] = [];
 
   constructor() {
@@ -259,6 +301,7 @@ export class DesertScene extends Phaser.Scene {
     this.direction.set(1, 0);
     this.lastShotAt = 0;
     this.snakes = [];
+    this.scorpions = [];
     this.magicRays = [];
   }
 
@@ -294,6 +337,14 @@ export class DesertScene extends Phaser.Scene {
       'desert-rock-01',
       './assets/world/desert/props/Montón de rocas desérticas estilizadas.png'
     );
+    this.load.image(
+      'desert-scorpion-down-01',
+      './assets/world/desert/enemies/scorpions/escorpion_down_01.png'
+    );
+    this.load.image(
+      'desert-scorpion-up-01',
+      './assets/world/desert/enemies/scorpions/escorpion_up_01.png'
+    );
 
     preloadPlayableUiAssets(this);
 
@@ -315,6 +366,7 @@ export class DesertScene extends Phaser.Scene {
     this.createPlayer();
     this.createRocks();
     this.createSnakes();
+    this.createScorpions();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -380,6 +432,7 @@ export class DesertScene extends Phaser.Scene {
     this.applyTempleStairsScale();
     this.updateWorldDepths();
     this.updateSnakes();
+    this.updateScorpions(time);
 
     const keyboardShot = Phaser.Input.Keyboard.JustDown(this.spaceKey);
     const touchShot = this.ui.consumeShootRequest();
@@ -561,7 +614,7 @@ export class DesertScene extends Phaser.Scene {
       const wasTouching = snake.getData('touchingPlayerCell') === true;
 
       if (sameCell && !wasTouching) {
-        this.damagePlayerFromSnake();
+        this.damagePlayer(SNAKE_DAMAGE);
       }
       snake.setData('touchingPlayerCell', sameCell);
 
@@ -583,9 +636,147 @@ export class DesertScene extends Phaser.Scene {
     this.magicRays = this.magicRays.filter((ray) => ray.active);
   }
 
-  private damagePlayerFromSnake(): void {
+  private createScorpions(): void {
+    this.scorpions = DESERT_SCORPION_PATROLS.map((patrol) => {
+      const firstPoint = patrol.points[0];
+      const startX = (firstPoint.column - 0.5) * GRID_SIZE;
+      const startY = (firstPoint.row - 0.5) * GRID_SIZE;
+      const points = patrol.points.map((point) => ({
+        x: (point.column - 0.5) * GRID_SIZE,
+        y: (point.row - 0.5) * GRID_SIZE
+      }));
+
+      const moving = points.length > 1;
+      const initialTexture = moving && points[1].y < points[0].y
+        ? 'desert-scorpion-up-01'
+        : 'desert-scorpion-down-01';
+
+      const scorpion = this.physics.add.sprite(startX, startY, initialTexture);
+
+      scorpion
+        .setDisplaySize(SCORPION_SIZE, SCORPION_SIZE)
+        .setDepth(startY)
+        .setData('patrolPoints', points)
+        .setData('patrolIndex', moving ? 1 : 0)
+        .setData('patrolDirection', 1)
+        .setData('moving', moving)
+        .setData('touchingPlayerCell', false)
+        .setData('nextMirrorAt', 0);
+
+      const body = scorpion.body as Phaser.Physics.Arcade.Body;
+      body.setAllowGravity(false);
+      body.setSize(SCORPION_SIZE * 0.75, SCORPION_SIZE * 0.75, true);
+
+      if (moving) this.setScorpionVelocityToTarget(scorpion);
+      else body.setVelocity(0, 0);
+
+      return scorpion;
+    });
+  }
+
+  private setScorpionVelocityToTarget(scorpion: Phaser.Physics.Arcade.Sprite): void {
+    const points = scorpion.getData('patrolPoints') as Array<{ x: number; y: number }>;
+    const index = scorpion.getData('patrolIndex') as number;
+    const target = points[index];
+    const body = scorpion.body as Phaser.Physics.Arcade.Body;
+
+    const direction = new Phaser.Math.Vector2(target.x - scorpion.x, target.y - scorpion.y);
+    if (direction.lengthSq() === 0) {
+      body.setVelocity(0, 0);
+      return;
+    }
+
+    direction.normalize();
+    body.setVelocity(direction.x * SCORPION_SPEED, direction.y * SCORPION_SPEED);
+
+    if (direction.y < -0.1) {
+      scorpion.setTexture('desert-scorpion-up-01');
+    } else if (direction.y > 0.1) {
+      scorpion.setTexture('desert-scorpion-down-01');
+    } else {
+      scorpion.setTexture(direction.x < 0 ? 'desert-scorpion-up-01' : 'desert-scorpion-down-01');
+    }
+  }
+
+  private updateScorpions(time: number): void {
+    const playerFootX = this.player.x;
+    const playerFootY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const playerColumn = Math.floor(playerFootX / GRID_SIZE) + 1;
+    const playerRow = Math.floor(playerFootY / GRID_SIZE) + 1;
+
+    for (const scorpion of this.scorpions) {
+      if (!scorpion.active) continue;
+
+      const moving = scorpion.getData('moving') === true;
+      const points = scorpion.getData('patrolPoints') as Array<{ x: number; y: number }>;
+
+      if (moving) {
+        let index = scorpion.getData('patrolIndex') as number;
+        let patrolDirection = scorpion.getData('patrolDirection') as number;
+        const target = points[index];
+        const distanceToTarget = Phaser.Math.Distance.Between(
+          scorpion.x,
+          scorpion.y,
+          target.x,
+          target.y
+        );
+
+        if (distanceToTarget <= 3) {
+          scorpion.setPosition(target.x, target.y);
+
+          if (index === points.length - 1 && patrolDirection === 1) {
+            patrolDirection = -1;
+          } else if (index === 0 && patrolDirection === -1) {
+            patrolDirection = 1;
+          }
+
+          index += patrolDirection;
+          scorpion.setData('patrolIndex', index);
+          scorpion.setData('patrolDirection', patrolDirection);
+          this.setScorpionVelocityToTarget(scorpion);
+        }
+
+        const nextMirrorAt = scorpion.getData('nextMirrorAt') as number;
+        if (time >= nextMirrorAt) {
+          scorpion.toggleFlipX();
+          scorpion.setData('nextMirrorAt', time + 180);
+        }
+      }
+
+      scorpion.setDepth(scorpion.y);
+
+      const scorpionColumn = Math.floor(scorpion.x / GRID_SIZE) + 1;
+      const scorpionGroundY = scorpion.y + SCORPION_SIZE / 2;
+      const scorpionRow = Math.floor(scorpionGroundY / GRID_SIZE) + 1;
+      const sameCell = scorpionColumn === playerColumn && scorpionRow === playerRow;
+      const wasTouching = scorpion.getData('touchingPlayerCell') === true;
+
+      if (sameCell && !wasTouching) {
+        this.damagePlayer(SCORPION_DAMAGE);
+      }
+      scorpion.setData('touchingPlayerCell', sameCell);
+
+      for (const ray of this.magicRays) {
+        if (!ray.active) continue;
+
+        const rayColumn = Math.floor(ray.x / GRID_SIZE) + 1;
+        const rayRow = Math.floor(ray.y / GRID_SIZE) + 1;
+
+        if (rayColumn === scorpionColumn && rayRow === scorpionRow) {
+          ray.destroy();
+          scorpion.destroy();
+          break;
+        }
+      }
+    }
+
+    this.scorpions = this.scorpions.filter((scorpion) => scorpion.active);
+    this.magicRays = this.magicRays.filter((ray) => ray.active);
+  }
+
+  private damagePlayer(amount: number): void {
     const progress = getVillageProgress();
-    const nextEnergy = Math.max(0, progress.energy - SNAKE_DAMAGE);
+    const nextEnergy = Math.max(0, progress.energy - amount);
 
     setVillageEnergy(nextEnergy);
     this.registry.set(REGISTRY_ENERGY_KEY, nextEnergy);
