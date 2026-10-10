@@ -528,8 +528,11 @@ export class AldeaScene extends Phaser.Scene {
     (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
     this.cameras.main.fadeOut(700, 8, 7, 17);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.events.emit('aldea-exit-requested', { characterId: this.characterId });
-      this.scene.pause();
+      this.scene.start('WorldMapScene', {
+        characterId: this.characterId,
+        startAtMap: true,
+        destination: 'desert'
+      });
     });
   }
 
