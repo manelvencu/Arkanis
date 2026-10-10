@@ -151,7 +151,6 @@ const SNAKE_SPEED = 72;
 const SNAKE_WIDTH = 38;
 const SNAKE_HEIGHT = 19;
 const SNAKE_DAMAGE = 10;
-const SNAKE_DAMAGE_COOLDOWN_MS = 1000;
 
 const REGISTRY_ENERGY_KEY = 'arkanis.player.energy';
 const REGISTRY_COINS_KEY = 'arkanis.player.coins';
@@ -204,7 +203,8 @@ export class DesertScene extends Phaser.Scene {
   private direction = new Phaser.Math.Vector2(1, 0);
   private lastShotAt = 0;
   private snake?: Phaser.Physics.Arcade.Sprite;
-  private snakeDamageCooldownUntil = 0;
+  private snakeTouchingPlayerCell = false;
+  private magicRays: Phaser.Physics.Arcade.Image[] = [];
 
   constructor() {
     super('DesertScene');
@@ -216,7 +216,8 @@ export class DesertScene extends Phaser.Scene {
     this.direction.set(1, 0);
     this.lastShotAt = 0;
     this.snake = undefined;
-    this.snakeDamageCooldownUntil = 0;
+    this.snakeTouchingPlayerCell = false;
+    this.magicRays = [];
   }
 
   preload(): void {
@@ -452,21 +453,38 @@ export class DesertScene extends Phaser.Scene {
       body.setVelocityX(-SNAKE_SPEED);
     }
 
-    const touchingPlayer =
-      Math.abs(snake.x - this.player.x) <= (SNAKE_WIDTH + 28) / 2 &&
-      Math.abs(snake.y - (this.player.y + PLAYER_FOOT_OFFSET_Y)) <= (SNAKE_HEIGHT + 24) / 2;
+    const snakeColumn = Math.floor(snake.x / GRID_SIZE) + 1;
+    const snakeRow = Math.floor(snake.y / GRID_SIZE) + 1;
+    const playerFootX = this.player.x;
+    const playerFootY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const playerColumn = Math.floor(playerFootX / GRID_SIZE) + 1;
+    const playerRow = Math.floor(playerFootY / GRID_SIZE) + 1;
+    const sameCell = snakeColumn === playerColumn && snakeRow === playerRow;
 
-    if (touchingPlayer) {
+    if (sameCell && !this.snakeTouchingPlayerCell) {
       this.damagePlayerFromSnake();
     }
+    this.snakeTouchingPlayerCell = sameCell;
+
+    for (const ray of this.magicRays) {
+      if (!ray.active) continue;
+
+      const rayColumn = Math.floor(ray.x / GRID_SIZE) + 1;
+      const rayRow = Math.floor(ray.y / GRID_SIZE) + 1;
+
+      if (rayColumn === snakeColumn && rayRow === snakeRow) {
+        ray.destroy();
+        snake.destroy();
+        this.snake = undefined;
+        this.snakeTouchingPlayerCell = false;
+        break;
+      }
+    }
+
+    this.magicRays = this.magicRays.filter((ray) => ray.active);
   }
 
   private damagePlayerFromSnake(): void {
-    const now = this.time.now;
-    if (now < this.snakeDamageCooldownUntil) return;
-
-    this.snakeDamageCooldownUntil = now + SNAKE_DAMAGE_COOLDOWN_MS;
-
     const progress = getVillageProgress();
     const nextEnergy = Math.max(0, progress.energy - SNAKE_DAMAGE);
 
@@ -537,17 +555,11 @@ export class DesertScene extends Phaser.Scene {
       shotDirection.y * MAGIC_RAY_SPEED
     );
 
-    const snake = this.snake;
-    if (snake?.active) {
-      this.physics.add.overlap(ray, snake, () => {
-        if (ray.active) ray.destroy();
-        if (snake.active) snake.destroy();
-        if (this.snake === snake) this.snake = undefined;
-      });
-    }
+    this.magicRays.push(ray);
 
     this.time.delayedCall(MAGIC_RAY_LIFETIME, () => {
       if (ray.active) ray.destroy();
+      this.magicRays = this.magicRays.filter((activeRay) => activeRay.active);
     });
   }
 
