@@ -200,7 +200,7 @@ export class WorldMapScene extends Phaser.Scene {
 
   private pulseAldea(): void {
     if (!this.mapContainer || !this.mapImage) return;
-    const local = this.destinationLocalPoint();
+    const local = this.aldeaLocalPoint();
     const glow = this.add.circle(local.x, local.y, 70, 0xffe28a, 0.08)
       .setStrokeStyle(8, 0xffdc78, 0.88);
     this.mapContainer.add(glow);
@@ -229,18 +229,19 @@ export class WorldMapScene extends Phaser.Scene {
     this.input.removeAllListeners('pointerdown');
 
     const { width, height } = this.scale;
-    const local = this.aldeaLocalPoint();
+    const local = this.destinationLocalPoint();
     const targetScale = 5.6;
 
-    const flash = this.add.circle(
-      this.mapContainer.x + local.x,
-      this.mapContainer.y + local.y,
-      90,
-      0xffe9a3,
-      0.18
-    ).setStrokeStyle(10, 0xffdc74, 0.95).setDepth(50);
-
-    this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 850 });
+    if (this.destination === 'aldea') {
+      const flash = this.add.circle(
+        this.mapContainer.x + local.x,
+        this.mapContainer.y + local.y,
+        90,
+        0xffe9a3,
+        0.18
+      ).setStrokeStyle(10, 0xffdc74, 0.95).setDepth(50);
+      this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 850 });
+    }
     this.tweens.add({
       targets: this.mapContainer,
       scaleX: targetScale,
