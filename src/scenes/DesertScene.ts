@@ -146,14 +146,49 @@ const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
 
 const DESERT_SNAKE_PATROLS = [
-  { start: { column: 26, row: 10 }, end: { column: 14, row: 10 } },
-  { start: { column: 57, row: 12 }, end: { column: 39, row: 12 } },
-  { start: { column: 68, row: 14 }, end: { column: 56, row: 14 } }
+  {
+    points: [
+      { column: 26, row: 10 },
+      { column: 14, row: 10 }
+    ]
+  },
+  {
+    points: [
+      { column: 57, row: 12 },
+      { column: 39, row: 12 }
+    ]
+  },
+  {
+    points: [
+      { column: 68, row: 14 },
+      { column: 56, row: 14 }
+    ]
+  },
+  {
+    points: [
+      { column: 77, row: 13 },
+      { column: 72, row: 13 }
+    ]
+  },
+  {
+    points: [
+      { column: 82, row: 15 },
+      { column: 82, row: 16 },
+      { column: 76, row: 16 },
+      { column: 76, row: 15 }
+    ]
+  }
 ] as const;
 
 const DESERT_ROCKS = [
   { column: 57, row: 12 },
-  { column: 39, row: 12 }
+  { column: 39, row: 12 },
+  { column: 68, row: 14 },
+  { column: 56, row: 14 },
+  { column: 77, row: 13 },
+  { column: 72, row: 13 },
+  { column: 82, row: 15 },
+  { column: 76, row: 15 }
 ] as const;
 
 const SNAKE_SPEED = 72;
@@ -437,27 +472,53 @@ export class DesertScene extends Phaser.Scene {
     }
 
     this.snakes = DESERT_SNAKE_PATROLS.map((patrol) => {
-      const startX = (patrol.start.column - 0.5) * GRID_SIZE;
-      const startY = (patrol.start.row - 0.5) * GRID_SIZE;
-      const endX = (patrol.end.column - 0.5) * GRID_SIZE;
+      const firstPoint = patrol.points[0];
+      const startX = (firstPoint.column - 0.5) * GRID_SIZE;
+      const startY = (firstPoint.row - 0.5) * GRID_SIZE;
+      const points = patrol.points.map((point) => ({
+        x: (point.column - 0.5) * GRID_SIZE,
+        y: (point.row - 0.5) * GRID_SIZE
+      }));
 
       const snake = this.physics.add.sprite(startX, startY, 'desert-snake-01');
 
       snake
         .setDisplaySize(SNAKE_WIDTH, SNAKE_HEIGHT)
         .setDepth(startY)
-        .setData('startX', startX)
-        .setData('endX', endX)
+        .setData('patrolPoints', points)
+        .setData('patrolIndex', 1)
+        .setData('patrolDirection', 1)
         .setData('touchingPlayerCell', false);
 
       const body = snake.body as Phaser.Physics.Arcade.Body;
       body.setAllowGravity(false);
       body.setSize(SNAKE_WIDTH * 0.8, SNAKE_HEIGHT * 0.7, true);
-      body.setVelocityX(-SNAKE_SPEED);
 
       snake.play('desert-snake-slither');
+      this.setSnakeVelocityToTarget(snake);
+
       return snake;
     });
+  }
+
+  private setSnakeVelocityToTarget(snake: Phaser.Physics.Arcade.Sprite): void {
+    const points = snake.getData('patrolPoints') as Array<{ x: number; y: number }>;
+    const index = snake.getData('patrolIndex') as number;
+    const target = points[index];
+    const body = snake.body as Phaser.Physics.Arcade.Body;
+
+    const direction = new Phaser.Math.Vector2(target.x - snake.x, target.y - snake.y);
+    if (direction.lengthSq() === 0) {
+      body.setVelocity(0, 0);
+      return;
+    }
+
+    direction.normalize();
+    body.setVelocity(direction.x * SNAKE_SPEED, direction.y * SNAKE_SPEED);
+
+    if (Math.abs(direction.x) > 0.1) {
+      snake.setFlipX(direction.x > 0);
+    }
   }
 
   private updateSnakes(): void {
@@ -469,20 +530,27 @@ export class DesertScene extends Phaser.Scene {
     for (const snake of this.snakes) {
       if (!snake.active) continue;
 
-      const startX = snake.getData('startX') as number;
-      const endX = snake.getData('endX') as number;
-      const body = snake.body as Phaser.Physics.Arcade.Body;
+      const points = snake.getData('patrolPoints') as Array<{ x: number; y: number }>;
+      let index = snake.getData('patrolIndex') as number;
+      let patrolDirection = snake.getData('patrolDirection') as number;
+      const target = points[index];
 
       snake.setDepth(snake.y);
 
-      if (snake.x <= endX) {
-        snake.setX(endX);
-        snake.setFlipX(true);
-        body.setVelocityX(SNAKE_SPEED);
-      } else if (snake.x >= startX) {
-        snake.setX(startX);
-        snake.setFlipX(false);
-        body.setVelocityX(-SNAKE_SPEED);
+      const distanceToTarget = Phaser.Math.Distance.Between(snake.x, snake.y, target.x, target.y);
+      if (distanceToTarget <= 3) {
+        snake.setPosition(target.x, target.y);
+
+        if (index === points.length - 1 && patrolDirection === 1) {
+          patrolDirection = -1;
+        } else if (index === 0 && patrolDirection === -1) {
+          patrolDirection = 1;
+        }
+
+        index += patrolDirection;
+        snake.setData('patrolIndex', index);
+        snake.setData('patrolDirection', patrolDirection);
+        this.setSnakeVelocityToTarget(snake);
       }
 
       const snakeGroundX = snake.x;
