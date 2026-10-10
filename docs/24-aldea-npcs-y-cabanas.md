@@ -81,6 +81,8 @@ Los NPC pueden:
 
 Cuando el jugador se aproxima, el NPC se detiene y puede mostrar el siguiente diálogo global disponible.
 
+Los diálogos de NPC son **UI contextual centrada en la pantalla visible**. No se posicionan respecto al NPC ni al jugador, de modo que nunca deben quedar cortados al hablar cerca de los bordes superior, inferior o laterales de la cámara.
+
 La secuencia narrativa actual introduce:
 
 - los ocho mundos;
@@ -152,9 +154,9 @@ Definición:
 
 ## Grid visual
 
-Las plantillas visuales de grid utilizadas para definir las cabañas y la iglesia ya fueron retiradas.
+Las plantillas visuales de grid utilizadas para definir las cabañas, la iglesia y **La Aldea exterior** ya fueron retiradas.
 
-Las colisiones continúan funcionando porque el grid visible nunca fue la colisión real.
+Las colisiones continúan funcionando porque el grid visible nunca fue la colisión real. La navegación exterior sigue dependiendo de la whitelist de `src/aldeaWalkableGrid.ts`.
 
 ## HUD
 
