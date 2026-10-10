@@ -145,8 +145,17 @@ const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
 
-const SNAKE_START_CELL = { column: 77, row: 13 } as const;
-const SNAKE_END_CELL = { column: 13, row: 13 } as const;
+const DESERT_SNAKE_PATROLS = [
+  { start: { column: 26, row: 10 }, end: { column: 14, row: 10 } },
+  { start: { column: 57, row: 12 }, end: { column: 39, row: 12 } },
+  { start: { column: 68, row: 14 }, end: { column: 56, row: 14 } }
+] as const;
+
+const DESERT_ROCKS = [
+  { column: 57, row: 12 },
+  { column: 39, row: 12 }
+] as const;
+
 const SNAKE_SPEED = 72;
 const SNAKE_WIDTH = 38;
 const SNAKE_HEIGHT = 19;
@@ -202,8 +211,7 @@ export class DesertScene extends Phaser.Scene {
   private facing: Facing = 'side';
   private direction = new Phaser.Math.Vector2(1, 0);
   private lastShotAt = 0;
-  private snake?: Phaser.Physics.Arcade.Sprite;
-  private snakeTouchingPlayerCell = false;
+  private snakes: Phaser.Physics.Arcade.Sprite[] = [];
   private magicRays: Phaser.Physics.Arcade.Image[] = [];
 
   constructor() {
@@ -215,8 +223,7 @@ export class DesertScene extends Phaser.Scene {
     this.facing = 'side';
     this.direction.set(1, 0);
     this.lastShotAt = 0;
-    this.snake = undefined;
-    this.snakeTouchingPlayerCell = false;
+    this.snakes = [];
     this.magicRays = [];
   }
 
@@ -248,6 +255,10 @@ export class DesertScene extends Phaser.Scene {
       'desert-snake-02',
       './assets/world/desert/enemies/snakes/serpiente-02.png'
     );
+    this.load.image(
+      'desert-rock-01',
+      './assets/world/desert/props/Montón de rocas desérticas estilizadas.png'
+    );
 
     preloadPlayableUiAssets(this);
 
@@ -267,7 +278,8 @@ export class DesertScene extends Phaser.Scene {
     this.createPalms();
     this.createGridGuide();
     this.createPlayer();
-    this.createSnake();
+    this.createRocks();
+    this.createSnakes();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -332,7 +344,7 @@ export class DesertScene extends Phaser.Scene {
 
     this.applyTempleStairsScale();
     this.updateWorldDepths();
-    this.updateSnake();
+    this.updateSnakes();
 
     const keyboardShot = Phaser.Input.Keyboard.JustDown(this.spaceKey);
     const touchShot = this.ui.consumeShootRequest();
@@ -399,11 +411,19 @@ export class DesertScene extends Phaser.Scene {
     this.player.setDepth(footY);
   }
 
-  private createSnake(): void {
-    const startX = (SNAKE_START_CELL.column - 0.5) * GRID_SIZE;
-    const startY = (SNAKE_START_CELL.row - 0.5) * GRID_SIZE;
-    const endX = (SNAKE_END_CELL.column - 0.5) * GRID_SIZE;
+  private createRocks(): void {
+    DESERT_ROCKS.forEach((rock) => {
+      const x = (rock.column - 0.5) * GRID_SIZE;
+      const baseY = rock.row * GRID_SIZE;
 
+      this.add.image(x, baseY, 'desert-rock-01')
+        .setOrigin(0.5, 1)
+        .setDisplaySize(48, 32)
+        .setDepth(baseY);
+    });
+  }
+
+  private createSnakes(): void {
     if (!this.anims.exists('desert-snake-slither')) {
       this.anims.create({
         key: 'desert-snake-slither',
@@ -416,73 +436,82 @@ export class DesertScene extends Phaser.Scene {
       });
     }
 
-    const snake = this.physics.add.sprite(startX, startY, 'desert-snake-01');
-    this.snake = snake;
+    this.snakes = DESERT_SNAKE_PATROLS.map((patrol) => {
+      const startX = (patrol.start.column - 0.5) * GRID_SIZE;
+      const startY = (patrol.start.row - 0.5) * GRID_SIZE;
+      const endX = (patrol.end.column - 0.5) * GRID_SIZE;
 
-    snake
-      .setDisplaySize(SNAKE_WIDTH, SNAKE_HEIGHT)
-      .setDepth(startY)
-      .setData('startX', startX)
-      .setData('endX', endX);
+      const snake = this.physics.add.sprite(startX, startY, 'desert-snake-01');
 
-    const body = snake.body as Phaser.Physics.Arcade.Body;
-    body.setAllowGravity(false);
-    body.setSize(SNAKE_WIDTH * 0.8, SNAKE_HEIGHT * 0.7, true);
-    body.setVelocityX(-SNAKE_SPEED);
+      snake
+        .setDisplaySize(SNAKE_WIDTH, SNAKE_HEIGHT)
+        .setDepth(startY)
+        .setData('startX', startX)
+        .setData('endX', endX)
+        .setData('touchingPlayerCell', false);
 
-    snake.play('desert-snake-slither');
+      const body = snake.body as Phaser.Physics.Arcade.Body;
+      body.setAllowGravity(false);
+      body.setSize(SNAKE_WIDTH * 0.8, SNAKE_HEIGHT * 0.7, true);
+      body.setVelocityX(-SNAKE_SPEED);
+
+      snake.play('desert-snake-slither');
+      return snake;
+    });
   }
 
-  private updateSnake(): void {
-    const snake = this.snake;
-    if (!snake?.active) return;
-
-    const startX = snake.getData('startX') as number;
-    const endX = snake.getData('endX') as number;
-    const body = snake.body as Phaser.Physics.Arcade.Body;
-
-    snake.setDepth(snake.y);
-
-    if (snake.x <= endX) {
-      snake.setX(endX);
-      snake.setFlipX(true);
-      body.setVelocityX(SNAKE_SPEED);
-    } else if (snake.x >= startX) {
-      snake.setX(startX);
-      snake.setFlipX(false);
-      body.setVelocityX(-SNAKE_SPEED);
-    }
-
-    const snakeGroundX = snake.x;
-    const snakeGroundY = snake.y + SNAKE_HEIGHT / 2;
-    const snakeColumn = Math.floor(snakeGroundX / GRID_SIZE) + 1;
-    const snakeRow = Math.floor(snakeGroundY / GRID_SIZE) + 1;
+  private updateSnakes(): void {
     const playerFootX = this.player.x;
     const playerFootY = this.player.y + PLAYER_FOOT_OFFSET_Y;
     const playerColumn = Math.floor(playerFootX / GRID_SIZE) + 1;
     const playerRow = Math.floor(playerFootY / GRID_SIZE) + 1;
-    const sameCell = snakeColumn === playerColumn && snakeRow === playerRow;
 
-    if (sameCell && !this.snakeTouchingPlayerCell) {
-      this.damagePlayerFromSnake();
-    }
-    this.snakeTouchingPlayerCell = sameCell;
+    for (const snake of this.snakes) {
+      if (!snake.active) continue;
 
-    for (const ray of this.magicRays) {
-      if (!ray.active) continue;
+      const startX = snake.getData('startX') as number;
+      const endX = snake.getData('endX') as number;
+      const body = snake.body as Phaser.Physics.Arcade.Body;
 
-      const rayColumn = Math.floor(ray.x / GRID_SIZE) + 1;
-      const rayRow = Math.floor(ray.y / GRID_SIZE) + 1;
+      snake.setDepth(snake.y);
 
-      if (rayColumn === snakeColumn && rayRow === snakeRow) {
-        ray.destroy();
-        snake.destroy();
-        this.snake = undefined;
-        this.snakeTouchingPlayerCell = false;
-        break;
+      if (snake.x <= endX) {
+        snake.setX(endX);
+        snake.setFlipX(true);
+        body.setVelocityX(SNAKE_SPEED);
+      } else if (snake.x >= startX) {
+        snake.setX(startX);
+        snake.setFlipX(false);
+        body.setVelocityX(-SNAKE_SPEED);
+      }
+
+      const snakeGroundX = snake.x;
+      const snakeGroundY = snake.y + SNAKE_HEIGHT / 2;
+      const snakeColumn = Math.floor(snakeGroundX / GRID_SIZE) + 1;
+      const snakeRow = Math.floor(snakeGroundY / GRID_SIZE) + 1;
+      const sameCell = snakeColumn === playerColumn && snakeRow === playerRow;
+      const wasTouching = snake.getData('touchingPlayerCell') === true;
+
+      if (sameCell && !wasTouching) {
+        this.damagePlayerFromSnake();
+      }
+      snake.setData('touchingPlayerCell', sameCell);
+
+      for (const ray of this.magicRays) {
+        if (!ray.active) continue;
+
+        const rayColumn = Math.floor(ray.x / GRID_SIZE) + 1;
+        const rayRow = Math.floor(ray.y / GRID_SIZE) + 1;
+
+        if (rayColumn === snakeColumn && rayRow === snakeRow) {
+          ray.destroy();
+          snake.destroy();
+          break;
+        }
       }
     }
 
+    this.snakes = this.snakes.filter((snake) => snake.active);
     this.magicRays = this.magicRays.filter((ray) => ray.active);
   }
 
