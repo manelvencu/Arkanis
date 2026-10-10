@@ -21,6 +21,41 @@ const WORLD_HEIGHT = WORLD_ROWS * GRID_SIZE;
 const GRID_TEXTURE_KEY = 'desert-grid-guide';
 const DESERT_BACKGROUND_KEY = 'desert-world-01';
 
+const DESERT_BUILDINGS = [
+  {
+    key: 'desert-building-house-awning-01',
+    path: './assets/world/desert/buildings/Mercado de adobe del desierto.png',
+    column: 11,
+    row: 13,
+    width: 160,
+    height: 144
+  },
+  {
+    key: 'desert-building-house-terrace-01',
+    path: './assets/world/desert/buildings/Casa de adobe del desierto con terrazas.png',
+    column: 17,
+    row: 13,
+    width: 160,
+    height: 144
+  },
+  {
+    key: 'desert-building-dome-01',
+    path: './assets/world/desert/buildings/Casa desértica isométrica con cúpula y toldos.png',
+    column: 23,
+    row: 14,
+    width: 144,
+    height: 176
+  },
+  {
+    key: 'desert-building-market-tent-01',
+    path: './assets/world/desert/buildings/Mercado desértico bajo una carpa roja.png',
+    column: 14,
+    row: 19,
+    width: 144,
+    height: 128
+  }
+] as const;
+
 const PLAYER_SIZE = 64;
 const PLAYER_SPEED = 180;
 const PLAYER_FOOT_OFFSET_Y = 20;
@@ -103,6 +138,10 @@ export class DesertScene extends Phaser.Scene {
       './assets/world/desert/desert-world-01.png'
     );
 
+    DESERT_BUILDINGS.forEach((building) => {
+      this.load.image(building.key, building.path);
+    });
+
     preloadPlayableUiAssets(this);
 
     const characterKey = this.characterId === 'lupe' ? 'lupe' : 'tiana';
@@ -117,6 +156,7 @@ export class DesertScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#b98245');
 
     this.createWorldBackground();
+    this.createBuildings();
     this.createGridGuide();
     this.createPlayer();
 
@@ -181,6 +221,9 @@ export class DesertScene extends Phaser.Scene {
       this.player.setTexture(`desert-player-${idleKey}`);
     }
 
+    this.applyTempleStairsScale();
+    this.updateWorldDepths();
+
     const keyboardShot = Phaser.Input.Keyboard.JustDown(this.spaceKey);
     const touchShot = this.ui.consumeShootRequest();
 
@@ -198,6 +241,40 @@ export class DesertScene extends Phaser.Scene {
     )
       .setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT)
       .setDepth(0);
+  }
+
+  private createBuildings(): void {
+    DESERT_BUILDINGS.forEach((building) => {
+      const x = (building.column - 0.5) * GRID_SIZE;
+      const baseY = building.row * GRID_SIZE;
+
+      this.add.image(x, baseY, building.key)
+        .setOrigin(0.5, 1)
+        .setDisplaySize(building.width, building.height)
+        .setDepth(baseY);
+    });
+  }
+
+  private applyTempleStairsScale(): void {
+    const footX = this.player.x;
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const column = Math.floor(footX / GRID_SIZE) + 1;
+    const row = Math.floor(footY / GRID_SIZE) + 1;
+
+    let scale = 1;
+
+    if (column === 18 || column === 19) {
+      if (row === 7) scale = 0.8;
+      else if (row === 6) scale = 0.6;
+      else if (row === 5) scale = 0.4;
+    }
+
+    this.player.setDisplaySize(PLAYER_SIZE * scale, PLAYER_SIZE * scale);
+  }
+
+  private updateWorldDepths(): void {
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    this.player.setDepth(footY);
   }
 
   private createPlayer(): void {
@@ -230,7 +307,7 @@ export class DesertScene extends Phaser.Scene {
 
     this.player
       .setDisplaySize(PLAYER_SIZE, PLAYER_SIZE)
-      .setDepth(30)
+      .setDepth(PLAYER_START.y + PLAYER_FOOT_OFFSET_Y)
       .setCollideWorldBounds(true);
 
     (this.player.body as Phaser.Physics.Arcade.Body)
@@ -329,7 +406,7 @@ export class DesertScene extends Phaser.Scene {
       WORLD_HEIGHT / 2,
       GRID_TEXTURE_KEY
     )
-      .setDepth(10)
+      .setDepth(10000)
       .setAlpha(0.95);
   }
 }
