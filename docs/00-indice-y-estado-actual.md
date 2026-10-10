@@ -17,7 +17,8 @@ Cuando una decisión antigua entre en conflicto con este documento o con el cód
    - tienda de vino;
    - cabaña de bendición/pareja;
    - iglesia.
-8. Próxima transición pendiente: **La Aldea -> mapa del mundo -> zoom hacia Las Tierras del Fuego**.
+8. Nueva transición: **La Aldea -> mapa del mundo -> zoom hacia El Desierto de Mil Soles**.
+9. `DesertScene`: escena base provisional creada para recibir la transición y empezar a diseñar el nuevo mundo.
 
 ## Arquitectura actual
 
@@ -176,18 +177,22 @@ Está implementada la transición narrativa entre ZE y La Aldea:
 - fundido;
 - entrada en Aldea.
 
-### Próximo bloque
+### Transición desde La Aldea
 
-Pendiente implementar la siguiente transición:
+Implementada la siguiente transición:
 
-`La Aldea -> WorldMapScene -> Las Tierras del Fuego`
+`La Aldea -> WorldMapScene -> El Desierto de Mil Soles`
 
-Requisito ya definido:
+Comportamiento:
 
-- volver a mostrar el mismo mapa;
-- al pulsar una tecla/clic/toque iniciar zoom;
-- el objetivo del zoom debe ser el texto **Las Tierras del Fuego**;
-- al final del zoom el nombre debe quedar centrado.
+- al abandonar La Aldea se vuelve a mostrar el mismo mapa del mundo;
+- no se repite la secuencia narrativa de la joya;
+- el mapa espera interacción del jugador;
+- cualquier tecla, clic o toque inicia el zoom;
+- el zoom apunta al centro visual del rótulo **El Desierto de Mil Soles**;
+- al terminar, fundido a negro y entrada en `DesertScene`.
+
+El target está parametrizado en `WorldMapScene` como destino `desert`.
 
 ## Organización de esta carpeta
 
