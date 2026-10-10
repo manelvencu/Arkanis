@@ -33,8 +33,8 @@ const DESERT_BUILDINGS = [
   {
     key: 'desert-building-house-terrace-01',
     path: './assets/world/desert/buildings/Casa de adobe del desierto con terrazas.png',
-    column: 17,
-    row: 13,
+    column: 20,
+    row: 12,
     width: 160,
     height: 144
   },
@@ -51,6 +51,22 @@ const DESERT_BUILDINGS = [
     path: './assets/world/desert/buildings/Mercado desértico bajo una carpa roja.png',
     column: 19,
     row: 18,
+    width: 144,
+    height: 128
+  },
+  {
+    key: 'desert-building-market-tent-01',
+    path: './assets/world/desert/buildings/Mercado desértico bajo una carpa roja.png',
+    column: 12,
+    row: 14,
+    width: 144,
+    height: 128
+  },
+  {
+    key: 'desert-building-market-tent-01',
+    path: './assets/world/desert/buildings/Mercado desértico bajo una carpa roja.png',
+    column: 22,
+    row: 16,
     width: 144,
     height: 128
   }
@@ -138,7 +154,10 @@ export class DesertScene extends Phaser.Scene {
       './assets/world/desert/desert-world-01.png'
     );
 
+    const loadedBuildingKeys = new Set<string>();
     DESERT_BUILDINGS.forEach((building) => {
+      if (loadedBuildingKeys.has(building.key)) return;
+      loadedBuildingKeys.add(building.key);
       this.load.image(building.key, building.path);
     });
 
