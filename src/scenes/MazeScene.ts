@@ -710,7 +710,7 @@ export class MazeScene extends Phaser.Scene {
 
     this.darknessMaskGraphics = this.make.graphics({ x: 0, y: 0 });
     const mask = this.darknessMaskGraphics.createGeometryMask();
-    mask.invertAlpha = true;
+    mask.setInvertAlpha(true);
     this.darknessOverlay.setMask(mask);
 
     this.updateDarknessMask();
