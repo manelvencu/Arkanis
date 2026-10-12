@@ -135,7 +135,7 @@ const DESERT_PALMS = [
 const PLAYER_SIZE = 64;
 const PLAYER_SPEED = 180;
 const PLAYER_FOOT_OFFSET_Y = 20;
-const PLAYER_START_CELL = { column: 7, row: 14 } as const;
+const PLAYER_START_CELL = { column: 5, row: 12 } as const;
 const PLAYER_START = {
   x: (PLAYER_START_CELL.column - 0.5) * GRID_SIZE,
   // Colocamos el centro entre los pies exactamente en C5/F12.
