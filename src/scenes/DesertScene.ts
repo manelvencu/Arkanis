@@ -931,7 +931,7 @@ export class DesertScene extends Phaser.Scene {
       const row = Number(rowText);
       if (!Number.isFinite(column) || !Number.isFinite(row)) continue;
 
-      context.fillStyle = 'rgba(220, 55, 45, 0.16)';
+      context.fillStyle = 'rgba(220, 55, 45, 0.28)';
       context.fillRect(
         (column - 1) * GRID_SIZE,
         (row - 1) * GRID_SIZE,
