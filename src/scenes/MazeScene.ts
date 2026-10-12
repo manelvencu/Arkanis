@@ -1717,7 +1717,11 @@ export class MazeScene extends Phaser.Scene {
   private updateStatueCorridor(time: number, delta: number): void {
     const playerFootY = this.player.y + PLAYER_FOOT_OFFSET_Y;
 
-    const nearbySites = MAZE_STATUE_LAUNCHERS.filter((site) => {
+    const activeSites = this.postFragmentRouteActive
+      ? [...MAZE_STATUE_LAUNCHERS, ...POST_FRAGMENT_STATUE_LAUNCHERS]
+      : MAZE_STATUE_LAUNCHERS;
+
+    const nearbySites = activeSites.filter((site) => {
       const x = (site.column - 0.5) * GRID_SIZE;
       const y = (site.row - 0.5) * GRID_SIZE;
       return Phaser.Math.Distance.Between(
