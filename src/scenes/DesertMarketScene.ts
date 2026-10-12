@@ -195,17 +195,20 @@ export class DesertMarketScene extends Phaser.Scene {
   ): void {
     this.clearDialog();
 
-    // Este cuadro no vive en coordenadas del mundo: se dibuja sobre la cámara
-    // fija del HUD, por lo que 960/540 es siempre el centro físico real de
-    // la pantalla de juego 1920x1080, independientemente del zoom o scroll.
-    const centerX = 960;
-    const centerY = 540;
-    const boxHeight = choices.length > 1 ? 392 : 324;
+    // Centro relativo real de la pantalla de juego. No dependemos del mundo,
+    // del zoom, del scroll ni de una resolución concreta.
+    const viewportWidth = this.scale.width;
+    const viewportHeight = this.scale.height;
+    const centerX = viewportWidth / 2;
+    const centerY = viewportHeight / 2;
+    const boxHeight = choices.length > 1
+      ? viewportHeight * 0.36
+      : viewportHeight * 0.30;
 
     const box = this.add.rectangle(
       centerX,
       centerY,
-      816,
+      viewportWidth * 0.425,
       boxHeight,
       0x170d08,
       0.96
@@ -219,10 +222,10 @@ export class DesertMarketScene extends Phaser.Scene {
       message,
       {
         fontFamily: 'Georgia, Times New Roman, serif',
-        fontSize: '34px',
+        fontSize: `${Math.round(viewportHeight * 0.031)}px`,
         color: '#fff0c7',
         align: 'center',
-        wordWrap: { width: 720 }
+        wordWrap: { width: viewportWidth * 0.375 }
       }
     )
       .setOrigin(0.5, 0)
@@ -232,17 +235,17 @@ export class DesertMarketScene extends Phaser.Scene {
     this.ui.showOnUiCamera(box);
     this.ui.showOnUiCamera(text);
 
-    const startY = centerY + 56;
+    const startY = centerY + viewportHeight * 0.052;
 
     choices.forEach((choice, index) => {
       const enabled = choice.enabled !== false;
-      const y = startY + index * 88;
+      const y = startY + index * (viewportHeight * 0.081);
 
       const button = this.add.rectangle(
         centerX,
         y,
-        600,
-        68,
+        viewportWidth * 0.3125,
+        viewportHeight * 0.063,
         enabled ? 0x6f3a22 : 0x3a302a,
         enabled ? 0.96 : 0.72
       )
@@ -251,7 +254,7 @@ export class DesertMarketScene extends Phaser.Scene {
 
       const label = this.add.text(centerX, y, choice.label, {
         fontFamily: 'Arial',
-        fontSize: '30px',
+        fontSize: `${Math.round(viewportHeight * 0.028)}px`,
         color: enabled ? '#fff1c7' : '#c9bca7',
         fontStyle: enabled ? 'bold' : 'normal'
       })
