@@ -371,6 +371,7 @@ export class DesertScene extends Phaser.Scene {
   private scorpions: Phaser.Physics.Arcade.Sprite[] = [];
   private magicRays: Phaser.Physics.Arcade.Image[] = [];
   private isGameOver = false;
+  private transitioningToInterior = false;
 
   constructor() {
     super('DesertScene');
@@ -385,6 +386,7 @@ export class DesertScene extends Phaser.Scene {
     this.scorpions = [];
     this.magicRays = [];
     this.isGameOver = false;
+    this.transitioningToInterior = false;
   }
 
   preload(): void {
@@ -518,6 +520,7 @@ export class DesertScene extends Phaser.Scene {
     }
 
     this.applyTempleStairsScale();
+    if (this.checkInteriorEntrance()) return;
     this.updateWorldDepths();
     this.updateSnakes();
     this.updateScorpions(time);
@@ -529,6 +532,48 @@ export class DesertScene extends Phaser.Scene {
       this.shootMagicRay();
       this.lastShotAt = time;
     }
+  }
+
+  private checkInteriorEntrance(): boolean {
+    if (this.transitioningToInterior) return true;
+
+    const footX = this.player.x;
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const entrance = getDesertEntranceAtFootPoint(footX, footY);
+
+    if (entrance !== 'temple') return false;
+
+    this.transitioningToInterior = true;
+    (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+    this.player.anims.stop();
+
+    this.cameras.main.fadeOut(240, 8, 5, 2);
+    this.cameras.main.once(
+      Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
+      () => {
+        this.scene.sleep();
+        this.scene.launch('TempleScene', { characterId: this.characterId });
+      }
+    );
+
+    return true;
+  }
+
+  public returnFromTemple(): void {
+    const returnColumn = 18;
+    const returnFootY = (6 - 0.25) * GRID_SIZE;
+
+    this.player.setPosition(
+      (returnColumn - 0.5) * GRID_SIZE,
+      returnFootY - PLAYER_FOOT_OFFSET_Y
+    );
+    this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE);
+    this.facing = 'down';
+    this.direction.set(0, 1);
+    this.player.setFlipX(false);
+    this.player.setTexture('desert-player-down');
+    this.transitioningToInterior = false;
+    this.updateWorldDepths();
   }
 
   private createWorldBackground(): void {
