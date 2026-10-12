@@ -207,6 +207,7 @@ export class MazeScene extends Phaser.Scene {
   private ui!: PlayableUiController;
   private facing: Facing = 'up';
   private exiting = false;
+  private exitLockedHintShown = false;
 
   constructor() {
     super('MazeScene');
@@ -216,6 +217,7 @@ export class MazeScene extends Phaser.Scene {
     this.characterId = data.characterId ?? 'tiana';
     this.facing = 'up';
     this.exiting = false;
+    this.exitLockedHintShown = false;
   }
 
   preload(): void {
@@ -537,7 +539,22 @@ export class MazeScene extends Phaser.Scene {
     const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
     const column = Math.floor(this.player.x / GRID_SIZE) + 1;
 
-    if (footY < WORLD_HEIGHT - 4 || column < 39 || column > 42) return;
+    if (footY < WORLD_HEIGHT - 4 || column < 39 || column > 42) {
+      this.exitLockedHintShown = false;
+      return;
+    }
+
+    if (!getVillageProgress().desertFragmentObtained) {
+      if (!this.exitLockedHintShown) {
+        this.exitLockedHintShown = true;
+        this.ui.updateStatus('La salida permanece sellada hasta recuperar el fragmento de la Joya.');
+        this.time.delayedCall(2200, () => {
+          if (this.scene.isActive()) this.ui.updateStatus('');
+        });
+      }
+      return;
+    }
+
     this.exitToDesert();
   }
 
