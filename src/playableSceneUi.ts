@@ -81,6 +81,9 @@ export function createPlayableUi(
   };
   let shootRequested = false;
   const controlsEnabled = options.controlsEnabled ?? true;
+  const initialCarpetOwned =
+    options.carpetOwned ??
+    (scene.registry.get('arkanis.player.desertCarpetPurchased') === true);
 
   const uiObjects: Phaser.GameObjects.GameObject[] = [];
   const remember = <T extends Phaser.GameObjects.GameObject>(object: T): T => {
@@ -125,7 +128,7 @@ export function createPlayableUi(
   const setCarpetOwned = (owned: boolean): void => {
     carpetIcon.setAlpha(owned ? 1 : 0.32);
   };
-  setCarpetOwned(options.carpetOwned ?? false);
+  setCarpetOwned(initialCarpetOwned);
 
   const coinImage = remember(scene.add.image((LOGICAL_WIDTH - 190) * HD_SCALE, 41 * HD_SCALE, 'playable-coin')
     .setDisplaySize(25 * HD_SCALE, 25 * HD_SCALE)
