@@ -290,6 +290,7 @@ export class DesertScene extends Phaser.Scene {
   private snakes: Phaser.Physics.Arcade.Sprite[] = [];
   private scorpions: Phaser.Physics.Arcade.Sprite[] = [];
   private magicRays: Phaser.Physics.Arcade.Image[] = [];
+  private isGameOver = false;
 
   constructor() {
     super('DesertScene');
@@ -303,6 +304,7 @@ export class DesertScene extends Phaser.Scene {
     this.snakes = [];
     this.scorpions = [];
     this.magicRays = [];
+    this.isGameOver = false;
   }
 
   preload(): void {
@@ -395,6 +397,8 @@ export class DesertScene extends Phaser.Scene {
   }
 
   update(time: number): void {
+    if (this.isGameOver) return;
+
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(0);
 
@@ -787,6 +791,21 @@ export class DesertScene extends Phaser.Scene {
     this.time.delayedCall(180, () => {
       if (this.player.active) this.player.clearTint();
     });
+
+    if (nextEnergy === 0 && !this.isGameOver) {
+      this.isGameOver = true;
+      const body = this.player.body as Phaser.Physics.Arcade.Body;
+      body.setVelocity(0);
+      this.player.anims.stop();
+
+      this.time.delayedCall(220, () => {
+        this.scene.launch('GameOverScene', {
+          characterId: this.characterId,
+          sourceSceneKey: 'DesertScene'
+        });
+        this.scene.pause();
+      });
+    }
   }
 
   private createPlayer(): void {
