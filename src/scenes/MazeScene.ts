@@ -368,50 +368,68 @@ function findScorpionCrackCells(): Array<{ column: number; row: number }> {
   const statues = MAZE_LANDMARKS.find((item) => item.id === 'statueCorridor');
   if (!brazier || !statues) return [];
 
-  const candidates: Array<{ column: number; row: number; score: number }> = [];
+  type Cell = { column: number; row: number };
+  const start: Cell = { column: brazier.column, row: brazier.row };
+  const targetKey = `${statues.column}:${statues.row}`;
+  const queue: Cell[] = [start];
+  const previous = new Map<string, string | null>([
+    [`${start.column}:${start.row}`, null]
+  ]);
+  let cursor = 0;
 
-  for (const key of MAZE_WALKABLE_CELLS) {
+  const directions = [
+    { dc: 1, dr: 0 },
+    { dc: -1, dr: 0 },
+    { dc: 0, dr: 1 },
+    { dc: 0, dr: -1 }
+  ] as const;
+
+  while (cursor < queue.length) {
+    const current = queue[cursor];
+    cursor += 1;
+    const currentKey = `${current.column}:${current.row}`;
+
+    if (currentKey === targetKey) break;
+
+    for (const direction of directions) {
+      const column = current.column + direction.dc;
+      const row = current.row + direction.dr;
+      const key = `${column}:${row}`;
+
+      if (!MAZE_WALKABLE_CELLS.has(key) || previous.has(key)) continue;
+
+      previous.set(key, currentKey);
+      queue.push({ column, row });
+    }
+  }
+
+  if (!previous.has(targetKey)) return [];
+
+  // Reconstruimos el camino real Brasero -> Estatuas. Así las grietas quedan
+  // obligatoriamente sobre una ruta alcanzable y no en componentes aislados.
+  const path: Cell[] = [];
+  let key: string | null = targetKey;
+
+  while (key) {
     const [columnText, rowText] = key.split(':');
-    const column = Number(columnText);
-    const row = Number(rowText);
-
-    if (
-      column >= CENTER_ROOM.left - 4 &&
-      column <= CENTER_ROOM.right + 4 &&
-      row >= CENTER_ROOM.top - 4 &&
-      row <= CENTER_ROOM.bottom + 8
-    ) {
-      continue;
-    }
-
-    const distanceFromBrazier =
-      Math.abs(column - brazier.column) + Math.abs(row - brazier.row);
-    const distanceFromStatues =
-      Math.abs(column - statues.column) + Math.abs(row - statues.row);
-
-    if (distanceFromBrazier < 5 || distanceFromStatues < 3) continue;
-
-    const score = Math.abs(distanceFromBrazier - distanceFromStatues);
-    candidates.push({ column, row, score });
+    path.push({
+      column: Number(columnText),
+      row: Number(rowText)
+    });
+    key = previous.get(key) ?? null;
   }
 
-  candidates.sort((a, b) => a.score - b.score);
+  path.reverse();
 
-  const selected: Array<{ column: number; row: number }> = [];
-  for (const candidate of candidates) {
-    if (
-      selected.every((cell) =>
-        Math.abs(cell.column - candidate.column) +
-        Math.abs(cell.row - candidate.row) >= 7
-      )
-    ) {
-      selected.push({ column: candidate.column, row: candidate.row });
-    }
-
-    if (selected.length === 3) break;
-  }
-
-  return selected;
+  const ratios = [0.25, 0.5, 0.75] as const;
+  return ratios.map((ratio) => {
+    const index = Phaser.Math.Clamp(
+      Math.round((path.length - 1) * ratio),
+      1,
+      Math.max(1, path.length - 2)
+    );
+    return path[index];
+  });
 }
 
 const MAZE_SCORPION_CRACKS = findScorpionCrackCells();
