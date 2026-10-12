@@ -220,15 +220,22 @@ export class TempleScene extends Phaser.Scene {
     this.cameras.main.once(
       Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
       () => {
-        const desert = this.scene.get('DesertScene') as unknown as {
-          returnFromTemple?: () => void;
-          cameras: Phaser.Cameras.Scene2D.CameraManager;
-        };
+        if (this.scene.isSleeping('DesertScene')) {
+          const desert = this.scene.get('DesertScene') as unknown as {
+            returnFromTemple?: () => void;
+            cameras: Phaser.Cameras.Scene2D.CameraManager;
+          };
 
-        desert.returnFromTemple?.();
-        this.scene.wake('DesertScene');
-        desert.cameras.main.fadeIn(240, 8, 5, 2);
-        this.scene.stop();
+          desert.returnFromTemple?.();
+          this.scene.wake('DesertScene');
+          desert.cameras.main.fadeIn(240, 8, 5, 2);
+          this.scene.stop();
+          return;
+        }
+
+        // Si entramos al Templo directamente desde el menú de desarrollo,
+        // no existe una instancia jugable del Desierto a la que volver.
+        this.scene.start('DesertScene', { characterId: this.characterId });
       }
     );
   }
