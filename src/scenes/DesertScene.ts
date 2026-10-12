@@ -6,6 +6,7 @@ import {
   type PlayableUiController
 } from '../playableSceneUi';
 import { getVillageProgress, setVillageEnergy } from '../villageProgress';
+import { isDesertWalkableFootPoint } from '../desertWalkableGrid';
 
 interface DesertSceneData {
   characterId?: CharacterId;
@@ -134,7 +135,7 @@ const DESERT_PALMS = [
 const PLAYER_SIZE = 64;
 const PLAYER_SPEED = 180;
 const PLAYER_FOOT_OFFSET_Y = 20;
-const PLAYER_START_CELL = { column: 5, row: 12 } as const;
+const PLAYER_START_CELL = { column: 7, row: 14 } as const;
 const PLAYER_START = {
   x: (PLAYER_START_CELL.column - 0.5) * GRID_SIZE,
   // Colocamos el centro entre los pies exactamente en C5/F12.
@@ -396,7 +397,7 @@ export class DesertScene extends Phaser.Scene {
     this.registry.set(REGISTRY_COINS_KEY, progress.coins);
   }
 
-  update(time: number): void {
+  update(time: number, delta: number): void {
     if (this.isGameOver) return;
 
     const body = this.player.body as Phaser.Physics.Arcade.Body;
@@ -412,7 +413,11 @@ export class DesertScene extends Phaser.Scene {
 
     if (x !== 0 || y !== 0) {
       const movement = new Phaser.Math.Vector2(x, y).normalize();
-      body.setVelocity(movement.x * PLAYER_SPEED, movement.y * PLAYER_SPEED);
+      const distance = PLAYER_SPEED * (delta / 1000);
+      this.movePlayerWithinWalkableGrid(
+        movement.x * distance,
+        movement.y * distance
+      );
       this.direction.copy(movement);
 
       if (Math.abs(movement.x) > Math.abs(movement.y)) {
@@ -479,6 +484,28 @@ export class DesertScene extends Phaser.Scene {
         .setDisplaySize(palm.width, palm.height)
         .setDepth(baseY);
     });
+  }
+
+  private movePlayerWithinWalkableGrid(dx: number, dy: number): void {
+    const maxStep = 4;
+    const steps = Math.max(
+      1,
+      Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / maxStep)
+    );
+    const stepX = dx / steps;
+    const stepY = dy / steps;
+
+    for (let index = 0; index < steps; index += 1) {
+      const nextX = this.player.x + stepX;
+      if (isDesertWalkableFootPoint(nextX, this.player.y)) {
+        this.player.x = nextX;
+      }
+
+      const nextY = this.player.y + stepY;
+      if (isDesertWalkableFootPoint(this.player.x, nextY)) {
+        this.player.y = nextY;
+      }
+    }
   }
 
   private applyTempleStairsScale(): void {
