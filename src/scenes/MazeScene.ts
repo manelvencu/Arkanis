@@ -37,9 +37,11 @@ const CENTER_ROOM = {
 } as const;
 
 const GRID_TEXTURE_KEY = 'maze-grid-guide';
-const BLACK_SUN_VISION_RADIUS = 190;
+const BLACK_SUN_VISION_RADIUS = 180;
+const BLACK_SUN_FEATHER_RADIUS = 230;
 const BLACK_SUN_DARKNESS_ALPHA = 0.94;
 const BLACK_SUN_TRIGGER_RADIUS = 30;
+const BLACK_SUN_SPOTLIGHT_STEP = 4;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -324,8 +326,7 @@ export class MazeScene extends Phaser.Scene {
   private exitLockedHintShown = false;
   private blackSunActivated = false;
   private blackSunObject?: Phaser.GameObjects.Container;
-  private darknessOverlay?: Phaser.GameObjects.Rectangle;
-  private darknessMaskGraphics?: Phaser.GameObjects.Graphics;
+  private darknessOverlay?: Phaser.GameObjects.Graphics;
 
   constructor() {
     super('MazeScene');
@@ -339,7 +340,6 @@ export class MazeScene extends Phaser.Scene {
     this.blackSunActivated = false;
     this.blackSunObject = undefined;
     this.darknessOverlay = undefined;
-    this.darknessMaskGraphics = undefined;
   }
 
   preload(): void {
@@ -696,22 +696,16 @@ export class MazeScene extends Phaser.Scene {
 
     this.cameras.main.shake(260, 0.004);
 
-    this.darknessOverlay = this.add.rectangle(
-      0,
-      0,
-      WORLD_WIDTH,
-      WORLD_HEIGHT,
-      0x000000,
-      BLACK_SUN_DARKNESS_ALPHA
-    )
-      .setOrigin(0)
-      .setDepth(9000)
+    // No usamos una máscara invertida: en Phaser 4 su comportamiento difiere
+    // entre renderizadores. Dibujamos directamente la oscuridad alrededor de
+    // un hueco circular, de modo que el foco sea estable en WebGL y Canvas.
+    this.darknessOverlay = this.add.graphics()
+      .setDepth(20000)
       .setAlpha(0);
 
-    this.darknessMaskGraphics = this.make.graphics({ x: 0, y: 0 });
-    const mask = this.darknessMaskGraphics.createGeometryMask();
-    (mask as Phaser.Display.Masks.GeometryMask & { invertAlpha: boolean }).invertAlpha = true;
-    this.darknessOverlay.setMask(mask);
+    // El HUD usa una cámara independiente. La oscuridad pertenece solo al
+    // mundo y nunca debe tapar energía, monedas ni controles.
+    this.ui.ignoreWorldObject(this.darknessOverlay);
 
     this.updateDarknessMask();
 
@@ -728,21 +722,139 @@ export class MazeScene extends Phaser.Scene {
   }
 
   private updateDarknessMask(): void {
-    if (
-      !this.blackSunActivated ||
-      !this.darknessOverlay ||
-      !this.darknessMaskGraphics
-    ) {
-      return;
+    if (!this.blackSunActivated || !this.darknessOverlay) return;
+
+    const centerX = this.player.x;
+    const centerY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const graphics = this.darknessOverlay;
+
+    graphics.clear();
+
+    // Exterior completamente oscuro.
+    this.drawDarknessOutsideCircle(
+      graphics,
+      centerX,
+      centerY,
+      BLACK_SUN_FEATHER_RADIUS,
+      BLACK_SUN_DARKNESS_ALPHA
+    );
+
+    // Borde suave del foco. El centro (180 px) queda totalmente limpio y la
+    // oscuridad aumenta progresivamente hasta los 230 px.
+    this.drawDarknessRing(graphics, centerX, centerY, 218, 230, 0.78);
+    this.drawDarknessRing(graphics, centerX, centerY, 205, 218, 0.58);
+    this.drawDarknessRing(graphics, centerX, centerY, 192, 205, 0.36);
+    this.drawDarknessRing(
+      graphics,
+      centerX,
+      centerY,
+      BLACK_SUN_VISION_RADIUS,
+      192,
+      0.16
+    );
+  }
+
+  private drawDarknessOutsideCircle(
+    graphics: Phaser.GameObjects.Graphics,
+    centerX: number,
+    centerY: number,
+    radius: number,
+    alpha: number
+  ): void {
+    graphics.fillStyle(0x000000, alpha);
+
+    const top = Math.max(0, centerY - radius);
+    const bottom = Math.min(WORLD_HEIGHT, centerY + radius);
+
+    if (top > 0) graphics.fillRect(0, 0, WORLD_WIDTH, top);
+    if (bottom < WORLD_HEIGHT) {
+      graphics.fillRect(0, bottom, WORLD_WIDTH, WORLD_HEIGHT - bottom);
     }
 
-    this.darknessMaskGraphics.clear();
-    this.darknessMaskGraphics.fillStyle(0xffffff, 1);
-    this.darknessMaskGraphics.fillCircle(
-      this.player.x,
-      this.player.y + PLAYER_FOOT_OFFSET_Y,
-      BLACK_SUN_VISION_RADIUS
-    );
+    for (
+      let y = Math.max(0, centerY - radius);
+      y < Math.min(WORLD_HEIGHT, centerY + radius);
+      y += BLACK_SUN_SPOTLIGHT_STEP
+    ) {
+      const sampleY = y + BLACK_SUN_SPOTLIGHT_STEP / 2;
+      const dy = sampleY - centerY;
+      const halfWidth = Math.sqrt(Math.max(0, radius * radius - dy * dy));
+      const leftEdge = Math.max(0, centerX - halfWidth);
+      const rightEdge = Math.min(WORLD_WIDTH, centerX + halfWidth);
+
+      if (leftEdge > 0) {
+        graphics.fillRect(0, y, leftEdge, BLACK_SUN_SPOTLIGHT_STEP + 1);
+      }
+      if (rightEdge < WORLD_WIDTH) {
+        graphics.fillRect(
+          rightEdge,
+          y,
+          WORLD_WIDTH - rightEdge,
+          BLACK_SUN_SPOTLIGHT_STEP + 1
+        );
+      }
+    }
+  }
+
+  private drawDarknessRing(
+    graphics: Phaser.GameObjects.Graphics,
+    centerX: number,
+    centerY: number,
+    innerRadius: number,
+    outerRadius: number,
+    alpha: number
+  ): void {
+    graphics.fillStyle(0x000000, alpha);
+
+    for (
+      let y = centerY - outerRadius;
+      y < centerY + outerRadius;
+      y += BLACK_SUN_SPOTLIGHT_STEP
+    ) {
+      if (y < 0 || y >= WORLD_HEIGHT) continue;
+
+      const sampleY = y + BLACK_SUN_SPOTLIGHT_STEP / 2;
+      const dy = sampleY - centerY;
+      const outerHalf = Math.sqrt(
+        Math.max(0, outerRadius * outerRadius - dy * dy)
+      );
+
+      const innerHalf =
+        Math.abs(dy) < innerRadius
+          ? Math.sqrt(Math.max(0, innerRadius * innerRadius - dy * dy))
+          : 0;
+
+      const leftOuter = Math.max(0, centerX - outerHalf);
+      const rightOuter = Math.min(WORLD_WIDTH, centerX + outerHalf);
+      const leftInner = Math.max(0, centerX - innerHalf);
+      const rightInner = Math.min(WORLD_WIDTH, centerX + innerHalf);
+
+      if (innerHalf > 0) {
+        if (leftInner > leftOuter) {
+          graphics.fillRect(
+            leftOuter,
+            y,
+            leftInner - leftOuter,
+            BLACK_SUN_SPOTLIGHT_STEP + 1
+          );
+        }
+        if (rightOuter > rightInner) {
+          graphics.fillRect(
+            rightInner,
+            y,
+            rightOuter - rightInner,
+            BLACK_SUN_SPOTLIGHT_STEP + 1
+          );
+        }
+      } else if (rightOuter > leftOuter) {
+        graphics.fillRect(
+          leftOuter,
+          y,
+          rightOuter - leftOuter,
+          BLACK_SUN_SPOTLIGHT_STEP + 1
+        );
+      }
+    }
   }
 
   private createCenterChamberMarker(): void {
