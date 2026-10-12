@@ -1676,7 +1676,10 @@ export class MazeScene extends Phaser.Scene {
   }
 
   private createStatueCorridor(): void {
-    for (const site of MAZE_STATUE_LAUNCHERS) {
+    for (const site of [
+      ...MAZE_STATUE_LAUNCHERS,
+      ...POST_FRAGMENT_STATUE_LAUNCHERS
+    ]) {
       this.createLauncherStatue(
         site.column,
         site.row,
