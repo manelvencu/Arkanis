@@ -141,7 +141,13 @@ export class DevMenuScene extends Phaser.Scene {
         ]
       },
       {
-        title: 'MUNDO 2 — EL DESIERTO DE MIL SOLES',
+        title: 'MUNDO 2 — LAS TIERRAS DEL FUEGO',
+        entries: [
+          { label: 'Entrada a Las Tierras del Fuego', sceneKey: 'FireLandsScene', data: characterData }
+        ]
+      },
+      {
+        title: 'MUNDO 3 — EL DESIERTO DE MIL SOLES',
         entries: [
           { label: 'Entrada al Desierto', sceneKey: 'DesertScene', data: characterData }
         ]
