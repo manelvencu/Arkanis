@@ -9,6 +9,7 @@ import {
   getVillageProgress,
   grantDesertCarpetForMazeTest,
   hasUsableDesertCarpet,
+  setVillageEnergy,
   useDesertCarpetInMaze
 } from '../villageProgress';
 
@@ -55,6 +56,11 @@ const BLACK_SUN_GATE = {
 } as const;
 const MOVING_WALL_TRIGGER_RADIUS = 26;
 const SACRED_BRAZIER_TRIGGER_RADIUS = 34;
+const MAZE_SCORPION_SIZE = 24;
+const MAZE_SCORPION_SPEED = 72;
+const MAZE_SCORPION_DAMAGE = 15;
+const MAZE_SCORPION_TRIGGER_RADIUS = 80;
+const MAZE_SCORPION_LIFETIME = 6500;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -352,6 +358,59 @@ function findMazeLandmarkCells(): MazeLandmark[] {
 
 const MAZE_LANDMARKS = findMazeLandmarkCells();
 
+function findScorpionCrackCells(): Array<{ column: number; row: number }> {
+  const brazier = MAZE_LANDMARKS.find((item) => item.id === 'sacredBrazier');
+  const statues = MAZE_LANDMARKS.find((item) => item.id === 'statueCorridor');
+  if (!brazier || !statues) return [];
+
+  const candidates: Array<{ column: number; row: number; score: number }> = [];
+
+  for (const key of MAZE_WALKABLE_CELLS) {
+    const [columnText, rowText] = key.split(':');
+    const column = Number(columnText);
+    const row = Number(rowText);
+
+    if (
+      column >= CENTER_ROOM.left - 4 &&
+      column <= CENTER_ROOM.right + 4 &&
+      row >= CENTER_ROOM.top - 4 &&
+      row <= CENTER_ROOM.bottom + 8
+    ) {
+      continue;
+    }
+
+    const distanceFromBrazier =
+      Math.abs(column - brazier.column) + Math.abs(row - brazier.row);
+    const distanceFromStatues =
+      Math.abs(column - statues.column) + Math.abs(row - statues.row);
+
+    if (distanceFromBrazier < 5 || distanceFromStatues < 3) continue;
+
+    const score = Math.abs(distanceFromBrazier - distanceFromStatues);
+    candidates.push({ column, row, score });
+  }
+
+  candidates.sort((a, b) => a.score - b.score);
+
+  const selected: Array<{ column: number; row: number }> = [];
+  for (const candidate of candidates) {
+    if (
+      selected.every((cell) =>
+        Math.abs(cell.column - candidate.column) +
+        Math.abs(cell.row - candidate.row) >= 7
+      )
+    ) {
+      selected.push({ column: candidate.column, row: candidate.row });
+    }
+
+    if (selected.length === 3) break;
+  }
+
+  return selected;
+}
+
+const MAZE_SCORPION_CRACKS = findScorpionCrackCells();
+
 export class MazeScene extends Phaser.Scene {
   private characterId: CharacterId = 'tiana';
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -374,6 +433,9 @@ export class MazeScene extends Phaser.Scene {
   private sacredBrazierLit = false;
   private sacredBrazierFlame?: Phaser.GameObjects.Ellipse;
   private sacredBrazierGlow?: Phaser.GameObjects.Ellipse;
+  private scorpions: Phaser.Physics.Arcade.Sprite[] = [];
+  private activatedScorpionCracks = new Set<string>();
+  private isGameOver = false;
 
   constructor() {
     super('MazeScene');
@@ -398,10 +460,22 @@ export class MazeScene extends Phaser.Scene {
     this.sacredBrazierLit = false;
     this.sacredBrazierFlame = undefined;
     this.sacredBrazierGlow = undefined;
+    this.scorpions = [];
+    this.activatedScorpionCracks.clear();
+    this.isGameOver = false;
   }
 
   preload(): void {
     preloadPlayableUiAssets(this);
+
+    this.load.image(
+      'maze-scorpion-down-01',
+      './assets/world/desert/enemies/scorpions/escorpion_down_01.png'
+    );
+    this.load.image(
+      'maze-scorpion-up-01',
+      './assets/world/desert/enemies/scorpions/escorpion_up_01.png'
+    );
 
     const assets = CHARACTER_ASSETS[this.characterId === 'lupe' ? 'lupe' : 'tiana'];
     Object.entries(assets).forEach(([key, path]) => {
@@ -422,6 +496,7 @@ export class MazeScene extends Phaser.Scene {
     this.createCarpetPit();
     this.createMovingWalls();
     this.createSacredBrazier();
+    this.createScorpionCracks();
     this.createPlayerAnimations();
     this.createGridGuide();
 
@@ -449,8 +524,8 @@ export class MazeScene extends Phaser.Scene {
     );
   }
 
-  update(_time: number, delta: number): void {
-    if (this.exiting) return;
+  update(time: number, delta: number): void {
+    if (this.exiting || this.isGameOver) return;
 
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(0);
@@ -507,6 +582,7 @@ export class MazeScene extends Phaser.Scene {
     this.checkMovingWallTriggers();
     this.checkMovingWallReleaseOutOfView();
     this.checkSacredBrazier();
+    this.updateScorpionCracks(time, delta);
     this.updateDarknessMask();
   }
 
@@ -1097,6 +1173,214 @@ export class MazeScene extends Phaser.Scene {
 
     this.time.delayedCall(2600, () => {
       if (this.scene.isActive()) this.ui.updateStatus('');
+    });
+  }
+
+  private createScorpionCracks(): void {
+    for (const crack of MAZE_SCORPION_CRACKS) {
+      const x = (crack.column - 0.5) * GRID_SIZE;
+      const y = (crack.row - 0.5) * GRID_SIZE;
+
+      const graphics = this.add.graphics().setDepth(114);
+      graphics.lineStyle(2, 0x3a261d, 0.95);
+      graphics.beginPath();
+      graphics.moveTo(x - 13, y - 3);
+      graphics.lineTo(x - 5, y + 2);
+      graphics.lineTo(x - 9, y + 10);
+      graphics.moveTo(x - 5, y + 2);
+      graphics.lineTo(x + 4, y - 5);
+      graphics.lineTo(x + 12, y + 2);
+      graphics.moveTo(x + 4, y - 5);
+      graphics.lineTo(x + 8, y - 13);
+      graphics.strokePath();
+    }
+  }
+
+  private updateScorpionCracks(time: number, delta: number): void {
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+
+    for (const crack of MAZE_SCORPION_CRACKS) {
+      const key = `${crack.column}:${crack.row}`;
+      if (this.activatedScorpionCracks.has(key)) continue;
+
+      const x = (crack.column - 0.5) * GRID_SIZE;
+      const y = (crack.row - 0.5) * GRID_SIZE;
+
+      if (
+        Phaser.Math.Distance.Between(this.player.x, footY, x, y) >
+        MAZE_SCORPION_TRIGGER_RADIUS
+      ) {
+        continue;
+      }
+
+      this.activatedScorpionCracks.add(key);
+      this.spawnMazeScorpion(x, y, time);
+    }
+
+    const safeDelta = Math.min(delta, 50);
+    const distance = MAZE_SCORPION_SPEED * (safeDelta / 1000);
+
+    for (const scorpion of this.scorpions) {
+      if (!scorpion.active) continue;
+
+      const bornAt = scorpion.getData('bornAt') as number;
+      if (time - bornAt >= MAZE_SCORPION_LIFETIME) {
+        scorpion.destroy();
+        continue;
+      }
+
+      const targetY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+      const direction = new Phaser.Math.Vector2(
+        this.player.x - scorpion.x,
+        targetY - scorpion.y
+      );
+
+      if (direction.lengthSq() > 1) {
+        direction.normalize();
+        this.moveScorpionWithinMaze(
+          scorpion,
+          direction.x * distance,
+          direction.y * distance
+        );
+
+        if (direction.y < -0.2) {
+          scorpion.setTexture('maze-scorpion-up-01');
+        } else if (direction.y > 0.2) {
+          scorpion.setTexture('maze-scorpion-down-01');
+        } else {
+          scorpion.setTexture(
+            direction.x < 0
+              ? 'maze-scorpion-up-01'
+              : 'maze-scorpion-down-01'
+          );
+        }
+
+        if (Math.abs(direction.x) > 0.2) {
+          scorpion.setFlipX(direction.x < 0);
+        }
+      }
+
+      scorpion.setDepth(scorpion.y + MAZE_SCORPION_SIZE / 2);
+
+      const touching =
+        Phaser.Math.Distance.Between(
+          scorpion.x,
+          scorpion.y,
+          this.player.x,
+          targetY
+        ) <= 22;
+
+      const wasTouching = scorpion.getData('touchingPlayer') === true;
+      if (touching && !wasTouching) {
+        this.damagePlayerFromScorpion(MAZE_SCORPION_DAMAGE);
+      }
+      scorpion.setData('touchingPlayer', touching);
+    }
+
+    this.scorpions = this.scorpions.filter((scorpion) => scorpion.active);
+  }
+
+  private spawnMazeScorpion(x: number, y: number, time: number): void {
+    const scorpion = this.physics.add.sprite(
+      x,
+      y,
+      'maze-scorpion-down-01'
+    );
+
+    scorpion
+      .setDisplaySize(MAZE_SCORPION_SIZE, MAZE_SCORPION_SIZE)
+      .setDepth(y + MAZE_SCORPION_SIZE / 2)
+      .setAlpha(0)
+      .setScale(0.2)
+      .setData('bornAt', time)
+      .setData('touchingPlayer', false);
+
+    const body = scorpion.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    body.setSize(
+      MAZE_SCORPION_SIZE * 0.72,
+      MAZE_SCORPION_SIZE * 0.72,
+      true
+    );
+    body.setVelocity(0, 0);
+
+    this.scorpions.push(scorpion);
+
+    this.tweens.add({
+      targets: scorpion,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 180,
+      ease: 'Back.easeOut'
+    });
+  }
+
+  private moveScorpionWithinMaze(
+    scorpion: Phaser.Physics.Arcade.Sprite,
+    dx: number,
+    dy: number
+  ): void {
+    const maxStep = 3;
+    const steps = Math.max(
+      1,
+      Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / maxStep)
+    );
+    const stepX = dx / steps;
+    const stepY = dy / steps;
+
+    for (let index = 0; index < steps; index += 1) {
+      const nextX = scorpion.x + stepX;
+      if (this.isMazeGroundPointWalkable(nextX, scorpion.y)) {
+        scorpion.x = nextX;
+      }
+
+      const nextY = scorpion.y + stepY;
+      if (this.isMazeGroundPointWalkable(scorpion.x, nextY)) {
+        scorpion.y = nextY;
+      }
+    }
+  }
+
+  private isMazeGroundPointWalkable(x: number, y: number): boolean {
+    if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return false;
+
+    const column = Math.floor(x / GRID_SIZE) + 1;
+    const row = Math.floor(y / GRID_SIZE) + 1;
+    const key = `${column}:${row}`;
+
+    return (
+      MAZE_WALKABLE_CELLS.has(key) &&
+      !this.movingWallBlockedCells.has(key)
+    );
+  }
+
+  private damagePlayerFromScorpion(amount: number): void {
+    const progress = getVillageProgress();
+    const nextEnergy = Math.max(0, progress.energy - amount);
+
+    setVillageEnergy(nextEnergy);
+    this.ui.updateEnergy(nextEnergy);
+
+    this.cameras.main.shake(170, 0.006);
+    this.player.setTint(0xff5544);
+    this.time.delayedCall(180, () => {
+      if (this.player.active) this.player.clearTint();
+    });
+
+    if (nextEnergy > 0 || this.isGameOver) return;
+
+    this.isGameOver = true;
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    body.setVelocity(0);
+    this.player.anims.stop();
+
+    this.time.delayedCall(220, () => {
+      this.scene.launch('GameOverScene', {
+        characterId: this.characterId,
+        sourceSceneKey: 'MazeScene'
+      });
+      this.scene.pause();
     });
   }
 
