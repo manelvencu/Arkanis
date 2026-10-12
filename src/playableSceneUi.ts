@@ -62,6 +62,7 @@ export function preloadPlayableUiAssets(scene: Phaser.Scene): void {
     );
   });
   scene.load.image('playable-coin', './assets/environment/coin-gold-01.png');
+  scene.load.image('playable-desertCarpet', './assets/ui/hud/desert-carpet-icon-01.png');
   scene.load.image('playable-menu', './assets/environment/menu-icon-01.png');
   scene.load.image('playable-magicRayGold', './assets/effects/magic-ray-gold-01.png');
 }
@@ -117,17 +118,19 @@ export function createPlayableUi(
     .setDepth(1004));
   fitEnergySprite(energyImage);
 
-  const carpetIcon = remember(scene.add.container((LOGICAL_WIDTH - 235) * HD_SCALE, 41 * HD_SCALE)
-    .setScrollFactor(0)
-    .setDepth(1004));
-  const carpetBody = scene.add.rectangle(0, 0, 30 * HD_SCALE, 18 * HD_SCALE, 0x9d3d32, 1)
-    .setStrokeStyle(2 * HD_SCALE, 0xd8ad55, 1);
-  const carpetBandA = scene.add.rectangle(-8 * HD_SCALE, 0, 3 * HD_SCALE, 16 * HD_SCALE, 0xd8ad55, 0.95);
-  const carpetBandB = scene.add.rectangle(8 * HD_SCALE, 0, 3 * HD_SCALE, 16 * HD_SCALE, 0xd8ad55, 0.95);
-  carpetIcon.add([carpetBody, carpetBandA, carpetBandB]);
+  const carpetIcon = remember(
+    scene.add.image(
+      (LOGICAL_WIDTH - 235) * HD_SCALE,
+      41 * HD_SCALE,
+      'playable-desertCarpet'
+    )
+      .setDisplaySize(38 * HD_SCALE, 38 * HD_SCALE)
+      .setScrollFactor(0)
+      .setDepth(1004)
+  );
 
   const setCarpetOwned = (owned: boolean): void => {
-    carpetIcon.setAlpha(owned ? 1 : 0.32);
+    carpetIcon.setVisible(owned);
   };
   setCarpetOwned(initialCarpetOwned);
 
