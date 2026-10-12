@@ -45,12 +45,15 @@ const GRID_TEXTURE_KEY = 'maze-grid-guide';
 const BLACK_SUN_VISION_RADIUS = 180;
 const BLACK_SUN_FEATHER_RADIUS = 250;
 const BLACK_SUN_DARKNESS_ALPHA = 0.94;
-const BLACK_SUN_TRIGGER_RADIUS = 30;
 const BLACK_SUN_SPOTLIGHT_STEP = 3;
 const CARPET_PIT_BLOCK_RADIUS = 46;
 const CARPET_PIT_USE_RADIUS = 58;
 const FALSE_BRANCH_JUNCTION = { column: 68, row: 76 } as const;
-const MOVING_WALL_TRIGGER_RADIUS = 24;
+const BLACK_SUN_GATE = {
+  column: 53,
+  rows: [68, 69]
+} as const;
+const MOVING_WALL_TRIGGER_RADIUS = 26;
 const SACRED_BRAZIER_TRIGGER_RADIUS = 34;
 
 type MazeLandmarkId =
@@ -305,6 +308,16 @@ function findMazeLandmarkCells(): MazeLandmark[] {
         color: definition.color,
         column: FALSE_BRANCH_JUNCTION.column,
         row: FALSE_BRANCH_JUNCTION.row
+      };
+    }
+
+    if (definition.id === 'blackSun') {
+      return {
+        id: definition.id,
+        label: definition.label,
+        color: definition.color,
+        column: BLACK_SUN_GATE.column,
+        row: BLACK_SUN_GATE.rows[0]
       };
     }
 
@@ -821,22 +834,21 @@ export class MazeScene extends Phaser.Scene {
   }
 
   private movingWallCellsForPhase(): {
-    entry: Array<{ column: number; row: number }>;
-    middle: Array<{ column: number; row: number }>;
-    north: Array<{ column: number; row: number }>;
+    first: Array<{ column: number; row: number }>;
+    second: Array<{ column: number; row: number }>;
   } {
     return {
-      entry: [
-        { column: 68, row: 56 },
-        { column: 68, row: 57 }
+      // Primer cierre: atraviesa por completo el corredor vertical C68-C69
+      // justo después de que el jugador haya girado hacia el este.
+      first: [
+        { column: 68, row: 55 },
+        { column: 69, row: 55 }
       ],
-      middle: [
-        { column: 72, row: 56 },
-        { column: 72, row: 57 }
-      ],
-      north: [
-        { column: 72, row: 54 },
-        { column: 73, row: 54 }
+      // Segundo cierre: bastante más adelante, atraviesa por completo el
+      // corredor horizontal F52-F53 después del siguiente giro.
+      second: [
+        { column: 74, row: 52 },
+        { column: 74, row: 53 }
       ]
     };
   }
@@ -848,9 +860,8 @@ export class MazeScene extends Phaser.Scene {
     let blocked: Array<{ column: number; row: number }> = [];
 
     if (!this.movingWallSolved) {
-      if (phase === 0) blocked = [...cells.middle, ...cells.north];
-      else if (phase === 1) blocked = [...cells.entry, ...cells.north];
-      else if (phase === 2) blocked = [...cells.entry, ...cells.middle];
+      if (phase === 1) blocked = [...cells.first];
+      else if (phase === 2) blocked = [...cells.first, ...cells.second];
     }
 
     const nextKeys = new Set(blocked.map((cell) => `${cell.column}:${cell.row}`));
@@ -918,21 +929,13 @@ export class MazeScene extends Phaser.Scene {
 
     if (
       this.movingWallPhase === 0 &&
-      (near(70, 56) || near(71, 56) || near(70, 57) || near(71, 57))
+      (near(71, 56) || near(72, 56) || near(71, 57) || near(72, 57))
     ) {
+      // El jugador ya ha abandonado el corredor vertical C68-C69:
+      // cerramos ambas celdas de ancho detrás de él.
       this.setMovingWallPhase(1);
       this.cameras.main.shake(180, 0.003);
-      this.ui.updateStatus('Los muros se han movido detrás de ti.');
-      this.time.delayedCall(1500, () => {
-        if (this.scene.isActive()) this.ui.updateStatus('');
-      });
-      return;
-    }
-
-    if (this.movingWallPhase === 1 && near(73, 55)) {
-      this.setMovingWallPhase(2);
-      this.cameras.main.shake(180, 0.003);
-      this.ui.updateStatus('El laberinto vuelve a cambiar.');
+      this.ui.updateStatus('Un muro ha cerrado completamente el paso a tu espalda.');
       this.time.delayedCall(1500, () => {
         if (this.scene.isActive()) this.ui.updateStatus('');
       });
@@ -940,14 +943,18 @@ export class MazeScene extends Phaser.Scene {
     }
 
     if (
-      this.movingWallPhase === 2 &&
-      !this.movingWallReleasePending &&
-      (near(74, 53) || near(75, 53))
+      this.movingWallPhase === 1 &&
+      (near(76, 50) || near(77, 50) || near(76, 51) || near(77, 51))
     ) {
-      // No deshacemos los muros mientras el jugador aún puede verlos.
-      // Quedan en su última configuración hasta que toda la zona desaparece
-      // del viewport; entonces se abren fuera de cámara.
+      // El segundo cierre ocurre bastante más adelante, cuando ya hemos
+      // recorrido el tramo este y girado hacia el norte.
+      this.setMovingWallPhase(2);
       this.movingWallReleasePending = true;
+      this.cameras.main.shake(180, 0.003);
+      this.ui.updateStatus('Otro muro se ha cerrado lejos, detrás de ti.');
+      this.time.delayedCall(1500, () => {
+        if (this.scene.isActive()) this.ui.updateStatus('');
+      });
     }
   }
 
@@ -961,9 +968,9 @@ export class MazeScene extends Phaser.Scene {
 
     const zone = new Phaser.Geom.Rectangle(
       (67 - 1) * GRID_SIZE,
-      (52 - 1) * GRID_SIZE,
-      9 * GRID_SIZE,
-      7 * GRID_SIZE
+      (49 - 1) * GRID_SIZE,
+      11 * GRID_SIZE,
+      9 * GRID_SIZE
     );
 
     const worldView = this.cameras.main.worldView;
@@ -1097,10 +1104,12 @@ export class MazeScene extends Phaser.Scene {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'blackSun');
     if (!landmark) return;
 
-    const x = (landmark.column - 0.5) * GRID_SIZE;
-    const y = (landmark.row - 0.5) * GRID_SIZE;
+    const x = (BLACK_SUN_GATE.column - 0.5) * GRID_SIZE;
+    const firstRowCenter = (BLACK_SUN_GATE.rows[0] - 0.5) * GRID_SIZE;
+    const secondRowCenter = (BLACK_SUN_GATE.rows[1] - 0.5) * GRID_SIZE;
+    const y = (firstRowCenter + secondRowCenter) / 2;
 
-    const aura = this.add.circle(0, 0, 24, 0x5c365f, 0.22)
+    const aura = this.add.circle(0, 0, 30, 0x5c365f, 0.22)
       .setStrokeStyle(2, 0xa76aa8, 0.65);
     const outer = this.add.circle(0, 0, 17, 0x17101a, 1)
       .setStrokeStyle(3, 0x6f4a73, 1);
@@ -1148,16 +1157,20 @@ export class MazeScene extends Phaser.Scene {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'blackSun');
     if (!landmark) return;
 
-    const x = (landmark.column - 0.5) * GRID_SIZE;
-    const y = (landmark.row - 0.5) * GRID_SIZE;
     const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const column = Math.floor(this.player.x / GRID_SIZE) + 1;
+    const row = Math.floor(footY / GRID_SIZE) + 1;
 
-    if (
-      Phaser.Math.Distance.Between(this.player.x, footY, x, y) >
-      BLACK_SUN_TRIGGER_RADIUS
-    ) {
-      return;
-    }
+    // El Sol Negro ocupa las dos celdas de ancho del único corredor de paso
+    // en este punto. No se puede continuar por esta ruta sin atravesar una de
+    // las dos celdas y, por tanto, sin activar la oscuridad.
+    const crossedBlackSunGate =
+      column === BLACK_SUN_GATE.column &&
+      BLACK_SUN_GATE.rows.includes(
+        row as (typeof BLACK_SUN_GATE.rows)[number]
+      );
+
+    if (!crossedBlackSunGate) return;
 
     this.blackSunActivated = true;
     this.activateBlackSunDarkness();
