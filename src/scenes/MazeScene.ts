@@ -37,8 +37,22 @@ const CENTER_ROOM = {
 } as const;
 
 const GRID_TEXTURE_KEY = 'maze-grid-guide';
-const FLOOR_TEXTURE_KEY = 'maze-floor-guide';
-const WALL_TEXTURE_KEY = 'maze-wall-guide';
+
+type MazeLandmarkId =
+  | 'blackSun'
+  | 'falseBranch'
+  | 'carpetPit'
+  | 'movingWalls'
+  | 'sacredBrazier'
+  | 'statueCorridor';
+
+interface MazeLandmark {
+  id: MazeLandmarkId;
+  label: string;
+  color: number;
+  column: number;
+  row: number;
+}
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -168,29 +182,29 @@ function buildMazeWalkableCells(): ReadonlySet<string> {
     }
   }
 
-  // Cámara central provisional. Es deliberadamente grande para que se
-  // perciba como destino desde corredores cercanos.
+  // Cámara central: el objetivo puede percibirse como destino, pero queda
+  // completamente sellado durante esta fase. Eliminamos cualquier contacto
+  // accidental del laberinto generado con el anillo exterior de la cámara.
   for (let row = CENTER_ROOM.top; row <= CENTER_ROOM.bottom; row += 1) {
     for (let column = CENTER_ROOM.left; column <= CENTER_ROOM.right; column += 1) {
       walkable.add(`${column}:${row}`);
     }
   }
 
-  // Abrimos cuatro accesos provisionales a la cámara. En fases posteriores
-  // algunos se cerrarán mediante mecanismos y muros móviles.
-  for (let column = 39; column <= 42; column += 1) {
-    for (let row = 31; row <= CENTER_ROOM.top; row += 1) {
-      walkable.add(`${column}:${row}`);
-    }
-    for (let row = CENTER_ROOM.bottom; row <= 50; row += 1) {
-      walkable.add(`${column}:${row}`);
-    }
+  for (let column = CENTER_ROOM.left - 1; column <= CENTER_ROOM.right + 1; column += 1) {
+    walkable.delete(`${column}:${CENTER_ROOM.top - 1}`);
+    walkable.delete(`${column}:${CENTER_ROOM.bottom + 1}`);
   }
-  for (let row = 39; row <= 42; row += 1) {
-    for (let column = 31; column <= CENTER_ROOM.left; column += 1) {
-      walkable.add(`${column}:${row}`);
-    }
-    for (let column = CENTER_ROOM.right; column <= 50; column += 1) {
+  for (let row = CENTER_ROOM.top - 1; row <= CENTER_ROOM.bottom + 1; row += 1) {
+    walkable.delete(`${CENTER_ROOM.left - 1}:${row}`);
+    walkable.delete(`${CENTER_ROOM.right + 1}:${row}`);
+  }
+
+  // Acceso final reservado en el lado sur. Dejamos una antesala transitable,
+  // pero el anillo F47 permanece bloqueado. Más adelante ese cierre será el
+  // último mecanismo que dará acceso al fragmento.
+  for (let row = 48; row <= 52; row += 1) {
+    for (let column = 39; column <= 42; column += 1) {
       walkable.add(`${column}:${row}`);
     }
   }
@@ -199,6 +213,103 @@ function buildMazeWalkableCells(): ReadonlySet<string> {
 }
 
 const MAZE_WALKABLE_CELLS = buildMazeWalkableCells();
+
+function findMazeLandmarkCells(): MazeLandmark[] {
+  const start = PLAYER_START_CELL;
+  const queue: Array<{ column: number; row: number }> = [start];
+  const distances = new Map<string, number>([
+    [`${start.column}:${start.row}`, 0]
+  ]);
+  let cursor = 0;
+
+  const directions = [
+    { dc: 1, dr: 0 },
+    { dc: -1, dr: 0 },
+    { dc: 0, dr: 1 },
+    { dc: 0, dr: -1 }
+  ] as const;
+
+  while (cursor < queue.length) {
+    const current = queue[cursor];
+    cursor += 1;
+    const currentDistance =
+      distances.get(`${current.column}:${current.row}`) ?? 0;
+
+    for (const direction of directions) {
+      const column = current.column + direction.dc;
+      const row = current.row + direction.dr;
+      const key = `${column}:${row}`;
+
+      if (!MAZE_WALKABLE_CELLS.has(key) || distances.has(key)) continue;
+      distances.set(key, currentDistance + 1);
+      queue.push({ column, row });
+    }
+  }
+
+  const reachable = queue.filter((cell) => {
+    const insideEntrance =
+      cell.column >= 39 &&
+      cell.column <= 42 &&
+      cell.row >= 72;
+    const nearCenter =
+      cell.column >= CENTER_ROOM.left - 3 &&
+      cell.column <= CENTER_ROOM.right + 3 &&
+      cell.row >= CENTER_ROOM.top - 3 &&
+      cell.row <= CENTER_ROOM.bottom + 7;
+    return !insideEntrance && !nearCenter;
+  });
+
+  const maxDistance = reachable.reduce((max, cell) => (
+    Math.max(max, distances.get(`${cell.column}:${cell.row}`) ?? 0)
+  ), 1);
+
+  const definitions: Array<{
+    id: MazeLandmarkId;
+    label: string;
+    color: number;
+    ratio: number;
+  }> = [
+    { id: 'blackSun', label: 'SOL NEGRO', color: 0x33233f, ratio: 0.16 },
+    { id: 'falseBranch', label: 'FALSA BIFURCACIÓN', color: 0x9a6f32, ratio: 0.31 },
+    { id: 'carpetPit', label: 'AGUJERO / ALFOMBRA', color: 0x51362b, ratio: 0.47 },
+    { id: 'movingWalls', label: 'MUROS MÓVILES', color: 0x6e6b63, ratio: 0.63 },
+    { id: 'sacredBrazier', label: 'BRASERO SAGRADO', color: 0xe2752f, ratio: 0.79 },
+    { id: 'statueCorridor', label: 'ESTATUAS LANZADORAS', color: 0x7b5543, ratio: 0.94 }
+  ];
+
+  const selected = new Set<string>();
+
+  return definitions.map((definition) => {
+    const target = maxDistance * definition.ratio;
+    let best = reachable[0];
+    let bestDelta = Number.POSITIVE_INFINITY;
+
+    for (const cell of reachable) {
+      const key = `${cell.column}:${cell.row}`;
+      if (selected.has(key)) continue;
+
+      const distance = distances.get(key) ?? 0;
+      const delta = Math.abs(distance - target);
+
+      if (delta < bestDelta) {
+        best = cell;
+        bestDelta = delta;
+      }
+    }
+
+    selected.add(`${best.column}:${best.row}`);
+
+    return {
+      id: definition.id,
+      label: definition.label,
+      color: definition.color,
+      column: best.column,
+      row: best.row
+    };
+  });
+}
+
+const MAZE_LANDMARKS = findMazeLandmarkCells();
 
 export class MazeScene extends Phaser.Scene {
   private characterId: CharacterId = 'tiana';
@@ -236,6 +347,7 @@ export class MazeScene extends Phaser.Scene {
 
     this.createFloorAndWalls();
     this.createCenterChamberMarker();
+    this.createLandmarkMarkers();
     this.createPlayer();
     this.createPlayerAnimations();
     this.createGridGuide();
@@ -441,6 +553,56 @@ export class MazeScene extends Phaser.Scene {
         walls.strokeRect(x, y, GRID_SIZE - 2, GRID_SIZE - 8);
       }
     }
+  }
+
+
+  private createLandmarkMarkers(): void {
+    for (const landmark of MAZE_LANDMARKS) {
+      const x = (landmark.column - 0.5) * GRID_SIZE;
+      const y = (landmark.row - 0.5) * GRID_SIZE;
+
+      this.add.circle(x, y, 18, landmark.color, 0.82)
+        .setStrokeStyle(3, 0xffe4a0, 0.9)
+        .setDepth(120);
+
+      this.add.text(x, y - 26, landmark.label, {
+        fontFamily: 'Arial',
+        fontSize: '11px',
+        color: '#fff3c4',
+        fontStyle: 'bold',
+        align: 'center',
+        backgroundColor: 'rgba(35, 22, 14, 0.82)',
+        padding: { x: 5, y: 3 }
+      })
+        .setOrigin(0.5, 1)
+        .setDepth(121);
+    }
+
+    const gateX = ((39 + 42) / 2 - 0.5) * GRID_SIZE;
+    const gateY = (47 - 0.5) * GRID_SIZE;
+
+    this.add.rectangle(
+      gateX,
+      gateY,
+      GRID_SIZE * 4,
+      GRID_SIZE,
+      0x4a3025,
+      0.95
+    )
+      .setStrokeStyle(3, 0xd8ad67, 0.9)
+      .setDepth(125);
+
+    this.add.text(gateX, gateY, 'ACCESO FINAL\nSELLADO', {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: '#ffe9b0',
+      fontStyle: 'bold',
+      align: 'center',
+      stroke: '#3b2115',
+      strokeThickness: 3
+    })
+      .setOrigin(0.5)
+      .setDepth(126);
   }
 
   private createCenterChamberMarker(): void {
