@@ -26,6 +26,7 @@ export interface PlayableUiController {
   consumeShootRequest: () => boolean;
   updateEnergy: (energy: number) => void;
   updateCoins: (coins: number) => void;
+  pulseCoins: () => void;
   updateStatus: (text: string) => void;
   ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => void;
 }
@@ -104,7 +105,7 @@ export function createPlayableUi(
     .setDepth(1004));
   fitEnergySprite(energyImage);
 
-  remember(scene.add.image((LOGICAL_WIDTH - 190) * HD_SCALE, 41 * HD_SCALE, 'playable-coin')
+  const coinImage = remember(scene.add.image((LOGICAL_WIDTH - 190) * HD_SCALE, 41 * HD_SCALE, 'playable-coin')
     .setDisplaySize(25 * HD_SCALE, 25 * HD_SCALE)
     .setScrollFactor(0)
     .setDepth(1004));
@@ -243,6 +244,20 @@ export function createPlayableUi(
     },
     updateEnergy,
     updateCoins: (coins: number) => coinCounter.setText(String(coins)),
+    pulseCoins: () => {
+      scene.tweens.killTweensOf([coinImage, coinCounter]);
+      coinImage.setPosition((LOGICAL_WIDTH - 190) * HD_SCALE, 41 * HD_SCALE);
+      coinCounter.setPosition((LOGICAL_WIDTH - 165) * HD_SCALE, 41 * HD_SCALE);
+
+      scene.tweens.add({
+        targets: [coinImage, coinCounter],
+        x: '+=8',
+        duration: 55,
+        yoyo: true,
+        repeat: 3,
+        ease: 'Sine.easeInOut'
+      });
+    },
     updateStatus: (text: string) => statusText.setText(text),
     ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => uiCamera.ignore(object)
   };
