@@ -27,8 +27,14 @@ export interface PlayableUiController {
   updateEnergy: (energy: number) => void;
   updateCoins: (coins: number) => void;
   pulseCoins: () => void;
+  updateCarpetOwned: (owned: boolean) => void;
   updateStatus: (text: string) => void;
   ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => void;
+}
+
+export interface PlayableUiOptions {
+  controlsEnabled?: boolean;
+  carpetOwned?: boolean;
 }
 
 function energyTextureKey(level: number): string {
@@ -64,7 +70,8 @@ export function createPlayableUi(
   characterId: CharacterId,
   characterName: string,
   initialEnergy = 100,
-  initialCoins = 0
+  initialCoins = 0,
+  options: PlayableUiOptions = {}
 ): PlayableUiController {
   const touchDirections: Record<TouchDirection, boolean> = {
     left: false,
@@ -73,6 +80,7 @@ export function createPlayableUi(
     down: false
   };
   let shootRequested = false;
+  const controlsEnabled = options.controlsEnabled ?? true;
 
   const uiObjects: Phaser.GameObjects.GameObject[] = [];
   const remember = <T extends Phaser.GameObjects.GameObject>(object: T): T => {
@@ -104,6 +112,20 @@ export function createPlayableUi(
     .setScrollFactor(0)
     .setDepth(1004));
   fitEnergySprite(energyImage);
+
+  const carpetIcon = remember(scene.add.container((LOGICAL_WIDTH - 235) * HD_SCALE, 41 * HD_SCALE)
+    .setScrollFactor(0)
+    .setDepth(1004));
+  const carpetBody = scene.add.rectangle(0, 0, 30 * HD_SCALE, 18 * HD_SCALE, 0x9d3d32, 1)
+    .setStrokeStyle(2 * HD_SCALE, 0xd8ad55, 1);
+  const carpetBandA = scene.add.rectangle(-8 * HD_SCALE, 0, 3 * HD_SCALE, 16 * HD_SCALE, 0xd8ad55, 0.95);
+  const carpetBandB = scene.add.rectangle(8 * HD_SCALE, 0, 3 * HD_SCALE, 16 * HD_SCALE, 0xd8ad55, 0.95);
+  carpetIcon.add([carpetBody, carpetBandA, carpetBandB]);
+
+  const setCarpetOwned = (owned: boolean): void => {
+    carpetIcon.setAlpha(owned ? 1 : 0.32);
+  };
+  setCarpetOwned(options.carpetOwned ?? false);
 
   const coinImage = remember(scene.add.image((LOGICAL_WIDTH - 190) * HD_SCALE, 41 * HD_SCALE, 'playable-coin')
     .setDisplaySize(25 * HD_SCALE, 25 * HD_SCALE)
@@ -148,41 +170,48 @@ export function createPlayableUi(
     { direction: 'down', label: '▼', x: DPAD_CENTER_X, y: DPAD_CENTER_Y + DPAD_SPACING }
   ];
 
-  directions.forEach(({ label, x, y }) => {
-    remember(scene.add.circle(x, y, 50, 0x171421, 0.68)
-      .setStrokeStyle(6, 0xf1d16a, 0.9)
+  if (controlsEnabled) {
+    directions.forEach(({ label, x, y }) => {
+      remember(scene.add.circle(x, y, 50, 0x171421, 0.68)
+        .setStrokeStyle(6, 0xf1d16a, 0.9)
+        .setScrollFactor(0)
+        .setDepth(UI_DEPTH));
+      remember(scene.add.text(x, y, label, {
+        fontFamily: 'Arial',
+        fontSize: '50px',
+        color: '#fff1ad',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(UI_DEPTH + 1));
+    });
+  }
+
+  const magicButton = controlsEnabled
+    ? remember(scene.add.circle(MAGIC_X, MAGIC_Y, 68, 0x7a302d, 0.84)
+      .setStrokeStyle(6, 0xf0a08c, 0.98)
       .setScrollFactor(0)
-      .setDepth(UI_DEPTH));
-    remember(scene.add.text(x, y, label, {
+      .setDepth(UI_DEPTH)
+      .setInteractive({ useHandCursor: true }))
+    : null;
+
+  if (magicButton) {
+    remember(scene.add.text(MAGIC_X, MAGIC_Y, '✦', {
       fontFamily: 'Arial',
-      fontSize: '50px',
-      color: '#fff1ad',
+      fontSize: '62px',
+      color: '#ffe9df',
       fontStyle: 'bold'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(UI_DEPTH + 1));
-  });
 
-  const magicButton = remember(scene.add.circle(MAGIC_X, MAGIC_Y, 68, 0x7a302d, 0.84)
-    .setStrokeStyle(6, 0xf0a08c, 0.98)
-    .setScrollFactor(0)
-    .setDepth(UI_DEPTH)
-    .setInteractive({ useHandCursor: true }));
-  remember(scene.add.text(MAGIC_X, MAGIC_Y, '✦', {
-    fontFamily: 'Arial',
-    fontSize: '62px',
-    color: '#ffe9df',
-    fontStyle: 'bold'
-  }).setOrigin(0.5).setScrollFactor(0).setDepth(UI_DEPTH + 1));
-
-  magicButton.on('pointerdown', () => {
-    shootRequested = true;
-    magicButton.setFillStyle(0xa9473b, 0.96);
-  });
-  const restoreMagic = (): void => {
-    magicButton.setFillStyle(0x7a302d, 0.84);
-  };
-  magicButton.on('pointerup', restoreMagic);
-  magicButton.on('pointerout', restoreMagic);
-  magicButton.on('pointerupoutside', restoreMagic);
+    magicButton.on('pointerdown', () => {
+      shootRequested = true;
+      magicButton.setFillStyle(0xa9473b, 0.96);
+    });
+    const restoreMagic = (): void => {
+      magicButton.setFillStyle(0x7a302d, 0.84);
+    };
+    magicButton.on('pointerup', restoreMagic);
+    magicButton.on('pointerout', restoreMagic);
+    magicButton.on('pointerupoutside', restoreMagic);
+  }
 
   let dpadPointerId: number | null = null;
   const clearDirections = (): void => {
@@ -258,6 +287,7 @@ export function createPlayableUi(
         ease: 'Sine.easeInOut'
       });
     },
+    updateCarpetOwned: setCarpetOwned,
     updateStatus: (text: string) => statusText.setText(text),
     ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => uiCamera.ignore(object)
   };
