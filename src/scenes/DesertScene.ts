@@ -6,7 +6,10 @@ import {
   type PlayableUiController
 } from '../playableSceneUi';
 import { getVillageProgress, setVillageEnergy } from '../villageProgress';
-import { isDesertWalkableFootPoint } from '../desertWalkableGrid';
+import {
+  DESERT_WALKABLE_CELLS,
+  isDesertWalkableFootPoint
+} from '../desertWalkableGrid';
 
 interface DesertSceneData {
   characterId?: CharacterId;
@@ -919,6 +922,24 @@ export class DesertScene extends Phaser.Scene {
 
     const context = texture.context;
     context.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+    // Ayuda visual de diseño: las celdas transitables se marcan con un rojo
+    // muy suave para distinguir la whitelist sin tapar el arte del escenario.
+    for (const key of DESERT_WALKABLE_CELLS) {
+      const [columnText, rowText] = key.split(':');
+      const column = Number(columnText);
+      const row = Number(rowText);
+      if (!Number.isFinite(column) || !Number.isFinite(row)) continue;
+
+      context.fillStyle = 'rgba(220, 55, 45, 0.16)';
+      context.fillRect(
+        (column - 1) * GRID_SIZE,
+        (row - 1) * GRID_SIZE,
+        GRID_SIZE,
+        GRID_SIZE
+      );
+    }
+
     context.textBaseline = 'top';
     context.font = '7px Arial';
 
