@@ -80,7 +80,8 @@ const DESERT_BUILDINGS = [
     column: 61,
     row: 18,
     width: 144,
-    height: 128
+    height: 128,
+    depthOffset: 32
   }
 ] as const;
 
@@ -478,10 +479,13 @@ export class DesertScene extends Phaser.Scene {
       const x = (building.column - 0.5) * GRID_SIZE;
       const baseY = building.row * GRID_SIZE;
 
+      const depthOffset = 'depthOffset' in building ? building.depthOffset : 0;
+      const sortY = baseY - depthOffset;
+
       this.add.image(x, baseY, building.key)
         .setOrigin(0.5, 1)
         .setDisplaySize(building.width, building.height)
-        .setDepth(baseY);
+        .setDepth(sortY);
     });
   }
 
