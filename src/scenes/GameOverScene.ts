@@ -3,10 +3,12 @@ import type { CharacterId } from '../gameData';
 
 interface GameOverData {
   characterId: CharacterId;
+  sourceSceneKey?: string;
 }
 
 export class GameOverScene extends Phaser.Scene {
   private characterId: CharacterId = 'tiana';
+  private sourceSceneKey = 'TrainingScene';
   private restarting = false;
 
   constructor() {
@@ -15,6 +17,7 @@ export class GameOverScene extends Phaser.Scene {
 
   init(data: GameOverData): void {
     this.characterId = data.characterId ?? 'tiana';
+    this.sourceSceneKey = data.sourceSceneKey ?? 'TrainingScene';
     this.restarting = false;
   }
 
@@ -86,7 +89,10 @@ export class GameOverScene extends Phaser.Scene {
     if (this.restarting) return;
     this.restarting = true;
 
-    this.scene.stop('TrainingScene');
+    this.scene.stop(this.sourceSceneKey);
+    if (this.sourceSceneKey !== 'TrainingScene') {
+      this.scene.stop('TrainingScene');
+    }
     this.scene.start('TrainingScene', { characterId: this.characterId });
   }
 }
