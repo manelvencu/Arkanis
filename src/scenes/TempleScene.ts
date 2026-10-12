@@ -1,5 +1,11 @@
 import * as Phaser from 'phaser';
-import type { CharacterId } from '../gameData';
+import { characters, type CharacterId } from '../gameData';
+import {
+  createPlayableUi,
+  preloadPlayableUiAssets,
+  type PlayableUiController
+} from '../playableSceneUi';
+import { getVillageProgress, grantTempleReward } from '../villageProgress';
 
 interface TempleSceneData {
   characterId?: CharacterId;
@@ -10,10 +16,9 @@ type Facing = 'down' | 'up' | 'side';
 const WORLD_WIDTH = 960;
 const WORLD_HEIGHT = 1080;
 
-// Mantenemos exactamente el mismo tamaño lógico de celda que en Cabaña 1:
-// 30 columnas sobre 960 px = 32 px de ancho.
-// Cabaña 1 tiene 15 filas sobre 540 px = 36 px de alto.
-// El Templo duplica la altura: 30 filas sobre 1080 px = 36 px de alto.
+// Mismo grid lógico que Cabaña 1:
+// 30 columnas sobre 960 px = 32 px.
+// 30 filas sobre 1080 px = 36 px.
 const GRID_COLUMNS = 30;
 const GRID_ROWS = 30;
 const CELL_WIDTH = WORLD_WIDTH / GRID_COLUMNS;
@@ -35,6 +40,26 @@ const PLAYER_START = {
   x: ENTRANCE_CENTER_X,
   y: WORLD_HEIGHT - CELL_HEIGHT * 1.8
 } as const;
+
+// El Templo queda bloqueado por defecto.
+// La alfombra central es la única zona transitable por ahora:
+// C14..C17 desde F30 hasta F12.
+const TEMPLE_WALKABLE_CELLS = new Set<string>();
+for (let row = 12; row <= 30; row += 1) {
+  for (let column = 14; column <= 17; column += 1) {
+    TEMPLE_WALKABLE_CELLS.add(`${column}:${row}`);
+  }
+}
+
+const KING_REWARD_CELLS = new Set([
+  '14:12',
+  '15:12',
+  '16:12',
+  '17:12'
+]);
+
+const KING_REWARD_MESSAGE =
+  'Se que estás ayudando a que nuestros mundos recuperen la Joya de Arkanis. Ten estas monedas. Te ayudarán a seguir con tu aventura.';
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -65,8 +90,10 @@ export class TempleScene extends Phaser.Scene {
   private characterId: CharacterId = 'tiana';
   private player!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private ui!: PlayableUiController;
   private facing: Facing = 'up';
   private exiting = false;
+  private messageOpen = false;
 
   constructor() {
     super('TempleScene');
@@ -76,6 +103,7 @@ export class TempleScene extends Phaser.Scene {
     this.characterId = data.characterId ?? 'tiana';
     this.facing = 'up';
     this.exiting = false;
+    this.messageOpen = false;
   }
 
   preload(): void {
@@ -88,6 +116,8 @@ export class TempleScene extends Phaser.Scene {
     Object.entries(assets).forEach(([key, path]) => {
       this.load.image(`temple-player-${key}`, path);
     });
+
+    preloadPlayableUiAssets(this);
   }
 
   create(): void {
@@ -105,15 +135,25 @@ export class TempleScene extends Phaser.Scene {
 
     this.cursors = this.input.keyboard!.createCursorKeys();
 
-    // Misma escala visual que Cabaña 1: zoom 2.
-    // Como el Templo mide el doble de alto, la cámara recorre verticalmente el interior.
     this.cameras.main.setZoom(2);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.fadeIn(260, 18, 12, 8);
+
+    const progress = getVillageProgress();
+    const character =
+      characters.find((item) => item.id === this.characterId) ?? characters[0];
+
+    this.ui = createPlayableUi(
+      this,
+      this.characterId,
+      character.name,
+      progress.energy,
+      progress.coins
+    );
   }
 
-  update(): void {
-    if (this.exiting) return;
+  update(_time: number, delta: number): void {
+    if (this.exiting || this.messageOpen) return;
 
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(0);
@@ -121,14 +161,20 @@ export class TempleScene extends Phaser.Scene {
     let x = 0;
     let y = 0;
 
-    if (this.cursors.left.isDown) x -= 1;
-    if (this.cursors.right.isDown) x += 1;
-    if (this.cursors.up.isDown) y -= 1;
-    if (this.cursors.down.isDown) y += 1;
+    if (this.cursors.left.isDown || this.ui.touchDirections.left) x -= 1;
+    if (this.cursors.right.isDown || this.ui.touchDirections.right) x += 1;
+    if (this.cursors.up.isDown || this.ui.touchDirections.up) y -= 1;
+    if (this.cursors.down.isDown || this.ui.touchDirections.down) y += 1;
 
     if (x !== 0 || y !== 0) {
       const movement = new Phaser.Math.Vector2(x, y).normalize();
-      body.setVelocity(movement.x * PLAYER_SPEED, movement.y * PLAYER_SPEED);
+      const safeDelta = Math.min(delta, 50);
+      const distance = PLAYER_SPEED * (safeDelta / 1000);
+
+      const moved = this.movePlayerWithinWalkableGrid(
+        movement.x * distance,
+        movement.y * distance
+      );
 
       if (Math.abs(movement.x) > Math.abs(movement.y)) {
         this.facing = 'side';
@@ -141,9 +187,16 @@ export class TempleScene extends Phaser.Scene {
         this.player.setFlipX(false);
       }
 
-      this.player.anims.play(`temple-walk-${this.facing}`, true);
+      if (moved) {
+        this.player.anims.play(`temple-walk-${this.facing}`, true);
+      } else {
+        this.player.anims.stop();
+        this.player.setTexture(
+          `temple-player-${this.facing === 'side' ? 'side' : this.facing}`
+        );
+      }
 
-      if (movement.y > 0) {
+      if (movement.y > 0 && moved) {
         this.checkExit();
       }
     } else {
@@ -154,6 +207,52 @@ export class TempleScene extends Phaser.Scene {
     }
 
     this.player.setDepth(this.player.y + PLAYER_FOOT_OFFSET_Y);
+    this.checkKingReward();
+  }
+
+  private isWalkableFootPoint(spriteX: number, spriteY: number): boolean {
+    const footX = spriteX;
+    const footY = spriteY + PLAYER_FOOT_OFFSET_Y;
+
+    if (
+      footX < 0 ||
+      footX >= WORLD_WIDTH ||
+      footY < 0 ||
+      footY >= WORLD_HEIGHT
+    ) {
+      return false;
+    }
+
+    const column = Math.floor(footX / CELL_WIDTH) + 1;
+    const row = Math.floor(footY / CELL_HEIGHT) + 1;
+    return TEMPLE_WALKABLE_CELLS.has(`${column}:${row}`);
+  }
+
+  private movePlayerWithinWalkableGrid(dx: number, dy: number): boolean {
+    const maxStep = 4;
+    const steps = Math.max(
+      1,
+      Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / maxStep)
+    );
+    const stepX = dx / steps;
+    const stepY = dy / steps;
+    let moved = false;
+
+    for (let index = 0; index < steps; index += 1) {
+      const nextX = this.player.x + stepX;
+      if (this.isWalkableFootPoint(nextX, this.player.y)) {
+        this.player.x = nextX;
+        moved = true;
+      }
+
+      const nextY = this.player.y + stepY;
+      if (this.isWalkableFootPoint(this.player.x, nextY)) {
+        this.player.y = nextY;
+        moved = true;
+      }
+    }
+
+    return moved;
   }
 
   private createPlayer(): void {
@@ -200,6 +299,85 @@ export class TempleScene extends Phaser.Scene {
     );
   }
 
+  private checkKingReward(): void {
+    const footX = this.player.x;
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const column = Math.floor(footX / CELL_WIDTH) + 1;
+    const row = Math.floor(footY / CELL_HEIGHT) + 1;
+
+    if (!KING_REWARD_CELLS.has(`${column}:${row}`)) return;
+    if (!grantTempleReward(30)) return;
+
+    const progress = getVillageProgress();
+    this.ui.updateCoins(progress.coins);
+    this.ui.pulseCoins();
+    this.registry.set('arkanis.player.coins', progress.coins);
+    this.showKingMessage();
+  }
+
+  private showKingMessage(): void {
+    this.messageOpen = true;
+    (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+    this.player.anims.stop();
+
+    const view = this.cameras.main.worldView;
+    const centerX = view.centerX;
+    const centerY = view.centerY;
+
+    const box = this.add.rectangle(
+      centerX,
+      centerY,
+      390,
+      180,
+      0x130c08,
+      0.96
+    )
+      .setStrokeStyle(3, 0xd6a84b, 1)
+      .setDepth(20000)
+      .setInteractive({ useHandCursor: true });
+
+    const text = this.add.text(centerX, centerY - 12, KING_REWARD_MESSAGE, {
+      fontFamily: 'Georgia, Times New Roman, serif',
+      fontSize: '18px',
+      color: '#fff0c7',
+      align: 'center',
+      wordWrap: { width: 350 }
+    })
+      .setOrigin(0.5)
+      .setDepth(20001);
+
+    const hint = this.add.text(
+      centerX,
+      centerY + 68,
+      'Toca, ESPACIO o ENTER para continuar',
+      {
+        fontFamily: 'Arial',
+        fontSize: '11px',
+        color: '#d6a84b'
+      }
+    )
+      .setOrigin(0.5)
+      .setDepth(20001);
+
+    // El mensaje pertenece al mundo y se centra en la vista actual de la cámara
+    // principal. La cámara fija del HUD debe ignorarlo.
+    this.ui.ignoreWorldObject(box);
+    this.ui.ignoreWorldObject(text);
+    this.ui.ignoreWorldObject(hint);
+
+    const dismiss = (): void => {
+      if (!box.active) return;
+      box.destroy();
+      text.destroy();
+      hint.destroy();
+      this.messageOpen = false;
+    };
+
+    box.once('pointerdown', dismiss);
+    this.input.keyboard?.once('keydown-SPACE', dismiss);
+    this.input.keyboard?.once('keydown-ENTER', dismiss);
+  }
+
   private checkExit(): void {
     const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
     const insideEntrance =
@@ -233,8 +411,6 @@ export class TempleScene extends Phaser.Scene {
           return;
         }
 
-        // Si entramos al Templo directamente desde el menú de desarrollo,
-        // no existe una instancia jugable del Desierto a la que volver.
         this.scene.start('DesertScene', { characterId: this.characterId });
       }
     );
@@ -254,6 +430,22 @@ export class TempleScene extends Phaser.Scene {
 
     const context = texture.context;
     context.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+    // Marcamos sutilmente la zona transitable, igual que en el Desierto.
+    for (const key of TEMPLE_WALKABLE_CELLS) {
+      const [columnText, rowText] = key.split(':');
+      const column = Number(columnText);
+      const row = Number(rowText);
+
+      context.fillStyle = 'rgba(220, 55, 45, 0.24)';
+      context.fillRect(
+        (column - 1) * CELL_WIDTH,
+        (row - 1) * CELL_HEIGHT,
+        CELL_WIDTH,
+        CELL_HEIGHT
+      );
+    }
+
     context.textBaseline = 'top';
     context.font = '7px Arial';
 
@@ -295,16 +487,6 @@ export class TempleScene extends Phaser.Scene {
         context.fillText(label, x, y);
       }
     }
-
-    // Marcamos la anchura física de la entrada inferior (4 bloques).
-    const entranceLeft = ENTRANCE_CENTER_X - ENTRANCE_WIDTH / 2;
-    context.fillStyle = 'rgba(70,180,255,0.18)';
-    context.fillRect(
-      entranceLeft,
-      WORLD_HEIGHT - CELL_HEIGHT,
-      ENTRANCE_WIDTH,
-      CELL_HEIGHT
-    );
 
     texture.refresh();
 
