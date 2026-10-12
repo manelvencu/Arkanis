@@ -231,11 +231,11 @@ const DESERT_SCORPION_PATROLS = [
 const SNAKE_SPEED = 72;
 const SNAKE_WIDTH = 38;
 const SNAKE_HEIGHT = 19;
-const SNAKE_DAMAGE = 10;
+const SNAKE_DAMAGE = 20;
 
 const SCORPION_SPEED = 58;
 const SCORPION_SIZE = 20;
-const SCORPION_DAMAGE = 10;
+const SCORPION_DAMAGE = 20;
 
 const REGISTRY_ENERGY_KEY = 'arkanis.player.energy';
 const REGISTRY_COINS_KEY = 'arkanis.player.coins';
