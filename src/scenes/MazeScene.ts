@@ -355,6 +355,7 @@ export class MazeScene extends Phaser.Scene {
   private carpetPitHintShown = false;
   private movingWallPhase = 0;
   private movingWallSolved = false;
+  private movingWallReleasePending = false;
   private movingWallObjects = new Map<string, Phaser.GameObjects.Rectangle>();
   private movingWallBlockedCells = new Set<string>();
   private sacredBrazierLit = false;
@@ -378,6 +379,7 @@ export class MazeScene extends Phaser.Scene {
     this.carpetPitHintShown = false;
     this.movingWallPhase = 0;
     this.movingWallSolved = false;
+    this.movingWallReleasePending = false;
     this.movingWallObjects.clear();
     this.movingWallBlockedCells.clear();
     this.sacredBrazierLit = false;
@@ -490,6 +492,7 @@ export class MazeScene extends Phaser.Scene {
     this.checkBlackSunActivation();
     this.checkCarpetPitInteraction();
     this.checkMovingWallTriggers();
+    this.checkMovingWallReleaseOutOfView();
     this.checkSacredBrazier();
     this.updateDarknessMask();
   }
@@ -938,16 +941,37 @@ export class MazeScene extends Phaser.Scene {
 
     if (
       this.movingWallPhase === 2 &&
+      !this.movingWallReleasePending &&
       (near(74, 53) || near(75, 53))
     ) {
-      this.movingWallSolved = true;
-      this.setMovingWallPhase(3);
-      this.cameras.main.shake(140, 0.002);
-      this.ui.updateStatus('Los muros quedan abiertos.');
-      this.time.delayedCall(1600, () => {
-        if (this.scene.isActive()) this.ui.updateStatus('');
-      });
+      // No deshacemos los muros mientras el jugador aún puede verlos.
+      // Quedan en su última configuración hasta que toda la zona desaparece
+      // del viewport; entonces se abren fuera de cámara.
+      this.movingWallReleasePending = true;
     }
+  }
+
+  private checkMovingWallReleaseOutOfView(): void {
+    if (
+      !this.movingWallReleasePending ||
+      this.movingWallSolved
+    ) {
+      return;
+    }
+
+    const zone = new Phaser.Geom.Rectangle(
+      (67 - 1) * GRID_SIZE,
+      (52 - 1) * GRID_SIZE,
+      9 * GRID_SIZE,
+      7 * GRID_SIZE
+    );
+
+    const worldView = this.cameras.main.worldView;
+    if (Phaser.Geom.Intersects.RectangleToRectangle(zone, worldView)) return;
+
+    this.movingWallReleasePending = false;
+    this.movingWallSolved = true;
+    this.setMovingWallPhase(3, false);
   }
 
   private createSacredBrazier(): void {
