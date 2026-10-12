@@ -149,7 +149,8 @@ export class DevMenuScene extends Phaser.Scene {
       {
         title: 'MUNDO 3 — EL DESIERTO DE MIL SOLES',
         entries: [
-          { label: 'Entrada al Desierto', sceneKey: 'DesertScene', data: characterData }
+          { label: 'Entrada al Desierto', sceneKey: 'DesertScene', data: characterData },
+          { label: 'Escenario 1 — El Templo', sceneKey: 'TempleScene', data: characterData }
         ]
       }
     ];
