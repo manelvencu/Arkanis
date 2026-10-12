@@ -53,12 +53,14 @@ const WALKABLE_RANGES: DesertCellRange[] = [
   range(63, 11, 73, 11),
   range(85, 11, 86, 11),
 
+  range(5, 12, 8, 12),
   range(15, 12, 17, 12),
   range(23, 12, 24, 12),
   range(46, 12, 54, 12),
   range(62, 12, 72, 12),
   range(83, 12, 85, 12),
 
+  range(5, 13, 9, 13),
   range(22, 13, 25, 13),
   range(29, 13, 33, 13),
   range(40, 13, 56, 13),
@@ -70,7 +72,7 @@ const WALKABLE_RANGES: DesertCellRange[] = [
   range(52, 14, 70, 14),
   range(82, 14, 83, 14),
 
-  range(7, 15, 11, 15),
+  range(7, 15, 19, 15),
   range(31, 15, 33, 15),
   range(38, 15, 39, 15),
   range(57, 15, 67, 15),
@@ -80,6 +82,7 @@ const WALKABLE_RANGES: DesertCellRange[] = [
   range(25, 16, 28, 16),
   range(54, 16, 67, 16),
 
+  range(15, 17, 16, 17),
   range(22, 17, 26, 17),
   range(55, 17, 67, 17),
 
