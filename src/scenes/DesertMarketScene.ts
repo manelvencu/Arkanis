@@ -21,7 +21,7 @@ const CARPET_PRICE = 40;
 
 const PLAYER_X = 286;
 const PLAYER_Y = 514;
-const PLAYER_SIZE = 68;
+const PLAYER_SIZE = 136;
 
 const CHARACTER_ASSETS = {
   tiana: './assets/characters/tiana/walk-right/tiana-idle-right.png',
@@ -197,7 +197,7 @@ export class DesertMarketScene extends Phaser.Scene {
 
     const view = this.cameras.main.worldView;
     const centerX = view.centerX;
-    const centerY = view.centerY + 62;
+    const centerY = view.centerY;
     const boxHeight = choices.length > 1 ? 196 : 162;
 
     const box = this.add.rectangle(
