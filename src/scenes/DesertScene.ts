@@ -165,6 +165,62 @@ const PLAYER_FRONT_DEPTH_CELLS = new Set([
 ]);
 const PLAYER_FRONT_DEPTH_BONUS = 2000;
 
+export type DesertEntranceId = 'temple' | 'shop' | 'maze';
+
+export const DESERT_ENTRANCES = {
+  temple: {
+    columns: [18, 19],
+    row: 6,
+    // El acceso está pegado al borde superior de F6: el personaje debe
+    // subir todo lo posible dentro de C18/F6 o C19/F6.
+    triggerY: (6 - 1) * GRID_SIZE,
+    edgeTolerance: 3
+  },
+  shop: {
+    column: 59,
+    row: 18,
+    // Punto central exacto de C59/F18.
+    x: (59 - 0.5) * GRID_SIZE,
+    y: (18 - 0.5) * GRID_SIZE,
+    radius: 6
+  },
+  maze: {
+    column: 85,
+    row: 11
+  }
+} as const;
+
+export function getDesertEntranceAtFootPoint(
+  footX: number,
+  footY: number
+): DesertEntranceId | null {
+  const column = Math.floor(footX / GRID_SIZE) + 1;
+  const row = Math.floor(footY / GRID_SIZE) + 1;
+
+  const temple = DESERT_ENTRANCES.temple;
+  if (
+    row === temple.row &&
+    temple.columns.includes(column as 18 | 19) &&
+    footY <= temple.triggerY + temple.edgeTolerance
+  ) {
+    return 'temple';
+  }
+
+  const shop = DESERT_ENTRANCES.shop;
+  if (
+    Phaser.Math.Distance.Between(footX, footY, shop.x, shop.y) <= shop.radius
+  ) {
+    return 'shop';
+  }
+
+  const maze = DESERT_ENTRANCES.maze;
+  if (column === maze.column && row === maze.row) {
+    return 'maze';
+  }
+
+  return null;
+}
+
 const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
