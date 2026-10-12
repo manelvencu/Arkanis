@@ -49,6 +49,7 @@ const BLACK_SUN_TRIGGER_RADIUS = 30;
 const BLACK_SUN_SPOTLIGHT_STEP = 3;
 const CARPET_PIT_BLOCK_RADIUS = 46;
 const CARPET_PIT_USE_RADIUS = 58;
+const FALSE_BRANCH_JUNCTION = { column: 68, row: 76 } as const;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -281,6 +282,9 @@ function findMazeLandmarkCells(): MazeLandmark[] {
     color: number;
     ratio: number;
   }> = [
+    // La falsa bifurcación se fija después en una intersección natural del
+    // laberinto. La rama este parece continuar hacia el objetivo, pero recorre
+    // un ramal largo y termina en un callejón sin salida, obligando a volver.
     { id: 'blackSun', label: 'SOL NEGRO', color: 0x33233f, ratio: 0.16 },
     { id: 'falseBranch', label: 'FALSA BIFURCACIÓN', color: 0x9a6f32, ratio: 0.31 },
     { id: 'carpetPit', label: 'AGUJERO / ALFOMBRA', color: 0x51362b, ratio: 0.47 },
@@ -292,6 +296,16 @@ function findMazeLandmarkCells(): MazeLandmark[] {
   const selected = new Set<string>();
 
   return definitions.map((definition) => {
+    if (definition.id === 'falseBranch') {
+      return {
+        id: definition.id,
+        label: definition.label,
+        color: definition.color,
+        column: FALSE_BRANCH_JUNCTION.column,
+        row: FALSE_BRANCH_JUNCTION.row
+      };
+    }
+
     const target = maxDistance * definition.ratio;
     let best = reachable[0];
     let bestDelta = Number.POSITIVE_INFINITY;
@@ -607,7 +621,11 @@ export class MazeScene extends Phaser.Scene {
 
   private createLandmarkMarkers(): void {
     for (const landmark of MAZE_LANDMARKS) {
-      if (landmark.id === 'blackSun' || landmark.id === 'carpetPit') continue;
+      if (
+        landmark.id === 'blackSun' ||
+        landmark.id === 'falseBranch' ||
+        landmark.id === 'carpetPit'
+      ) continue;
 
       const x = (landmark.column - 0.5) * GRID_SIZE;
       const y = (landmark.row - 0.5) * GRID_SIZE;
