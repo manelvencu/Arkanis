@@ -434,6 +434,193 @@ function findScorpionCrackCells(): Array<{ column: number; row: number }> {
 
 const MAZE_SCORPION_CRACKS = findScorpionCrackCells();
 
+interface StatueLauncherSite {
+  column: number;
+  row: number;
+  directionX: -1 | 0 | 1;
+  directionY: -1 | 0 | 1;
+}
+
+function findStatueLauncherSites(): StatueLauncherSite[] {
+  const brazier = MAZE_LANDMARKS.find((item) => item.id === 'sacredBrazier');
+  if (!brazier) return [];
+
+  type Cell = { column: number; row: number };
+  const startKey = `${brazier.column}:${brazier.row}`;
+  const queue: Cell[] = [{ column: brazier.column, row: brazier.row }];
+  const previous = new Map<string, string | null>([[startKey, null]]);
+  let cursor = 0;
+
+  const directions = [
+    { dc: 1, dr: 0 },
+    { dc: -1, dr: 0 },
+    { dc: 0, dr: 1 },
+    { dc: 0, dr: -1 }
+  ] as const;
+
+  // Buscamos dentro del componente realmente alcanzable desde el Brasero el
+  // punto que más se aproxima a la antesala final. No usamos el antiguo
+  // landmark de estatuas porque podía caer en un callejón sin salida.
+  let best: Cell = queue[0];
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  while (cursor < queue.length) {
+    const current = queue[cursor];
+    cursor += 1;
+
+    const distanceToFinal =
+      Math.abs(current.column - 40) + Math.abs(current.row - 52);
+
+    const nearSealedCenter =
+      current.column >= CENTER_ROOM.left - 2 &&
+      current.column <= CENTER_ROOM.right + 2 &&
+      current.row >= CENTER_ROOM.top - 2 &&
+      current.row <= CENTER_ROOM.bottom + 7;
+
+    if (!nearSealedCenter && distanceToFinal < bestDistance) {
+      best = current;
+      bestDistance = distanceToFinal;
+    }
+
+    for (const direction of directions) {
+      const column = current.column + direction.dc;
+      const row = current.row + direction.dr;
+      const key = `${column}:${row}`;
+
+      if (!MAZE_WALKABLE_CELLS.has(key) || previous.has(key)) continue;
+      previous.set(key, `${current.column}:${current.row}`);
+      queue.push({ column, row });
+    }
+  }
+
+  const path: Cell[] = [];
+  let key: string | null = `${best.column}:${best.row}`;
+
+  while (key) {
+    const [columnText, rowText] = key.split(':');
+    path.push({ column: Number(columnText), row: Number(rowText) });
+    key = previous.get(key) ?? null;
+  }
+
+  path.reverse();
+
+  const isOpen = (column: number, row: number): boolean =>
+    MAZE_WALKABLE_CELLS.has(`${column}:${row}`);
+
+  const candidates: Array<StatueLauncherSite & { pathIndex: number }> = [];
+
+  for (let index = 1; index < path.length - 1; index += 1) {
+    const cell = path[index];
+
+    // Pasillo vertical de 2 celdas de ancho:
+    // pared | libre | libre | pared. Una sola estatua en una pared dispara
+    // hasta perder el proyectil en la pared opuesta.
+    if (
+      !isOpen(cell.column - 1, cell.row) &&
+      isOpen(cell.column, cell.row) &&
+      isOpen(cell.column + 1, cell.row) &&
+      !isOpen(cell.column + 2, cell.row)
+    ) {
+      candidates.push({
+        column: cell.column - 1,
+        row: cell.row,
+        directionX: 1,
+        directionY: 0,
+        pathIndex: index
+      });
+      continue;
+    }
+
+    if (
+      !isOpen(cell.column + 1, cell.row) &&
+      isOpen(cell.column, cell.row) &&
+      isOpen(cell.column - 1, cell.row) &&
+      !isOpen(cell.column - 2, cell.row)
+    ) {
+      candidates.push({
+        column: cell.column + 1,
+        row: cell.row,
+        directionX: -1,
+        directionY: 0,
+        pathIndex: index
+      });
+      continue;
+    }
+
+    // Pasillo horizontal de 2 celdas de alto.
+    if (
+      !isOpen(cell.column, cell.row - 1) &&
+      isOpen(cell.column, cell.row) &&
+      isOpen(cell.column, cell.row + 1) &&
+      !isOpen(cell.column, cell.row + 2)
+    ) {
+      candidates.push({
+        column: cell.column,
+        row: cell.row - 1,
+        directionX: 0,
+        directionY: 1,
+        pathIndex: index
+      });
+      continue;
+    }
+
+    if (
+      !isOpen(cell.column, cell.row + 1) &&
+      isOpen(cell.column, cell.row) &&
+      isOpen(cell.column, cell.row - 1) &&
+      !isOpen(cell.column, cell.row - 2)
+    ) {
+      candidates.push({
+        column: cell.column,
+        row: cell.row + 1,
+        directionX: 0,
+        directionY: -1,
+        pathIndex: index
+      });
+    }
+  }
+
+  if (candidates.length === 0) return [];
+
+  const desired = 5;
+  const selected: StatueLauncherSite[] = [];
+
+  for (let slot = 0; slot < desired; slot += 1) {
+    const targetIndex =
+      ((slot + 1) / (desired + 1)) * Math.max(1, path.length - 1);
+
+    let bestCandidate: (typeof candidates)[number] | undefined;
+    let bestDelta = Number.POSITIVE_INFINITY;
+
+    for (const candidate of candidates) {
+      const tooClose = selected.some((site) =>
+        Math.abs(site.column - candidate.column) +
+        Math.abs(site.row - candidate.row) < 8
+      );
+      if (tooClose) continue;
+
+      const delta = Math.abs(candidate.pathIndex - targetIndex);
+      if (delta < bestDelta) {
+        bestCandidate = candidate;
+        bestDelta = delta;
+      }
+    }
+
+    if (bestCandidate) {
+      selected.push({
+        column: bestCandidate.column,
+        row: bestCandidate.row,
+        directionX: bestCandidate.directionX,
+        directionY: bestCandidate.directionY
+      });
+    }
+  }
+
+  return selected;
+}
+
+const MAZE_STATUE_LAUNCHERS = findStatueLauncherSites();
+
 export class MazeScene extends Phaser.Scene {
   private characterId: CharacterId = 'tiana';
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -1323,9 +1510,12 @@ export class MazeScene extends Phaser.Scene {
       .setDisplaySize(MAZE_SCORPION_SIZE, MAZE_SCORPION_SIZE)
       .setDepth(y + MAZE_SCORPION_SIZE / 2)
       .setAlpha(0)
-      .setScale(0.2)
       .setData('bornAt', time)
       .setData('touchingPlayer', false);
+
+    const targetScaleX = scorpion.scaleX;
+    const targetScaleY = scorpion.scaleY;
+    scorpion.setScale(targetScaleX * 0.2, targetScaleY * 0.2);
 
     const body = scorpion.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
@@ -1341,8 +1531,8 @@ export class MazeScene extends Phaser.Scene {
     this.tweens.add({
       targets: scorpion,
       alpha: 1,
-      scaleX: 1,
-      scaleY: 1,
+      scaleX: targetScaleX,
+      scaleY: targetScaleY,
       duration: 180,
       ease: 'Back.easeOut'
     });
@@ -1417,34 +1607,21 @@ export class MazeScene extends Phaser.Scene {
   }
 
   private createStatueCorridor(): void {
-    // El landmark cae en el corredor vertical C77-C78. Colocamos tres pares
-    // de estatuas en las paredes C76/C79 para disparar transversalmente.
-    const rows = [30, 33, 36];
-
-    for (const row of rows) {
-      const y = (row - 0.5) * GRID_SIZE;
-
-      this.createLauncherStatue(76, row, 1);
-      this.createLauncherStatue(79, row, -1);
-
-      // Marca sutil del carril de disparo mientras el arte es provisional.
-      this.add.line(
-        0,
-        0,
-        (76.75) * GRID_SIZE,
-        y,
-        (78.25) * GRID_SIZE,
-        y,
-        0x8f6f55,
-        0.18
-      ).setOrigin(0).setDepth(113);
+    for (const site of MAZE_STATUE_LAUNCHERS) {
+      this.createLauncherStatue(
+        site.column,
+        site.row,
+        site.directionX,
+        site.directionY
+      );
     }
   }
 
   private createLauncherStatue(
     column: number,
     row: number,
-    direction: -1 | 1
+    directionX: -1 | 0 | 1,
+    directionY: -1 | 0 | 1
   ): void {
     const x = (column - 0.5) * GRID_SIZE;
     const y = (row - 0.5) * GRID_SIZE;
@@ -1453,43 +1630,42 @@ export class MazeScene extends Phaser.Scene {
       .setStrokeStyle(2, 0xa99a86, 0.9);
     const head = this.add.circle(0, -8, 9, 0x796b5b, 1)
       .setStrokeStyle(2, 0xb5a590, 0.9);
-    const mouth = this.add.rectangle(direction * 9, -6, 9, 5, 0x231b16, 1);
+    const mouth = this.add.rectangle(
+      directionX * 9,
+      -6 + directionY * 9,
+      directionX === 0 ? 5 : 9,
+      directionY === 0 ? 5 : 9,
+      0x231b16,
+      1
+    );
 
     this.add.container(x, y, [base, head, mouth]).setDepth(129);
   }
 
   private updateStatueCorridor(time: number, delta: number): void {
-    const landmark = MAZE_LANDMARKS.find((item) => item.id === 'statueCorridor');
-    if (!landmark) return;
-
-    const zoneX = (landmark.column - 0.5) * GRID_SIZE;
-    const zoneY = (landmark.row - 0.5) * GRID_SIZE;
     const playerFootY = this.player.y + PLAYER_FOOT_OFFSET_Y;
-    const active =
-      Phaser.Math.Distance.Between(
+
+    const nearbySites = MAZE_STATUE_LAUNCHERS.filter((site) => {
+      const x = (site.column - 0.5) * GRID_SIZE;
+      const y = (site.row - 0.5) * GRID_SIZE;
+      return Phaser.Math.Distance.Between(
         this.player.x,
         playerFootY,
-        zoneX,
-        zoneY
+        x,
+        y
       ) <= STATUE_ACTIVE_RADIUS;
+    });
 
-    if (active && time >= this.nextStatueShotAt) {
-      const sequence = [
-        { column: 76, row: 30, direction: 1 as const },
-        { column: 79, row: 33, direction: -1 as const },
-        { column: 76, row: 36, direction: 1 as const },
-        { column: 79, row: 30, direction: -1 as const },
-        { column: 76, row: 33, direction: 1 as const },
-        { column: 79, row: 36, direction: -1 as const }
-      ];
-
-      const shot = sequence[this.statueShotIndex % sequence.length];
+    if (nearbySites.length > 0 && time >= this.nextStatueShotAt) {
+      const site = nearbySites[this.statueShotIndex % nearbySites.length];
       this.statueShotIndex += 1;
       this.nextStatueShotAt = time + STATUE_FIRE_INTERVAL;
+
       this.spawnStatueProjectile(
-        shot.column,
-        shot.row,
-        shot.direction,
+        site.column,
+        site.row,
+        site.directionX,
+        site.directionY,
         time
       );
     }
@@ -1506,13 +1682,17 @@ export class MazeScene extends Phaser.Scene {
         continue;
       }
 
-      const direction = projectile.getData('direction') as number;
-      projectile.x += direction * travel;
-      projectile.angle += direction * 18;
+      const directionX = projectile.getData('directionX') as number;
+      const directionY = projectile.getData('directionY') as number;
+      projectile.x += directionX * travel;
+      projectile.y += directionY * travel;
+      projectile.angle += 18;
 
       const column = Math.floor(projectile.x / GRID_SIZE) + 1;
       const row = Math.floor(projectile.y / GRID_SIZE) + 1;
 
+      // El proyectil cruza el pasillo y desaparece al entrar en la pared
+      // opuesta. Nunca existe una segunda estatua esperándolo al otro lado.
       if (!MAZE_WALKABLE_CELLS.has(`${column}:${row}`)) {
         projectile.destroy();
         continue;
@@ -1540,13 +1720,16 @@ export class MazeScene extends Phaser.Scene {
   private spawnStatueProjectile(
     column: number,
     row: number,
-    direction: -1 | 1,
+    directionX: -1 | 0 | 1,
+    directionY: -1 | 0 | 1,
     time: number
   ): void {
     const x =
       (column - 0.5) * GRID_SIZE +
-      direction * (GRID_SIZE * 0.46);
-    const y = (row - 0.5) * GRID_SIZE;
+      directionX * (GRID_SIZE * 0.58);
+    const y =
+      (row - 0.5) * GRID_SIZE +
+      directionY * (GRID_SIZE * 0.58);
 
     const projectile = this.add.circle(
       x,
@@ -1558,7 +1741,8 @@ export class MazeScene extends Phaser.Scene {
       .setStrokeStyle(2, 0xffdfa0, 1)
       .setDepth(135)
       .setData('bornAt', time)
-      .setData('direction', direction);
+      .setData('directionX', directionX)
+      .setData('directionY', directionY);
 
     this.statueProjectiles.push(projectile);
 
