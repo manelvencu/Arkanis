@@ -76,8 +76,17 @@ function buildHorizontalRanges(ranges: Array<{ c1: number; c2: number; f: number
  * - C82/F13 a C83/F13
  * - C83/F12 a C84/F12
  * - C84/F11 a C85/F11
+ * - C72/F10 a C73/F10
+ * - C72/F11
+ * - C63/F16 a C67/F16
+ *
+ * Exclusiones expresas dentro de rangos previamente autorizados:
+ * - C59/F17
+ * - C18/F12 a C22/F12
+ * - C23/F16
+ * - C26/F12 a C29/F12
  */
-export const DESERT_WALKABLE_CELLS: ReadonlySet<string> = buildHorizontalRanges([
+const walkableCells = new Set<string>(buildHorizontalRanges([
   { c1: 5, c2: 8, f: 12 },
   { c1: 6, c2: 9, f: 13 },
   { c1: 8, c2: 10, f: 14 },
@@ -126,8 +135,20 @@ export const DESERT_WALKABLE_CELLS: ReadonlySet<string> = buildHorizontalRanges(
   { c1: 77, c2: 81, f: 15 },
   { c1: 82, c2: 83, f: 13 },
   { c1: 83, c2: 84, f: 12 },
-  { c1: 84, c2: 85, f: 11 }
-]);
+  { c1: 84, c2: 85, f: 11 },
+  { c1: 72, c2: 73, f: 10 },
+  { c1: 72, c2: 72, f: 11 },
+  { c1: 63, c2: 67, f: 16 }
+]));
+
+[
+  '59:17',
+  '18:12', '19:12', '20:12', '21:12', '22:12',
+  '23:16',
+  '26:12', '27:12', '28:12', '29:12'
+].forEach((cell) => walkableCells.delete(cell));
+
+export const DESERT_WALKABLE_CELLS: ReadonlySet<string> = walkableCells;
 
 export function getDesertFootCell(spriteX: number, spriteY: number): DesertGridCell | null {
   const footX = spriteX;
