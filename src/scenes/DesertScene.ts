@@ -543,7 +543,7 @@ export class DesertScene extends Phaser.Scene {
     const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
     const entrance = getDesertEntranceAtFootPoint(footX, footY);
 
-    if (entrance !== 'temple' && entrance !== 'shop') return false;
+    if (entrance !== 'temple' && entrance !== 'shop' && entrance !== 'maze') return false;
 
     this.transitioningToInterior = true;
     (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
@@ -554,10 +554,14 @@ export class DesertScene extends Phaser.Scene {
       Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
       () => {
         this.scene.sleep();
-        this.scene.launch(
-          entrance === 'temple' ? 'TempleScene' : 'DesertMarketScene',
-          { characterId: this.characterId }
-        );
+        const targetScene =
+          entrance === 'temple'
+            ? 'TempleScene'
+            : entrance === 'shop'
+              ? 'DesertMarketScene'
+              : 'MazeScene';
+
+        this.scene.launch(targetScene, { characterId: this.characterId });
       }
     );
 
@@ -601,6 +605,23 @@ export class DesertScene extends Phaser.Scene {
     this.ui.updateCarpetOwned(progress.desertCarpetPurchased);
     this.registry.set(REGISTRY_COINS_KEY, progress.coins);
     this.registry.set('arkanis.player.desertCarpetPurchased', progress.desertCarpetPurchased);
+    this.updateWorldDepths();
+  }
+
+  public returnFromMaze(): void {
+    const returnColumn = 84;
+    const returnRow = 11;
+
+    this.player.setPosition(
+      (returnColumn - 0.5) * GRID_SIZE,
+      (returnRow - 0.5) * GRID_SIZE - PLAYER_FOOT_OFFSET_Y
+    );
+    this.player.setDisplaySize(PLAYER_SIZE, PLAYER_SIZE);
+    this.facing = 'side';
+    this.direction.set(-1, 0);
+    this.player.setFlipX(true);
+    this.player.setTexture('desert-player-side');
+    this.transitioningToInterior = false;
     this.updateWorldDepths();
   }
 
