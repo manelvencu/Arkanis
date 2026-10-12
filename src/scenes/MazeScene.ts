@@ -9,6 +9,7 @@ import {
   getVillageProgress,
   grantDesertCarpetForMazeTest,
   hasUsableDesertCarpet,
+  obtainDesertFragment,
   setVillageEnergy,
   useDesertCarpetInMaze
 } from '../villageProgress';
@@ -66,6 +67,9 @@ const STATUE_PROJECTILE_DAMAGE = 15;
 const STATUE_FIRE_INTERVAL = 900;
 const STATUE_ACTIVE_RADIUS = 300;
 const STATUE_PROJECTILE_LIFETIME = 1200;
+const FINAL_GATE_COLUMNS = [39, 40, 41, 42] as const;
+const FINAL_GATE_ROW = 47;
+const FRAGMENT_INTERACTION_RADIUS = 48;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -229,10 +233,10 @@ function buildMazeWalkableCells(): ReadonlySet<string> {
     walkable.delete(`${CENTER_ROOM.right + 1}:${row}`);
   }
 
-  // Acceso final reservado en el lado sur. Dejamos una antesala transitable,
-  // pero el anillo F47 permanece bloqueado. Más adelante ese cierre será el
-  // último mecanismo que dará acceso al fragmento.
-  for (let row = 48; row <= 52; row += 1) {
+  // Acceso final reservado en el lado sur. F47 forma parte físicamente del
+  // corredor, pero MazeScene la mantiene bloqueada hasta superar los hitos
+  // obligatorios del laberinto.
+  for (let row = 47; row <= 52; row += 1) {
     for (let column = 39; column <= 42; column += 1) {
       walkable.add(`${column}:${row}`);
     }
@@ -648,6 +652,12 @@ export class MazeScene extends Phaser.Scene {
   private statueProjectiles: Phaser.GameObjects.Arc[] = [];
   private nextStatueShotAt = 0;
   private statueShotIndex = 0;
+  private blackSunTriggeredEver = false;
+  private finalGateOpen = false;
+  private finalGateVisual?: Phaser.GameObjects.Rectangle;
+  private finalGateLabel?: Phaser.GameObjects.Text;
+  private fragmentObject?: Phaser.GameObjects.Container;
+  private fragmentHintShown = false;
   private isGameOver = false;
 
   constructor() {
@@ -678,6 +688,12 @@ export class MazeScene extends Phaser.Scene {
     this.statueProjectiles = [];
     this.nextStatueShotAt = 0;
     this.statueShotIndex = 0;
+    this.blackSunTriggeredEver = false;
+    this.finalGateOpen = getVillageProgress().desertFragmentObtained;
+    this.finalGateVisual = undefined;
+    this.finalGateLabel = undefined;
+    this.fragmentObject = undefined;
+    this.fragmentHintShown = false;
     this.isGameOver = false;
   }
 
@@ -706,6 +722,8 @@ export class MazeScene extends Phaser.Scene {
 
     this.createFloorAndWalls();
     this.createCenterChamberMarker();
+    this.createFinalGate();
+    this.createDesertFragment();
     this.createLandmarkMarkers();
     this.createPlayer();
     this.createBlackSun();
@@ -801,6 +819,8 @@ export class MazeScene extends Phaser.Scene {
     this.checkSacredBrazier();
     this.updateScorpionCracks(time, delta);
     this.updateStatueCorridor(time, delta);
+    this.checkFinalGateUnlock();
+    this.checkDesertFragmentInteraction();
     this.updateDarknessMask();
   }
 
@@ -866,6 +886,16 @@ export class MazeScene extends Phaser.Scene {
 
     if (!MAZE_WALKABLE_CELLS.has(`${column}:${row}`)) return false;
     if (this.movingWallBlockedCells.has(`${column}:${row}`)) return false;
+
+    if (
+      !this.finalGateOpen &&
+      row === FINAL_GATE_ROW &&
+      FINAL_GATE_COLUMNS.includes(
+        column as (typeof FINAL_GATE_COLUMNS)[number]
+      )
+    ) {
+      return false;
+    }
 
     const pit = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
     if (pit && !getVillageProgress().desertCarpetUsedInMaze) {
@@ -981,31 +1011,6 @@ export class MazeScene extends Phaser.Scene {
         .setDepth(121);
     }
 
-    const gateX = ((39 + 42) / 2 - 0.5) * GRID_SIZE;
-    const gateY = (47 - 0.5) * GRID_SIZE;
-
-    this.add.rectangle(
-      gateX,
-      gateY,
-      GRID_SIZE * 4,
-      GRID_SIZE,
-      0x4a3025,
-      0.95
-    )
-      .setStrokeStyle(3, 0xd8ad67, 0.9)
-      .setDepth(125);
-
-    this.add.text(gateX, gateY, 'ACCESO FINAL\nSELLADO', {
-      fontFamily: 'Arial',
-      fontSize: '11px',
-      color: '#ffe9b0',
-      fontStyle: 'bold',
-      align: 'center',
-      stroke: '#3b2115',
-      strokeThickness: 3
-    })
-      .setOrigin(0.5)
-      .setDepth(126);
   }
 
   private createCarpetPit(): void {
@@ -1756,6 +1761,197 @@ export class MazeScene extends Phaser.Scene {
     });
   }
 
+  private createFinalGate(): void {
+    const gateX = ((FINAL_GATE_COLUMNS[0] + FINAL_GATE_COLUMNS[3]) / 2 - 0.5) * GRID_SIZE;
+    const gateY = (FINAL_GATE_ROW - 0.5) * GRID_SIZE;
+
+    if (this.finalGateOpen) return;
+
+    this.finalGateVisual = this.add.rectangle(
+      gateX,
+      gateY,
+      GRID_SIZE * FINAL_GATE_COLUMNS.length,
+      GRID_SIZE,
+      0x4a3025,
+      0.98
+    )
+      .setStrokeStyle(3, 0xd8ad67, 0.95)
+      .setDepth(125);
+
+    this.finalGateLabel = this.add.text(gateX, gateY, 'ACCESO FINAL\nSELLADO', {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: '#ffe9b0',
+      fontStyle: 'bold',
+      align: 'center',
+      stroke: '#3b2115',
+      strokeThickness: 3
+    })
+      .setOrigin(0.5)
+      .setDepth(126);
+  }
+
+  private checkFinalGateUnlock(): void {
+    if (this.finalGateOpen) return;
+
+    const progress = getVillageProgress();
+    const mandatoryMilestonesComplete =
+      this.blackSunTriggeredEver &&
+      progress.desertCarpetUsedInMaze &&
+      this.movingWallSolved &&
+      this.sacredBrazierLit;
+
+    if (!mandatoryMilestonesComplete) return;
+
+    this.finalGateOpen = true;
+    this.ui.updateStatus('El acceso a la cámara central se ha abierto.');
+    this.cameras.main.shake(260, 0.004);
+
+    const gate = this.finalGateVisual;
+    const label = this.finalGateLabel;
+
+    if (gate) {
+      this.tweens.add({
+        targets: gate,
+        scaleY: 0.05,
+        alpha: 0,
+        duration: 520,
+        ease: 'Sine.easeIn',
+        onComplete: () => gate.destroy()
+      });
+    }
+
+    if (label) {
+      this.tweens.add({
+        targets: label,
+        alpha: 0,
+        duration: 260,
+        onComplete: () => label.destroy()
+      });
+    }
+
+    this.finalGateVisual = undefined;
+    this.finalGateLabel = undefined;
+
+    this.time.delayedCall(2200, () => {
+      if (this.scene.isActive()) this.ui.updateStatus('');
+    });
+  }
+
+  private createDesertFragment(): void {
+    if (getVillageProgress().desertFragmentObtained) return;
+
+    const centerX =
+      ((CENTER_ROOM.left + CENTER_ROOM.right) / 2 - 0.5) * GRID_SIZE;
+    const centerY =
+      ((CENTER_ROOM.top + CENTER_ROOM.bottom) / 2 - 0.5) * GRID_SIZE;
+
+    const glow = this.add.circle(0, 0, 34, 0xffdd67, 0.18)
+      .setStrokeStyle(2, 0xffefad, 0.45);
+    const outer = this.add.polygon(
+      0,
+      0,
+      [
+        -12, 0,
+        0, -24,
+        12, 0,
+        0, 24
+      ],
+      0xf3c94d,
+      1
+    )
+      .setStrokeStyle(3, 0xfff1a1, 1);
+    const core = this.add.polygon(
+      0,
+      0,
+      [
+        -6, 0,
+        0, -14,
+        6, 0,
+        0, 14
+      ],
+      0xfff0a1,
+      1
+    );
+
+    this.fragmentObject = this.add.container(
+      centerX,
+      centerY,
+      [glow, outer, core]
+    ).setDepth(140);
+
+    this.tweens.add({
+      targets: this.fragmentObject,
+      y: centerY - 8,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    this.tweens.add({
+      targets: glow,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      alpha: 0.28,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private checkDesertFragmentInteraction(): void {
+    if (!this.fragmentObject || getVillageProgress().desertFragmentObtained) return;
+
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const distance = Phaser.Math.Distance.Between(
+      this.player.x,
+      footY,
+      this.fragmentObject.x,
+      this.fragmentObject.y
+    );
+
+    if (distance > FRAGMENT_INTERACTION_RADIUS) {
+      if (this.fragmentHintShown) {
+        this.fragmentHintShown = false;
+        this.ui.updateStatus('');
+      }
+      return;
+    }
+
+    if (!this.fragmentHintShown) {
+      this.fragmentHintShown = true;
+      this.ui.updateStatus('Pulsa ESPACIO para recoger el fragmento de la Joya.');
+    }
+
+    if (!Phaser.Input.Keyboard.JustDown(this.cursors.space!)) return;
+    if (!obtainDesertFragment()) return;
+
+    this.fragmentHintShown = false;
+    const fragment = this.fragmentObject;
+    this.fragmentObject = undefined;
+
+    this.ui.updateStatus(
+      'Has recuperado el fragmento de la Joya. Regresa a la salida del laberinto.'
+    );
+    this.cameras.main.flash(420, 255, 226, 120, false);
+
+    this.tweens.add({
+      targets: fragment,
+      scaleX: 1.7,
+      scaleY: 1.7,
+      alpha: 0,
+      duration: 420,
+      ease: 'Sine.easeOut',
+      onComplete: () => fragment.destroy()
+    });
+
+    this.time.delayedCall(3200, () => {
+      if (this.scene.isActive()) this.ui.updateStatus('');
+    });
+  }
+
   private createBlackSun(): void {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'blackSun');
     if (!landmark) return;
@@ -1829,6 +2025,7 @@ export class MazeScene extends Phaser.Scene {
     if (!crossedBlackSunGate) return;
 
     this.blackSunActivated = true;
+    this.blackSunTriggeredEver = true;
     this.activateBlackSunDarkness();
   }
 
