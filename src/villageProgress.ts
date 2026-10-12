@@ -7,6 +7,7 @@ export interface VillageProgress {
   energy: number;
   collectedCabinCoins: number[];
   templeRewardReceived: boolean;
+  desertCarpetPurchased: boolean;
 }
 
 const progress: VillageProgress = {
@@ -15,7 +16,8 @@ const progress: VillageProgress = {
   coins: 0,
   energy: 100,
   collectedCabinCoins: [],
-  templeRewardReceived: false
+  templeRewardReceived: false,
+  desertCarpetPurchased: false
 };
 
 export function getVillageProgress(): VillageProgress {
@@ -64,4 +66,16 @@ export function grantTempleReward(amount = 30): boolean {
   progress.templeRewardReceived = true;
   progress.coins += Math.max(0, Math.floor(amount));
   return true;
+}
+
+export type DesertCarpetPurchaseResult = 'purchased' | 'owned' | 'insufficient';
+
+export function purchaseDesertCarpet(price = 40): DesertCarpetPurchaseResult {
+  const safePrice = Math.max(0, Math.floor(price));
+  if (progress.desertCarpetPurchased) return 'owned';
+  if (progress.coins < safePrice) return 'insufficient';
+
+  progress.coins -= safePrice;
+  progress.desertCarpetPurchased = true;
+  return 'purchased';
 }
