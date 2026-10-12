@@ -51,6 +51,7 @@ const CARPET_PIT_BLOCK_RADIUS = 46;
 const CARPET_PIT_USE_RADIUS = 58;
 const FALSE_BRANCH_JUNCTION = { column: 68, row: 76 } as const;
 const MOVING_WALL_TRIGGER_RADIUS = 24;
+const SACRED_BRAZIER_TRIGGER_RADIUS = 34;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -356,6 +357,9 @@ export class MazeScene extends Phaser.Scene {
   private movingWallSolved = false;
   private movingWallObjects = new Map<string, Phaser.GameObjects.Rectangle>();
   private movingWallBlockedCells = new Set<string>();
+  private sacredBrazierLit = false;
+  private sacredBrazierFlame?: Phaser.GameObjects.Ellipse;
+  private sacredBrazierGlow?: Phaser.GameObjects.Ellipse;
 
   constructor() {
     super('MazeScene');
@@ -376,6 +380,9 @@ export class MazeScene extends Phaser.Scene {
     this.movingWallSolved = false;
     this.movingWallObjects.clear();
     this.movingWallBlockedCells.clear();
+    this.sacredBrazierLit = false;
+    this.sacredBrazierFlame = undefined;
+    this.sacredBrazierGlow = undefined;
   }
 
   preload(): void {
@@ -399,6 +406,7 @@ export class MazeScene extends Phaser.Scene {
     this.createBlackSun();
     this.createCarpetPit();
     this.createMovingWalls();
+    this.createSacredBrazier();
     this.createPlayerAnimations();
     this.createGridGuide();
 
@@ -482,6 +490,7 @@ export class MazeScene extends Phaser.Scene {
     this.checkBlackSunActivation();
     this.checkCarpetPitInteraction();
     this.checkMovingWallTriggers();
+    this.checkSacredBrazier();
     this.updateDarknessMask();
   }
 
@@ -637,7 +646,8 @@ export class MazeScene extends Phaser.Scene {
         landmark.id === 'blackSun' ||
         landmark.id === 'falseBranch' ||
         landmark.id === 'carpetPit' ||
-        landmark.id === 'movingWalls'
+        landmark.id === 'movingWalls' ||
+        landmark.id === 'sacredBrazier'
       ) continue;
 
       const x = (landmark.column - 0.5) * GRID_SIZE;
@@ -940,6 +950,125 @@ export class MazeScene extends Phaser.Scene {
     }
   }
 
+  private createSacredBrazier(): void {
+    const landmark = MAZE_LANDMARKS.find((item) => item.id === 'sacredBrazier');
+    if (!landmark) return;
+
+    const x = (landmark.column - 0.5) * GRID_SIZE;
+    const y = (landmark.row - 0.5) * GRID_SIZE;
+
+    this.add.ellipse(x, y + 11, 42, 15, 0x2b211b, 0.75)
+      .setDepth(123);
+
+    this.add.rectangle(x, y + 4, 34, 20, 0x5d4638, 1)
+      .setStrokeStyle(3, 0xa98965, 0.95)
+      .setDepth(124);
+
+    this.add.ellipse(x, y - 5, 38, 16, 0x33251d, 1)
+      .setStrokeStyle(3, 0xb69368, 0.95)
+      .setDepth(125);
+
+    this.sacredBrazierGlow = this.add.ellipse(x, y - 18, 42, 42, 0xe2752f, 0.10)
+      .setDepth(126);
+
+    this.sacredBrazierFlame = this.add.ellipse(x, y - 17, 13, 25, 0xe2752f, 0.32)
+      .setStrokeStyle(2, 0xffc65f, 0.35)
+      .setDepth(127);
+
+    this.add.text(x, y - 38, 'BRASERO SAGRADO', {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: '#ffe4b8',
+      fontStyle: 'bold',
+      backgroundColor: 'rgba(44, 25, 14, 0.84)',
+      padding: { x: 5, y: 3 }
+    })
+      .setOrigin(0.5, 1)
+      .setDepth(128);
+
+    this.tweens.add({
+      targets: [this.sacredBrazierFlame, this.sacredBrazierGlow],
+      scaleX: 1.08,
+      scaleY: 1.15,
+      alpha: '+=0.08',
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private checkSacredBrazier(): void {
+    if (this.sacredBrazierLit || !this.blackSunActivated) return;
+
+    const landmark = MAZE_LANDMARKS.find((item) => item.id === 'sacredBrazier');
+    if (!landmark) return;
+
+    const x = (landmark.column - 0.5) * GRID_SIZE;
+    const y = (landmark.row - 0.5) * GRID_SIZE;
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+
+    if (
+      Phaser.Math.Distance.Between(this.player.x, footY, x, y) >
+      SACRED_BRAZIER_TRIGGER_RADIUS
+    ) {
+      return;
+    }
+
+    this.sacredBrazierLit = true;
+    this.blackSunActivated = false;
+
+    if (this.sacredBrazierFlame && this.sacredBrazierGlow) {
+      this.tweens.killTweensOf([
+        this.sacredBrazierFlame,
+        this.sacredBrazierGlow
+      ]);
+
+      this.sacredBrazierFlame
+        .setFillStyle(0xff8a2a, 1)
+        .setStrokeStyle(3, 0xffe27a, 1)
+        .setScale(1.15, 1.35);
+
+      this.sacredBrazierGlow
+        .setFillStyle(0xffb13b, 0.28)
+        .setScale(1.45);
+
+      this.tweens.add({
+        targets: [this.sacredBrazierFlame, this.sacredBrazierGlow],
+        scaleX: '+=0.08',
+        scaleY: '+=0.12',
+        duration: 520,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
+
+    this.ui.updateStatus('El Brasero Sagrado ha devuelto la luz al laberinto.');
+    this.cameras.main.flash(380, 255, 205, 110, false);
+
+    if (this.darknessOverlay) {
+      const overlay = this.darknessOverlay;
+      this.tweens.killTweensOf(overlay);
+      this.tweens.add({
+        targets: overlay,
+        alpha: 0,
+        duration: 1100,
+        ease: 'Sine.easeOut',
+        onComplete: () => {
+          overlay.destroy();
+          if (this.darknessOverlay === overlay) {
+            this.darknessOverlay = undefined;
+          }
+        }
+      });
+    }
+
+    this.time.delayedCall(2600, () => {
+      if (this.scene.isActive()) this.ui.updateStatus('');
+    });
+  }
+
   private createBlackSun(): void {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'blackSun');
     if (!landmark) return;
@@ -990,7 +1119,7 @@ export class MazeScene extends Phaser.Scene {
   }
 
   private checkBlackSunActivation(): void {
-    if (this.blackSunActivated) return;
+    if (this.blackSunActivated || this.sacredBrazierLit) return;
 
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'blackSun');
     if (!landmark) return;
