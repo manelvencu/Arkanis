@@ -69,13 +69,13 @@ const WALKABLE_RANGES: DesertCellRange[] = [
   range(15, 13, 25, 13),
   range(29, 13, 33, 13),
   range(40, 13, 56, 13),
-  range(64, 13, 74, 13),
+  range(64, 13, 75, 13),
   range(83, 13, 84, 13),
 
   range(7, 14, 9, 14),
   range(15, 14, 41, 14),
   range(52, 14, 70, 14),
-  range(82, 14, 83, 14),
+  range(75, 14, 83, 14),
 
   range(7, 15, 19, 15),
   range(31, 15, 33, 15),
