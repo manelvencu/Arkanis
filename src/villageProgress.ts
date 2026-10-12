@@ -6,6 +6,7 @@ export interface VillageProgress {
   coins: number;
   energy: number;
   collectedCabinCoins: number[];
+  templeRewardReceived: boolean;
 }
 
 const progress: VillageProgress = {
@@ -13,7 +14,8 @@ const progress: VillageProgress = {
   fragmentHolderReceived: false,
   coins: 0,
   energy: 100,
-  collectedCabinCoins: []
+  collectedCabinCoins: [],
+  templeRewardReceived: false
 };
 
 export function getVillageProgress(): VillageProgress {
@@ -55,4 +57,11 @@ export function collectVillageCabinCoin(index: number): boolean {
 
 export function setVillageEnergy(value: number): void {
   progress.energy = Math.max(0, Math.min(100, value));
+}
+
+export function grantTempleReward(amount = 30): boolean {
+  if (progress.templeRewardReceived) return false;
+  progress.templeRewardReceived = true;
+  progress.coins += Math.max(0, Math.floor(amount));
+  return true;
 }
