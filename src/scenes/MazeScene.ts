@@ -38,10 +38,10 @@ const CENTER_ROOM = {
 
 const GRID_TEXTURE_KEY = 'maze-grid-guide';
 const BLACK_SUN_VISION_RADIUS = 180;
-const BLACK_SUN_FEATHER_RADIUS = 230;
+const BLACK_SUN_FEATHER_RADIUS = 250;
 const BLACK_SUN_DARKNESS_ALPHA = 0.94;
 const BLACK_SUN_TRIGGER_RADIUS = 30;
-const BLACK_SUN_SPOTLIGHT_STEP = 4;
+const BLACK_SUN_SPOTLIGHT_STEP = 3;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -739,18 +739,23 @@ export class MazeScene extends Phaser.Scene {
       BLACK_SUN_DARKNESS_ALPHA
     );
 
-    // Borde suave del foco. El centro (180 px) queda totalmente limpio y la
-    // oscuridad aumenta progresivamente hasta los 230 px.
-    this.drawDarknessRing(graphics, centerX, centerY, 218, 230, 0.78);
-    this.drawDarknessRing(graphics, centerX, centerY, 205, 218, 0.58);
-    this.drawDarknessRing(graphics, centerX, centerY, 192, 205, 0.36);
+    // Transición más progresiva del foco: mantenemos el radio útil de
+    // 180 px, pero repartimos la caída de luz en más bandas hasta 250 px.
+    this.drawDarknessRing(graphics, centerX, centerY, 242, 250, 0.88);
+    this.drawDarknessRing(graphics, centerX, centerY, 234, 242, 0.78);
+    this.drawDarknessRing(graphics, centerX, centerY, 226, 234, 0.68);
+    this.drawDarknessRing(graphics, centerX, centerY, 218, 226, 0.57);
+    this.drawDarknessRing(graphics, centerX, centerY, 210, 218, 0.46);
+    this.drawDarknessRing(graphics, centerX, centerY, 202, 210, 0.35);
+    this.drawDarknessRing(graphics, centerX, centerY, 194, 202, 0.25);
+    this.drawDarknessRing(graphics, centerX, centerY, 187, 194, 0.16);
     this.drawDarknessRing(
       graphics,
       centerX,
       centerY,
       BLACK_SUN_VISION_RADIUS,
-      192,
-      0.16
+      187,
+      0.08
     );
   }
 
