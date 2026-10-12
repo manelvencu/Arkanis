@@ -161,6 +161,7 @@ export class DesertMarketScene extends Phaser.Scene {
     }
 
     this.registry.set('arkanis.player.coins', progress.coins);
+    this.registry.set('arkanis.player.desertCarpetPurchased', true);
     this.ui.updateCoins(progress.coins);
     this.ui.updateCarpetOwned(true);
     this.ui.pulseCoins();
