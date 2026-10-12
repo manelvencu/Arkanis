@@ -124,7 +124,7 @@ export function createPlayableUi(
       41 * HD_SCALE,
       'playable-desertCarpet'
     )
-      .setDisplaySize(38 * HD_SCALE, 38 * HD_SCALE)
+      .setDisplaySize(34.2 * HD_SCALE, 34.2 * HD_SCALE)
       .setScrollFactor(0)
       .setDepth(1004)
   );
