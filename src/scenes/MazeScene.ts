@@ -37,6 +37,9 @@ const CENTER_ROOM = {
 } as const;
 
 const GRID_TEXTURE_KEY = 'maze-grid-guide';
+const BLACK_SUN_VISION_RADIUS = 190;
+const BLACK_SUN_DARKNESS_ALPHA = 0.94;
+const BLACK_SUN_TRIGGER_RADIUS = 30;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -319,6 +322,10 @@ export class MazeScene extends Phaser.Scene {
   private facing: Facing = 'up';
   private exiting = false;
   private exitLockedHintShown = false;
+  private blackSunActivated = false;
+  private blackSunObject?: Phaser.GameObjects.Container;
+  private darknessOverlay?: Phaser.GameObjects.Rectangle;
+  private darknessMaskGraphics?: Phaser.GameObjects.Graphics;
 
   constructor() {
     super('MazeScene');
@@ -329,6 +336,10 @@ export class MazeScene extends Phaser.Scene {
     this.facing = 'up';
     this.exiting = false;
     this.exitLockedHintShown = false;
+    this.blackSunActivated = false;
+    this.blackSunObject = undefined;
+    this.darknessOverlay = undefined;
+    this.darknessMaskGraphics = undefined;
   }
 
   preload(): void {
@@ -349,6 +360,7 @@ export class MazeScene extends Phaser.Scene {
     this.createCenterChamberMarker();
     this.createLandmarkMarkers();
     this.createPlayer();
+    this.createBlackSun();
     this.createPlayerAnimations();
     this.createGridGuide();
 
@@ -425,6 +437,8 @@ export class MazeScene extends Phaser.Scene {
     }
 
     this.player.setDepth(this.player.y + PLAYER_FOOT_OFFSET_Y);
+    this.checkBlackSunActivation();
+    this.updateDarknessMask();
   }
 
   private createPlayer(): void {
@@ -558,6 +572,8 @@ export class MazeScene extends Phaser.Scene {
 
   private createLandmarkMarkers(): void {
     for (const landmark of MAZE_LANDMARKS) {
+      if (landmark.id === 'blackSun') continue;
+
       const x = (landmark.column - 0.5) * GRID_SIZE;
       const y = (landmark.row - 0.5) * GRID_SIZE;
 
@@ -603,6 +619,130 @@ export class MazeScene extends Phaser.Scene {
     })
       .setOrigin(0.5)
       .setDepth(126);
+  }
+
+  private createBlackSun(): void {
+    const landmark = MAZE_LANDMARKS.find((item) => item.id === 'blackSun');
+    if (!landmark) return;
+
+    const x = (landmark.column - 0.5) * GRID_SIZE;
+    const y = (landmark.row - 0.5) * GRID_SIZE;
+
+    const aura = this.add.circle(0, 0, 24, 0x5c365f, 0.22)
+      .setStrokeStyle(2, 0xa76aa8, 0.65);
+    const outer = this.add.circle(0, 0, 17, 0x17101a, 1)
+      .setStrokeStyle(3, 0x6f4a73, 1);
+    const core = this.add.circle(0, 0, 9, 0x020104, 1)
+      .setStrokeStyle(2, 0xb58bb5, 0.8);
+
+    const rays = this.add.graphics();
+    rays.lineStyle(2, 0x8f628f, 0.85);
+    for (let index = 0; index < 8; index += 1) {
+      const angle = (Math.PI * 2 * index) / 8;
+      rays.beginPath();
+      rays.moveTo(Math.cos(angle) * 20, Math.sin(angle) * 20);
+      rays.lineTo(Math.cos(angle) * 27, Math.sin(angle) * 27);
+      rays.strokePath();
+    }
+
+    const label = this.add.text(0, -34, 'SOL NEGRO', {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: '#e8cbea',
+      fontStyle: 'bold',
+      align: 'center',
+      backgroundColor: 'rgba(20, 12, 22, 0.86)',
+      padding: { x: 5, y: 3 }
+    }).setOrigin(0.5, 1);
+
+    this.blackSunObject = this.add.container(x, y, [aura, rays, outer, core, label])
+      .setDepth(130);
+
+    this.tweens.add({
+      targets: [aura, outer],
+      scaleX: 1.12,
+      scaleY: 1.12,
+      alpha: 0.5,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private checkBlackSunActivation(): void {
+    if (this.blackSunActivated) return;
+
+    const landmark = MAZE_LANDMARKS.find((item) => item.id === 'blackSun');
+    if (!landmark) return;
+
+    const x = (landmark.column - 0.5) * GRID_SIZE;
+    const y = (landmark.row - 0.5) * GRID_SIZE;
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+
+    if (
+      Phaser.Math.Distance.Between(this.player.x, footY, x, y) >
+      BLACK_SUN_TRIGGER_RADIUS
+    ) {
+      return;
+    }
+
+    this.blackSunActivated = true;
+    this.activateBlackSunDarkness();
+  }
+
+  private activateBlackSunDarkness(): void {
+    this.ui.updateStatus('El Sol Negro ha apagado la luz del laberinto.');
+
+    this.cameras.main.shake(260, 0.004);
+
+    this.darknessOverlay = this.add.rectangle(
+      0,
+      0,
+      WORLD_WIDTH,
+      WORLD_HEIGHT,
+      0x000000,
+      BLACK_SUN_DARKNESS_ALPHA
+    )
+      .setOrigin(0)
+      .setDepth(9000)
+      .setAlpha(0);
+
+    this.darknessMaskGraphics = this.make.graphics({ x: 0, y: 0 });
+    const mask = this.darknessMaskGraphics.createGeometryMask();
+    mask.invertAlpha = true;
+    this.darknessOverlay.setMask(mask);
+
+    this.updateDarknessMask();
+
+    this.tweens.add({
+      targets: this.darknessOverlay,
+      alpha: 1,
+      duration: 800,
+      ease: 'Sine.easeInOut'
+    });
+
+    this.time.delayedCall(2400, () => {
+      if (this.scene.isActive()) this.ui.updateStatus('');
+    });
+  }
+
+  private updateDarknessMask(): void {
+    if (
+      !this.blackSunActivated ||
+      !this.darknessOverlay ||
+      !this.darknessMaskGraphics
+    ) {
+      return;
+    }
+
+    this.darknessMaskGraphics.clear();
+    this.darknessMaskGraphics.fillStyle(0xffffff, 1);
+    this.darknessMaskGraphics.fillCircle(
+      this.player.x,
+      this.player.y + PLAYER_FOOT_OFFSET_Y,
+      BLACK_SUN_VISION_RADIUS
+    );
   }
 
   private createCenterChamberMarker(): void {
