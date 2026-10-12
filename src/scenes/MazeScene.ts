@@ -61,6 +61,11 @@ const MAZE_SCORPION_SPEED = 72;
 const MAZE_SCORPION_DAMAGE = 15;
 const MAZE_SCORPION_TRIGGER_RADIUS = 80;
 const MAZE_SCORPION_LIFETIME = 6500;
+const STATUE_PROJECTILE_SPEED = 155;
+const STATUE_PROJECTILE_DAMAGE = 15;
+const STATUE_FIRE_INTERVAL = 900;
+const STATUE_ACTIVE_RADIUS = 300;
+const STATUE_PROJECTILE_LIFETIME = 1200;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -435,6 +440,9 @@ export class MazeScene extends Phaser.Scene {
   private sacredBrazierGlow?: Phaser.GameObjects.Ellipse;
   private scorpions: Phaser.Physics.Arcade.Sprite[] = [];
   private activatedScorpionCracks = new Set<string>();
+  private statueProjectiles: Phaser.GameObjects.Arc[] = [];
+  private nextStatueShotAt = 0;
+  private statueShotIndex = 0;
   private isGameOver = false;
 
   constructor() {
@@ -462,6 +470,9 @@ export class MazeScene extends Phaser.Scene {
     this.sacredBrazierGlow = undefined;
     this.scorpions = [];
     this.activatedScorpionCracks.clear();
+    this.statueProjectiles = [];
+    this.nextStatueShotAt = 0;
+    this.statueShotIndex = 0;
     this.isGameOver = false;
   }
 
@@ -497,6 +508,7 @@ export class MazeScene extends Phaser.Scene {
     this.createMovingWalls();
     this.createSacredBrazier();
     this.createScorpionCracks();
+    this.createStatueCorridor();
     this.createPlayerAnimations();
     this.createGridGuide();
 
@@ -583,6 +595,7 @@ export class MazeScene extends Phaser.Scene {
     this.checkMovingWallReleaseOutOfView();
     this.checkSacredBrazier();
     this.updateScorpionCracks(time, delta);
+    this.updateStatueCorridor(time, delta);
     this.updateDarknessMask();
   }
 
@@ -739,7 +752,8 @@ export class MazeScene extends Phaser.Scene {
         landmark.id === 'falseBranch' ||
         landmark.id === 'carpetPit' ||
         landmark.id === 'movingWalls' ||
-        landmark.id === 'sacredBrazier'
+        landmark.id === 'sacredBrazier' ||
+        landmark.id === 'statueCorridor'
       ) continue;
 
       const x = (landmark.column - 0.5) * GRID_SIZE;
@@ -1272,7 +1286,7 @@ export class MazeScene extends Phaser.Scene {
 
       const wasTouching = scorpion.getData('touchingPlayer') === true;
       if (touching && !wasTouching) {
-        this.damagePlayerFromScorpion(MAZE_SCORPION_DAMAGE);
+        this.damagePlayer(MAZE_SCORPION_DAMAGE);
       }
       scorpion.setData('touchingPlayer', touching);
     }
@@ -1355,7 +1369,7 @@ export class MazeScene extends Phaser.Scene {
     );
   }
 
-  private damagePlayerFromScorpion(amount: number): void {
+  private damagePlayer(amount: number): void {
     const progress = getVillageProgress();
     const nextEnergy = Math.max(0, progress.energy - amount);
 
@@ -1381,6 +1395,162 @@ export class MazeScene extends Phaser.Scene {
         sourceSceneKey: 'MazeScene'
       });
       this.scene.pause();
+    });
+  }
+
+  private createStatueCorridor(): void {
+    // El landmark cae en el corredor vertical C77-C78. Colocamos tres pares
+    // de estatuas en las paredes C76/C79 para disparar transversalmente.
+    const rows = [30, 33, 36];
+
+    for (const row of rows) {
+      const y = (row - 0.5) * GRID_SIZE;
+
+      this.createLauncherStatue(76, row, 1);
+      this.createLauncherStatue(79, row, -1);
+
+      // Marca sutil del carril de disparo mientras el arte es provisional.
+      this.add.line(
+        0,
+        0,
+        (76.75) * GRID_SIZE,
+        y,
+        (78.25) * GRID_SIZE,
+        y,
+        0x8f6f55,
+        0.18
+      ).setOrigin(0).setDepth(113);
+    }
+  }
+
+  private createLauncherStatue(
+    column: number,
+    row: number,
+    direction: -1 | 1
+  ): void {
+    const x = (column - 0.5) * GRID_SIZE;
+    const y = (row - 0.5) * GRID_SIZE;
+
+    const base = this.add.rectangle(0, 8, 24, 22, 0x66594c, 1)
+      .setStrokeStyle(2, 0xa99a86, 0.9);
+    const head = this.add.circle(0, -8, 9, 0x796b5b, 1)
+      .setStrokeStyle(2, 0xb5a590, 0.9);
+    const mouth = this.add.rectangle(direction * 9, -6, 9, 5, 0x231b16, 1);
+
+    this.add.container(x, y, [base, head, mouth]).setDepth(129);
+  }
+
+  private updateStatueCorridor(time: number, delta: number): void {
+    const landmark = MAZE_LANDMARKS.find((item) => item.id === 'statueCorridor');
+    if (!landmark) return;
+
+    const zoneX = (landmark.column - 0.5) * GRID_SIZE;
+    const zoneY = (landmark.row - 0.5) * GRID_SIZE;
+    const playerFootY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const active =
+      Phaser.Math.Distance.Between(
+        this.player.x,
+        playerFootY,
+        zoneX,
+        zoneY
+      ) <= STATUE_ACTIVE_RADIUS;
+
+    if (active && time >= this.nextStatueShotAt) {
+      const sequence = [
+        { column: 76, row: 30, direction: 1 as const },
+        { column: 79, row: 33, direction: -1 as const },
+        { column: 76, row: 36, direction: 1 as const },
+        { column: 79, row: 30, direction: -1 as const },
+        { column: 76, row: 33, direction: 1 as const },
+        { column: 79, row: 36, direction: -1 as const }
+      ];
+
+      const shot = sequence[this.statueShotIndex % sequence.length];
+      this.statueShotIndex += 1;
+      this.nextStatueShotAt = time + STATUE_FIRE_INTERVAL;
+      this.spawnStatueProjectile(
+        shot.column,
+        shot.row,
+        shot.direction,
+        time
+      );
+    }
+
+    const safeDelta = Math.min(delta, 50);
+    const travel = STATUE_PROJECTILE_SPEED * (safeDelta / 1000);
+
+    for (const projectile of this.statueProjectiles) {
+      if (!projectile.active) continue;
+
+      const bornAt = projectile.getData('bornAt') as number;
+      if (time - bornAt >= STATUE_PROJECTILE_LIFETIME) {
+        projectile.destroy();
+        continue;
+      }
+
+      const direction = projectile.getData('direction') as number;
+      projectile.x += direction * travel;
+      projectile.angle += direction * 18;
+
+      const column = Math.floor(projectile.x / GRID_SIZE) + 1;
+      const row = Math.floor(projectile.y / GRID_SIZE) + 1;
+
+      if (!MAZE_WALKABLE_CELLS.has(`${column}:${row}`)) {
+        projectile.destroy();
+        continue;
+      }
+
+      const touching =
+        Phaser.Math.Distance.Between(
+          projectile.x,
+          projectile.y,
+          this.player.x,
+          playerFootY
+        ) <= 20;
+
+      if (touching) {
+        projectile.destroy();
+        this.damagePlayer(STATUE_PROJECTILE_DAMAGE);
+      }
+    }
+
+    this.statueProjectiles = this.statueProjectiles.filter(
+      (projectile) => projectile.active
+    );
+  }
+
+  private spawnStatueProjectile(
+    column: number,
+    row: number,
+    direction: -1 | 1,
+    time: number
+  ): void {
+    const x =
+      (column - 0.5) * GRID_SIZE +
+      direction * (GRID_SIZE * 0.46);
+    const y = (row - 0.5) * GRID_SIZE;
+
+    const projectile = this.add.circle(
+      x,
+      y,
+      7,
+      0xd99b48,
+      1
+    )
+      .setStrokeStyle(2, 0xffdfa0, 1)
+      .setDepth(135)
+      .setData('bornAt', time)
+      .setData('direction', direction);
+
+    this.statueProjectiles.push(projectile);
+
+    this.tweens.add({
+      targets: projectile,
+      scaleX: 1.28,
+      scaleY: 1.28,
+      duration: 110,
+      yoyo: true,
+      repeat: -1
     });
   }
 
