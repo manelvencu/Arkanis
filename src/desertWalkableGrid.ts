@@ -8,16 +8,32 @@ export const DESERT_GRID_COLUMNS = 90;
 export const DESERT_GRID_ROWS = 22;
 export const DESERT_FOOT_OFFSET_Y = 20;
 
+function buildHorizontalRanges(ranges: Array<{ c1: number; c2: number; f: number }>): ReadonlySet<string> {
+  const cells = new Set<string>();
+
+  for (const item of ranges) {
+    for (let c = item.c1; c <= item.c2; c += 1) {
+      cells.add(`${c}:${item.f}`);
+    }
+  }
+
+  return cells;
+}
+
 /**
  * El Desierto de Mil Soles.
  *
- * Estado base de diseño:
- * - toda la pantalla está bloqueada por defecto;
- * - no existe ninguna celda transitable hasta que se añada explícitamente;
- * - las futuras aperturas se definirán únicamente a partir de los rangos
- *   autorizados por diseño.
+ * Toda la pantalla está bloqueada por defecto.
+ * Solo son transitables los rangos horizontales autorizados expresamente.
+ *
+ * Prueba actual:
+ * - C5/F12 a C8/F12
+ * - C6/F13 a C9/F13
  */
-export const DESERT_WALKABLE_CELLS: ReadonlySet<string> = new Set<string>();
+export const DESERT_WALKABLE_CELLS: ReadonlySet<string> = buildHorizontalRanges([
+  { c1: 5, c2: 8, f: 12 },
+  { c1: 6, c2: 9, f: 13 }
+]);
 
 export function getDesertFootCell(spriteX: number, spriteY: number): DesertGridCell | null {
   const footX = spriteX;
