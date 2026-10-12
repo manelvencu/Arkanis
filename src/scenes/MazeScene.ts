@@ -5,7 +5,12 @@ import {
   preloadPlayableUiAssets,
   type PlayableUiController
 } from '../playableSceneUi';
-import { getVillageProgress } from '../villageProgress';
+import {
+  getVillageProgress,
+  grantDesertCarpetForMazeTest,
+  hasUsableDesertCarpet,
+  useDesertCarpetInMaze
+} from '../villageProgress';
 
 interface MazeSceneData {
   characterId?: CharacterId;
@@ -42,6 +47,8 @@ const BLACK_SUN_FEATHER_RADIUS = 250;
 const BLACK_SUN_DARKNESS_ALPHA = 0.94;
 const BLACK_SUN_TRIGGER_RADIUS = 30;
 const BLACK_SUN_SPOTLIGHT_STEP = 3;
+const CARPET_PIT_BLOCK_RADIUS = 46;
+const CARPET_PIT_USE_RADIUS = 58;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -327,6 +334,9 @@ export class MazeScene extends Phaser.Scene {
   private blackSunActivated = false;
   private blackSunObject?: Phaser.GameObjects.Container;
   private darknessOverlay?: Phaser.GameObjects.Graphics;
+  private carpetPit?: Phaser.GameObjects.Ellipse;
+  private carpetOnPit?: Phaser.GameObjects.Rectangle;
+  private carpetPitHintShown = false;
 
   constructor() {
     super('MazeScene');
@@ -340,6 +350,9 @@ export class MazeScene extends Phaser.Scene {
     this.blackSunActivated = false;
     this.blackSunObject = undefined;
     this.darknessOverlay = undefined;
+    this.carpetPit = undefined;
+    this.carpetOnPit = undefined;
+    this.carpetPitHintShown = false;
   }
 
   preload(): void {
@@ -361,6 +374,7 @@ export class MazeScene extends Phaser.Scene {
     this.createLandmarkMarkers();
     this.createPlayer();
     this.createBlackSun();
+    this.createCarpetPit();
     this.createPlayerAnimations();
     this.createGridGuide();
 
@@ -369,6 +383,10 @@ export class MazeScene extends Phaser.Scene {
     this.cameras.main.setZoom(2);
     this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
     this.cameras.main.fadeIn(300, 8, 5, 2);
+
+    // TEMPORAL durante las pruebas del laberinto: siempre entramos con una
+    // alfombra disponible para poder validar el agujero sin repetir la tienda.
+    grantDesertCarpetForMazeTest();
 
     const progress = getVillageProgress();
     const character =
@@ -380,7 +398,7 @@ export class MazeScene extends Phaser.Scene {
       character.name,
       progress.energy,
       progress.coins,
-      { carpetOwned: progress.desertCarpetPurchased }
+      { carpetOwned: hasUsableDesertCarpet() }
     );
   }
 
@@ -438,6 +456,7 @@ export class MazeScene extends Phaser.Scene {
 
     this.player.setDepth(this.player.y + PLAYER_FOOT_OFFSET_Y);
     this.checkBlackSunActivation();
+    this.checkCarpetPitInteraction();
     this.updateDarknessMask();
   }
 
@@ -500,7 +519,23 @@ export class MazeScene extends Phaser.Scene {
 
     const column = Math.floor(footX / GRID_SIZE) + 1;
     const row = Math.floor(footY / GRID_SIZE) + 1;
-    return MAZE_WALKABLE_CELLS.has(`${column}:${row}`);
+
+    if (!MAZE_WALKABLE_CELLS.has(`${column}:${row}`)) return false;
+
+    const pit = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
+    if (pit && !getVillageProgress().desertCarpetUsedInMaze) {
+      const pitX = (pit.column - 0.5) * GRID_SIZE;
+      const pitY = (pit.row - 0.5) * GRID_SIZE;
+
+      if (
+        Phaser.Math.Distance.Between(footX, footY, pitX, pitY) <
+        CARPET_PIT_BLOCK_RADIUS
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private movePlayerWithinWalkableGrid(dx: number, dy: number): boolean {
@@ -572,7 +607,7 @@ export class MazeScene extends Phaser.Scene {
 
   private createLandmarkMarkers(): void {
     for (const landmark of MAZE_LANDMARKS) {
-      if (landmark.id === 'blackSun') continue;
+      if (landmark.id === 'blackSun' || landmark.id === 'carpetPit') continue;
 
       const x = (landmark.column - 0.5) * GRID_SIZE;
       const y = (landmark.row - 0.5) * GRID_SIZE;
@@ -619,6 +654,101 @@ export class MazeScene extends Phaser.Scene {
     })
       .setOrigin(0.5)
       .setDepth(126);
+  }
+
+  private createCarpetPit(): void {
+    const landmark = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
+    if (!landmark) return;
+
+    const x = (landmark.column - 0.5) * GRID_SIZE;
+    const y = (landmark.row - 0.5) * GRID_SIZE;
+
+    if (getVillageProgress().desertCarpetUsedInMaze) {
+      this.placeCarpetOverPit(x, y);
+      return;
+    }
+
+    const shadow = this.add.ellipse(x, y + 4, 78, 54, 0x1b100b, 0.68)
+      .setDepth(116);
+    this.carpetPit = this.add.ellipse(x, y, 70, 46, 0x050302, 1)
+      .setStrokeStyle(4, 0x51362b, 1)
+      .setDepth(117);
+
+    this.add.ellipse(x, y - 2, 52, 30, 0x000000, 0.72)
+      .setDepth(118);
+
+    this.add.text(x, y - 34, 'AGUJERO', {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: '#ffe3b7',
+      fontStyle: 'bold',
+      backgroundColor: 'rgba(28, 16, 10, 0.82)',
+      padding: { x: 5, y: 3 }
+    })
+      .setOrigin(0.5, 1)
+      .setDepth(119);
+
+    shadow.setData('mazePitVisual', true);
+  }
+
+  private checkCarpetPitInteraction(): void {
+    const landmark = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
+    if (!landmark || getVillageProgress().desertCarpetUsedInMaze) return;
+
+    const x = (landmark.column - 0.5) * GRID_SIZE;
+    const y = (landmark.row - 0.5) * GRID_SIZE;
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const distance = Phaser.Math.Distance.Between(this.player.x, footY, x, y);
+
+    if (distance > CARPET_PIT_USE_RADIUS) {
+      if (this.carpetPitHintShown) {
+        this.carpetPitHintShown = false;
+        this.ui.updateStatus('');
+      }
+      return;
+    }
+
+    if (!hasUsableDesertCarpet()) {
+      if (!this.carpetPitHintShown) {
+        this.carpetPitHintShown = true;
+        this.ui.updateStatus('El agujero bloquea el paso. Necesitas una alfombra.');
+      }
+      return;
+    }
+
+    if (!this.carpetPitHintShown) {
+      this.carpetPitHintShown = true;
+      this.ui.updateStatus('Pulsa ESPACIO para cubrir el agujero con la alfombra.');
+    }
+
+    if (!Phaser.Input.Keyboard.JustDown(this.cursors.space!)) return;
+
+    if (!useDesertCarpetInMaze()) return;
+
+    this.ui.updateCarpetOwned(false);
+    this.ui.updateStatus('La alfombra cubre el agujero. Ya puedes cruzar.');
+    this.placeCarpetOverPit(x, y);
+
+    this.time.delayedCall(2200, () => {
+      if (this.scene.isActive()) this.ui.updateStatus('');
+    });
+  }
+
+  private placeCarpetOverPit(x: number, y: number): void {
+    this.carpetPit?.destroy();
+    this.carpetPit = undefined;
+
+    if (this.carpetOnPit) return;
+
+    this.carpetOnPit = this.add.rectangle(x, y, 74, 50, 0xb73931, 1)
+      .setStrokeStyle(4, 0xe4c269, 1)
+      .setAngle(-4)
+      .setDepth(119);
+
+    this.add.rectangle(x, y, 58, 34, 0x7d2524, 1)
+      .setStrokeStyle(2, 0xf0d483, 0.9)
+      .setAngle(-4)
+      .setDepth(120);
   }
 
   private createBlackSun(): void {
