@@ -151,7 +151,8 @@ export class DevMenuScene extends Phaser.Scene {
         entries: [
           { label: 'Entrada al Desierto', sceneKey: 'DesertScene', data: characterData },
           { label: 'Escenario 1 — El Templo', sceneKey: 'TempleScene', data: characterData },
-          { label: 'Tienda de alfombras', sceneKey: 'DesertMarketScene', data: characterData }
+          { label: 'Tienda de alfombras', sceneKey: 'DesertMarketScene', data: characterData },
+          { label: 'Escenario 3 — Laberinto', sceneKey: 'MazeScene', data: characterData }
         ]
       }
     ];
