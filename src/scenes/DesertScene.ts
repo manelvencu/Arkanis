@@ -154,6 +154,17 @@ const PLAYER_START = {
   y: (PLAYER_START_CELL.row - 0.5) * GRID_SIZE - PLAYER_FOOT_OFFSET_Y
 } as const;
 
+const PLAYER_FRONT_DEPTH_CELLS = new Set([
+  '17:18',
+  '20:18',
+  '21:18',
+  '24:16',
+  '14:14',
+  '10:14',
+  '25:12'
+]);
+const PLAYER_FRONT_DEPTH_BONUS = 2000;
+
 const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
@@ -541,8 +552,13 @@ export class DesertScene extends Phaser.Scene {
   }
 
   private updateWorldDepths(): void {
+    const footX = this.player.x;
     const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
-    this.player.setDepth(footY);
+    const column = Math.floor(footX / GRID_SIZE) + 1;
+    const row = Math.floor(footY / GRID_SIZE) + 1;
+    const forceFront = PLAYER_FRONT_DEPTH_CELLS.has(`${column}:${row}`);
+
+    this.player.setDepth(footY + (forceFront ? PLAYER_FRONT_DEPTH_BONUS : 0));
   }
 
   private createRocks(): void {
