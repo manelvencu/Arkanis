@@ -78,7 +78,7 @@ const DESERT_BUILDINGS = [
     key: 'desert-building-market-tent-01',
     path: './assets/world/desert/buildings/Mercado desértico bajo una carpa roja.png',
     column: 61,
-    row: 16,
+    row: 18,
     width: 144,
     height: 128
   }
