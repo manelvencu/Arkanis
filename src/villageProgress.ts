@@ -8,6 +8,7 @@ export interface VillageProgress {
   collectedCabinCoins: number[];
   templeRewardReceived: boolean;
   desertCarpetPurchased: boolean;
+  desertCarpetUsedInMaze: boolean;
   desertFragmentObtained: boolean;
 }
 
@@ -19,6 +20,7 @@ const progress: VillageProgress = {
   collectedCabinCoins: [],
   templeRewardReceived: false,
   desertCarpetPurchased: false,
+  desertCarpetUsedInMaze: false,
   desertFragmentObtained: false
 };
 
@@ -79,7 +81,25 @@ export function purchaseDesertCarpet(price = 40): DesertCarpetPurchaseResult {
 
   progress.coins -= safePrice;
   progress.desertCarpetPurchased = true;
+  progress.desertCarpetUsedInMaze = false;
   return 'purchased';
+}
+
+export function hasUsableDesertCarpet(): boolean {
+  return progress.desertCarpetPurchased && !progress.desertCarpetUsedInMaze;
+}
+
+export function useDesertCarpetInMaze(): boolean {
+  if (!hasUsableDesertCarpet()) return false;
+  progress.desertCarpetUsedInMaze = true;
+  return true;
+}
+
+// Ayuda temporal de pruebas: mientras construimos el laberinto, entrar en
+// MazeScene entrega una alfombra disponible sin cobrar monedas.
+export function grantDesertCarpetForMazeTest(): void {
+  progress.desertCarpetPurchased = true;
+  progress.desertCarpetUsedInMaze = false;
 }
 
 
