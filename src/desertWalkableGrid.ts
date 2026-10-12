@@ -39,14 +39,19 @@ function buildCellSet(ranges: DesertCellRange[]): ReadonlySet<string> {
  * Todo lo no declarado queda bloqueado.
  */
 const WALKABLE_RANGES: DesertCellRange[] = [
+  range(18, 5, 19, 5),
+  range(18, 6, 19, 6),
+
+  range(18, 7, 19, 7),
   range(67, 7, 71, 7),
 
+  range(10, 8, 23, 8),
   range(66, 8, 75, 8),
 
   range(10, 9, 23, 9),
   range(65, 9, 75, 9),
 
-  range(21, 10, 32, 10),
+  range(15, 10, 32, 10),
   range(65, 10, 75, 10),
 
   range(23, 11, 25, 11),
@@ -61,7 +66,7 @@ const WALKABLE_RANGES: DesertCellRange[] = [
   range(83, 12, 85, 12),
 
   range(5, 13, 9, 13),
-  range(22, 13, 25, 13),
+  range(15, 13, 25, 13),
   range(29, 13, 33, 13),
   range(40, 13, 56, 13),
   range(64, 13, 74, 13),
