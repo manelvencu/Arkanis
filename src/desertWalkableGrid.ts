@@ -26,13 +26,23 @@ function buildHorizontalRanges(ranges: Array<{ c1: number; c2: number; f: number
  * Toda la pantalla está bloqueada por defecto.
  * Solo son transitables los rangos horizontales autorizados expresamente.
  *
- * Prueba actual:
+ * Rangos autorizados actualmente:
  * - C5/F12 a C8/F12
  * - C6/F13 a C9/F13
+ * - C8/F14 a C10/F14
+ * - C8/F15 a C20/F15
+ * - C14/F14 a C29/F14
+ * - C15/F13 a C30/F13
+ * - C12/F12 a C25/F12
  */
 export const DESERT_WALKABLE_CELLS: ReadonlySet<string> = buildHorizontalRanges([
   { c1: 5, c2: 8, f: 12 },
-  { c1: 6, c2: 9, f: 13 }
+  { c1: 6, c2: 9, f: 13 },
+  { c1: 8, c2: 10, f: 14 },
+  { c1: 8, c2: 20, f: 15 },
+  { c1: 14, c2: 29, f: 14 },
+  { c1: 15, c2: 30, f: 13 },
+  { c1: 12, c2: 25, f: 12 }
 ]);
 
 export function getDesertFootCell(spriteX: number, spriteY: number): DesertGridCell | null {
