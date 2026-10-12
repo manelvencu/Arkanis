@@ -646,6 +646,13 @@ function findStatueLauncherSites(): StatueLauncherSite[] {
 
 const MAZE_STATUE_LAUNCHERS = findStatueLauncherSites();
 
+const POST_FRAGMENT_STATUE_LAUNCHERS: StatueLauncherSite[] = [
+  { column: 42, row: 19, directionX: 0, directionY: 1 },
+  { column: 75, row: 23, directionX: 1, directionY: 0 },
+  { column: 19, row: 15, directionX: 1, directionY: 0 },
+  { column: 10, row: 44, directionX: -1, directionY: 0 }
+];
+
 export class MazeScene extends Phaser.Scene {
   private characterId: CharacterId = 'tiana';
   private player!: Phaser.Physics.Arcade.Sprite;
