@@ -70,6 +70,14 @@ const STATUE_PROJECTILE_LIFETIME = 1200;
 const FINAL_GATE_COLUMNS = [39, 40, 41, 42] as const;
 const FINAL_GATE_ROW = 47;
 const FRAGMENT_INTERACTION_RADIUS = 48;
+const NORTH_GATE_COLUMNS = [40, 41, 42, 43] as const;
+const NORTH_GATE_ROW = 34;
+const RETURN_BRIDGE_COLUMNS = [6, 7] as const;
+const RETURN_BRIDGE_ROWS = [76, 77] as const;
+const SECOND_BLACK_SUN_GATE = {
+  column: 20,
+  rows: [14, 15]
+} as const;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -238,6 +246,19 @@ function buildMazeWalkableCells(): ReadonlySet<string> {
   // obligatorios del laberinto.
   for (let row = 47; row <= 52; row += 1) {
     for (let column = 39; column <= 42; column += 1) {
+      walkable.add(`${column}:${row}`);
+    }
+  }
+
+  // Tras recoger el fragmento, la cámara se transforma: se abre al norte
+  // hacia el gran componente superior y, mucho más adelante, ese recorrido
+  // vuelve a enlazar con la ruta de salida por el extremo inferior izquierdo.
+  for (const column of NORTH_GATE_COLUMNS) {
+    walkable.add(`${column}:${NORTH_GATE_ROW}`);
+  }
+
+  for (const row of RETURN_BRIDGE_ROWS) {
+    for (const column of RETURN_BRIDGE_COLUMNS) {
       walkable.add(`${column}:${row}`);
     }
   }
@@ -658,6 +679,11 @@ export class MazeScene extends Phaser.Scene {
   private finalGateLabel?: Phaser.GameObjects.Text;
   private fragmentObject?: Phaser.GameObjects.Container;
   private fragmentHintShown = false;
+  private postFragmentRouteActive = false;
+  private postFragmentSouthGate?: Phaser.GameObjects.Rectangle;
+  private secondBlackSunObject?: Phaser.GameObjects.Container;
+  private secondBlackSunTriggered = false;
+  private postFragmentScorpionsSpawned = new Set<string>();
   private isGameOver = false;
 
   constructor() {
@@ -694,6 +720,11 @@ export class MazeScene extends Phaser.Scene {
     this.finalGateLabel = undefined;
     this.fragmentObject = undefined;
     this.fragmentHintShown = false;
+    this.postFragmentRouteActive = getVillageProgress().desertFragmentObtained;
+    this.postFragmentSouthGate = undefined;
+    this.secondBlackSunObject = undefined;
+    this.secondBlackSunTriggered = false;
+    this.postFragmentScorpionsSpawned.clear();
     this.isGameOver = false;
   }
 
@@ -724,6 +755,8 @@ export class MazeScene extends Phaser.Scene {
     this.createCenterChamberMarker();
     this.createFinalGate();
     this.createDesertFragment();
+    this.createPostFragmentRouteVisuals();
+    this.createSecondBlackSun();
     this.createLandmarkMarkers();
     this.createPlayer();
     this.createBlackSun();
@@ -821,6 +854,8 @@ export class MazeScene extends Phaser.Scene {
     this.updateStatueCorridor(time, delta);
     this.checkFinalGateUnlock();
     this.checkDesertFragmentInteraction();
+    this.checkSecondBlackSunActivation();
+    this.updatePostFragmentThreats(time);
     this.updateDarknessMask();
   }
 
@@ -888,10 +923,32 @@ export class MazeScene extends Phaser.Scene {
     if (this.movingWallBlockedCells.has(`${column}:${row}`)) return false;
 
     if (
-      !this.finalGateOpen &&
+      (!this.finalGateOpen || this.postFragmentRouteActive) &&
       row === FINAL_GATE_ROW &&
       FINAL_GATE_COLUMNS.includes(
         column as (typeof FINAL_GATE_COLUMNS)[number]
+      )
+    ) {
+      return false;
+    }
+
+    if (
+      !this.postFragmentRouteActive &&
+      row === NORTH_GATE_ROW &&
+      NORTH_GATE_COLUMNS.includes(
+        column as (typeof NORTH_GATE_COLUMNS)[number]
+      )
+    ) {
+      return false;
+    }
+
+    if (
+      !this.postFragmentRouteActive &&
+      RETURN_BRIDGE_ROWS.includes(
+        row as (typeof RETURN_BRIDGE_ROWS)[number]
+      ) &&
+      RETURN_BRIDGE_COLUMNS.includes(
+        column as (typeof RETURN_BRIDGE_COLUMNS)[number]
       )
     ) {
       return false;
@@ -1932,8 +1989,10 @@ export class MazeScene extends Phaser.Scene {
     const fragment = this.fragmentObject;
     this.fragmentObject = undefined;
 
+    this.activatePostFragmentRoute();
+
     this.ui.updateStatus(
-      'Has recuperado el fragmento de la Joya. Regresa a la salida del laberinto.'
+      'Has recuperado el fragmento. El acceso sur se ha cerrado: busca la nueva salida al norte.'
     );
     this.cameras.main.flash(420, 255, 226, 120, false);
 
@@ -1950,6 +2009,155 @@ export class MazeScene extends Phaser.Scene {
     this.time.delayedCall(3200, () => {
       if (this.scene.isActive()) this.ui.updateStatus('');
     });
+  }
+
+  private createPostFragmentRouteVisuals(): void {
+    if (!this.postFragmentRouteActive) return;
+    this.createClosedSouthGate();
+  }
+
+  private activatePostFragmentRoute(): void {
+    if (this.postFragmentRouteActive) return;
+
+    this.postFragmentRouteActive = true;
+    this.createClosedSouthGate();
+
+    const northX =
+      ((NORTH_GATE_COLUMNS[0] + NORTH_GATE_COLUMNS[3]) / 2 - 0.5) * GRID_SIZE;
+    const northY = (NORTH_GATE_ROW - 0.5) * GRID_SIZE;
+
+    this.cameras.main.shake(320, 0.005);
+    this.add.rectangle(
+      northX,
+      northY,
+      GRID_SIZE * NORTH_GATE_COLUMNS.length,
+      GRID_SIZE,
+      0xe8c879,
+      0.18
+    )
+      .setStrokeStyle(2, 0xffe8a8, 0.55)
+      .setDepth(118);
+
+    this.time.delayedCall(1100, () => {
+      if (this.scene.isActive()) {
+        this.ui.updateStatus(
+          'Una nueva ruta se ha abierto al norte de la cámara.'
+        );
+      }
+    });
+
+    this.time.delayedCall(3300, () => {
+      if (this.scene.isActive()) this.ui.updateStatus('');
+    });
+  }
+
+  private createClosedSouthGate(): void {
+    if (this.postFragmentSouthGate) return;
+
+    const gateX =
+      ((FINAL_GATE_COLUMNS[0] + FINAL_GATE_COLUMNS[3]) / 2 - 0.5) * GRID_SIZE;
+    const gateY = (FINAL_GATE_ROW - 0.5) * GRID_SIZE;
+
+    this.postFragmentSouthGate = this.add.rectangle(
+      gateX,
+      gateY,
+      GRID_SIZE * FINAL_GATE_COLUMNS.length,
+      GRID_SIZE,
+      0x3b2a24,
+      0.98
+    )
+      .setStrokeStyle(3, 0x8f755e, 0.95)
+      .setDepth(132);
+  }
+
+  private createSecondBlackSun(): void {
+    const x = (SECOND_BLACK_SUN_GATE.column - 0.5) * GRID_SIZE;
+    const firstY = (SECOND_BLACK_SUN_GATE.rows[0] - 0.5) * GRID_SIZE;
+    const secondY = (SECOND_BLACK_SUN_GATE.rows[1] - 0.5) * GRID_SIZE;
+    const y = (firstY + secondY) / 2;
+
+    const aura = this.add.circle(0, 0, 30, 0x5c365f, 0.20)
+      .setStrokeStyle(2, 0xa76aa8, 0.62);
+    const outer = this.add.circle(0, 0, 17, 0x17101a, 1)
+      .setStrokeStyle(3, 0x6f4a73, 1);
+    const core = this.add.circle(0, 0, 9, 0x020104, 1)
+      .setStrokeStyle(2, 0xb58bb5, 0.8);
+
+    this.secondBlackSunObject = this.add.container(
+      x,
+      y,
+      [aura, outer, core]
+    ).setDepth(130);
+
+    this.tweens.add({
+      targets: [aura, outer],
+      scaleX: 1.12,
+      scaleY: 1.12,
+      alpha: 0.5,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private checkSecondBlackSunActivation(): void {
+    if (
+      !this.postFragmentRouteActive ||
+      this.secondBlackSunTriggered
+    ) {
+      return;
+    }
+
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const column = Math.floor(this.player.x / GRID_SIZE) + 1;
+    const row = Math.floor(footY / GRID_SIZE) + 1;
+
+    const crossed =
+      column === SECOND_BLACK_SUN_GATE.column &&
+      SECOND_BLACK_SUN_GATE.rows.includes(
+        row as (typeof SECOND_BLACK_SUN_GATE.rows)[number]
+      );
+
+    if (!crossed) return;
+
+    this.secondBlackSunTriggered = true;
+    this.blackSunActivated = true;
+    this.ui.updateStatus(
+      'Otro Sol Negro apaga la luz en el camino de regreso.'
+    );
+    this.activateBlackSunDarkness();
+  }
+
+  private updatePostFragmentThreats(time: number): void {
+    if (!this.postFragmentRouteActive) return;
+
+    // Dos nuevas grietas repartidas por el largo recorrido superior. Son
+    // posiciones del propio componente antes aislado, no atajos añadidos.
+    const cracks = [
+      { column: 60, row: 16 },
+      { column: 5, row: 53 }
+    ] as const;
+
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+
+    for (const crack of cracks) {
+      const key = `${crack.column}:${crack.row}`;
+      if (this.postFragmentScorpionsSpawned.has(key)) continue;
+
+      const x = (crack.column - 0.5) * GRID_SIZE;
+      const y = (crack.row - 0.5) * GRID_SIZE;
+
+      if (
+        Phaser.Math.Distance.Between(this.player.x, footY, x, y) >
+        MAZE_SCORPION_TRIGGER_RADIUS
+      ) {
+        continue;
+      }
+
+      this.postFragmentScorpionsSpawned.add(key);
+      this.spawnMazeScorpion(x, y, time);
+    }
   }
 
   private createBlackSun(): void {
@@ -2325,20 +2533,15 @@ export class MazeScene extends Phaser.Scene {
     this.cameras.main.once(
       Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
       () => {
+        // El fragmento del Desierto completa este mundo. La salida del
+        // laberinto ya no devuelve al Desierto: continúa hacia El Mar Esmeralda.
         if (this.scene.isSleeping('DesertScene')) {
-          const desert = this.scene.get('DesertScene') as unknown as {
-            returnFromMaze?: () => void;
-            cameras: Phaser.Cameras.Scene2D.CameraManager;
-          };
-
-          desert.returnFromMaze?.();
-          this.scene.wake('DesertScene');
-          desert.cameras.main.fadeIn(240, 8, 5, 2);
-          this.scene.stop();
-          return;
+          this.scene.stop('DesertScene');
         }
 
-        this.scene.start('DesertScene', { characterId: this.characterId });
+        this.scene.start('EmeraldSeaScene', {
+          characterId: this.characterId
+        });
       }
     );
   }
