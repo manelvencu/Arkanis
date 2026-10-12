@@ -30,6 +30,7 @@ export interface PlayableUiController {
   updateCarpetOwned: (owned: boolean) => void;
   updateStatus: (text: string) => void;
   ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => void;
+  showOnUiCamera: (object: Phaser.GameObjects.GameObject) => void;
 }
 
 export interface PlayableUiOptions {
@@ -292,6 +293,9 @@ export function createPlayableUi(
     },
     updateCarpetOwned: setCarpetOwned,
     updateStatus: (text: string) => statusText.setText(text),
-    ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => uiCamera.ignore(object)
+    ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => uiCamera.ignore(object),
+    showOnUiCamera: (object: Phaser.GameObjects.GameObject) => {
+      scene.cameras.main.ignore(object);
+    }
   };
 }
