@@ -50,6 +50,7 @@ const BLACK_SUN_SPOTLIGHT_STEP = 3;
 const CARPET_PIT_BLOCK_RADIUS = 46;
 const CARPET_PIT_USE_RADIUS = 58;
 const FALSE_BRANCH_JUNCTION = { column: 68, row: 76 } as const;
+const MOVING_WALL_TRIGGER_RADIUS = 24;
 
 type MazeLandmarkId =
   | 'blackSun'
@@ -351,6 +352,10 @@ export class MazeScene extends Phaser.Scene {
   private carpetPit?: Phaser.GameObjects.Ellipse;
   private carpetOnPit?: Phaser.GameObjects.Rectangle;
   private carpetPitHintShown = false;
+  private movingWallPhase = 0;
+  private movingWallSolved = false;
+  private movingWallObjects = new Map<string, Phaser.GameObjects.Rectangle>();
+  private movingWallBlockedCells = new Set<string>();
 
   constructor() {
     super('MazeScene');
@@ -367,6 +372,10 @@ export class MazeScene extends Phaser.Scene {
     this.carpetPit = undefined;
     this.carpetOnPit = undefined;
     this.carpetPitHintShown = false;
+    this.movingWallPhase = 0;
+    this.movingWallSolved = false;
+    this.movingWallObjects.clear();
+    this.movingWallBlockedCells.clear();
   }
 
   preload(): void {
@@ -389,6 +398,7 @@ export class MazeScene extends Phaser.Scene {
     this.createPlayer();
     this.createBlackSun();
     this.createCarpetPit();
+    this.createMovingWalls();
     this.createPlayerAnimations();
     this.createGridGuide();
 
@@ -471,6 +481,7 @@ export class MazeScene extends Phaser.Scene {
     this.player.setDepth(this.player.y + PLAYER_FOOT_OFFSET_Y);
     this.checkBlackSunActivation();
     this.checkCarpetPitInteraction();
+    this.checkMovingWallTriggers();
     this.updateDarknessMask();
   }
 
@@ -535,6 +546,7 @@ export class MazeScene extends Phaser.Scene {
     const row = Math.floor(footY / GRID_SIZE) + 1;
 
     if (!MAZE_WALKABLE_CELLS.has(`${column}:${row}`)) return false;
+    if (this.movingWallBlockedCells.has(`${column}:${row}`)) return false;
 
     const pit = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
     if (pit && !getVillageProgress().desertCarpetUsedInMaze) {
@@ -624,7 +636,8 @@ export class MazeScene extends Phaser.Scene {
       if (
         landmark.id === 'blackSun' ||
         landmark.id === 'falseBranch' ||
-        landmark.id === 'carpetPit'
+        landmark.id === 'carpetPit' ||
+        landmark.id === 'movingWalls'
       ) continue;
 
       const x = (landmark.column - 0.5) * GRID_SIZE;
@@ -767,6 +780,164 @@ export class MazeScene extends Phaser.Scene {
       .setStrokeStyle(2, 0xf0d483, 0.9)
       .setAngle(-4)
       .setDepth(120);
+  }
+
+  private createMovingWalls(): void {
+    const landmark = MAZE_LANDMARKS.find((item) => item.id === 'movingWalls');
+    if (!landmark) return;
+
+    // Esta zona forma una pequeña cámara de paso:
+    // 1) al entrar, se cierra el acceso anterior y se abre el lateral;
+    // 2) al alcanzar el giro, el lateral se cierra y se abre el paso norte;
+    // 3) al salir de la zona, los muros quedan abiertos para permitir regreso.
+    this.setMovingWallPhase(0, false);
+
+    const x = (landmark.column - 0.5) * GRID_SIZE;
+    const y = (landmark.row - 0.5) * GRID_SIZE;
+
+    this.add.text(x + GRID_SIZE, y - 42, 'MUROS MÓVILES', {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: '#eee8dc',
+      fontStyle: 'bold',
+      backgroundColor: 'rgba(47, 43, 39, 0.84)',
+      padding: { x: 5, y: 3 }
+    })
+      .setOrigin(0.5, 1)
+      .setDepth(128);
+  }
+
+  private movingWallCellsForPhase(): {
+    entry: Array<{ column: number; row: number }>;
+    middle: Array<{ column: number; row: number }>;
+    north: Array<{ column: number; row: number }>;
+  } {
+    return {
+      entry: [
+        { column: 68, row: 56 },
+        { column: 68, row: 57 }
+      ],
+      middle: [
+        { column: 72, row: 56 },
+        { column: 72, row: 57 }
+      ],
+      north: [
+        { column: 72, row: 54 },
+        { column: 73, row: 54 }
+      ]
+    };
+  }
+
+  private setMovingWallPhase(phase: number, animate = true): void {
+    this.movingWallPhase = phase;
+
+    const cells = this.movingWallCellsForPhase();
+    let blocked: Array<{ column: number; row: number }> = [];
+
+    if (!this.movingWallSolved) {
+      if (phase === 0) blocked = [...cells.middle, ...cells.north];
+      else if (phase === 1) blocked = [...cells.entry, ...cells.north];
+      else if (phase === 2) blocked = [...cells.entry, ...cells.middle];
+    }
+
+    const nextKeys = new Set(blocked.map((cell) => `${cell.column}:${cell.row}`));
+
+    for (const [key, wall] of this.movingWallObjects) {
+      if (nextKeys.has(key)) continue;
+
+      if (animate) {
+        this.tweens.add({
+          targets: wall,
+          scaleY: 0.08,
+          alpha: 0,
+          duration: 260,
+          ease: 'Sine.easeIn',
+          onComplete: () => wall.destroy()
+        });
+      } else {
+        wall.destroy();
+      }
+      this.movingWallObjects.delete(key);
+    }
+
+    for (const cell of blocked) {
+      const key = `${cell.column}:${cell.row}`;
+      if (this.movingWallObjects.has(key)) continue;
+
+      const x = (cell.column - 0.5) * GRID_SIZE;
+      const y = (cell.row - 0.5) * GRID_SIZE;
+      const wall = this.add.rectangle(x, y, GRID_SIZE - 2, GRID_SIZE - 2, 0x62564d, 1)
+        .setStrokeStyle(2, 0xb0a08c, 0.9)
+        .setDepth(132);
+
+      wall.setScale(1, animate ? 0.08 : 1);
+      wall.setAlpha(animate ? 0 : 1);
+      this.movingWallObjects.set(key, wall);
+
+      if (animate) {
+        this.tweens.add({
+          targets: wall,
+          scaleY: 1,
+          alpha: 1,
+          duration: 300,
+          ease: 'Sine.easeOut'
+        });
+      }
+    }
+
+    this.movingWallBlockedCells = nextKeys;
+  }
+
+  private checkMovingWallTriggers(): void {
+    if (this.movingWallSolved) return;
+
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+    const near = (column: number, row: number): boolean => {
+      const x = (column - 0.5) * GRID_SIZE;
+      const y = (row - 0.5) * GRID_SIZE;
+      return Phaser.Math.Distance.Between(
+        this.player.x,
+        footY,
+        x,
+        y
+      ) <= MOVING_WALL_TRIGGER_RADIUS;
+    };
+
+    if (
+      this.movingWallPhase === 0 &&
+      (near(70, 56) || near(71, 56) || near(70, 57) || near(71, 57))
+    ) {
+      this.setMovingWallPhase(1);
+      this.cameras.main.shake(180, 0.003);
+      this.ui.updateStatus('Los muros se han movido detrás de ti.');
+      this.time.delayedCall(1500, () => {
+        if (this.scene.isActive()) this.ui.updateStatus('');
+      });
+      return;
+    }
+
+    if (this.movingWallPhase === 1 && near(73, 55)) {
+      this.setMovingWallPhase(2);
+      this.cameras.main.shake(180, 0.003);
+      this.ui.updateStatus('El laberinto vuelve a cambiar.');
+      this.time.delayedCall(1500, () => {
+        if (this.scene.isActive()) this.ui.updateStatus('');
+      });
+      return;
+    }
+
+    if (
+      this.movingWallPhase === 2 &&
+      (near(74, 53) || near(75, 53))
+    ) {
+      this.movingWallSolved = true;
+      this.setMovingWallPhase(3);
+      this.cameras.main.shake(140, 0.002);
+      this.ui.updateStatus('Los muros quedan abiertos.');
+      this.time.delayedCall(1600, () => {
+        if (this.scene.isActive()) this.ui.updateStatus('');
+      });
+    }
   }
 
   private createBlackSun(): void {
