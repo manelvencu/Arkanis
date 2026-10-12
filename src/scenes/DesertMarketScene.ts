@@ -195,15 +195,17 @@ export class DesertMarketScene extends Phaser.Scene {
   ): void {
     this.clearDialog();
 
-    const view = this.cameras.main.worldView;
-    const centerX = view.centerX;
-    const centerY = view.centerY;
-    const boxHeight = choices.length > 1 ? 196 : 162;
+    // Este cuadro no vive en coordenadas del mundo: se dibuja sobre la cámara
+    // fija del HUD, por lo que 960/540 es siempre el centro físico real de
+    // la pantalla de juego 1920x1080, independientemente del zoom o scroll.
+    const centerX = 960;
+    const centerY = 540;
+    const boxHeight = choices.length > 1 ? 392 : 324;
 
     const box = this.add.rectangle(
       centerX,
       centerY,
-      408,
+      816,
       boxHeight,
       0x170d08,
       0.96
@@ -217,30 +219,30 @@ export class DesertMarketScene extends Phaser.Scene {
       message,
       {
         fontFamily: 'Georgia, Times New Roman, serif',
-        fontSize: '17px',
+        fontSize: '34px',
         color: '#fff0c7',
         align: 'center',
-        wordWrap: { width: 360 }
+        wordWrap: { width: 720 }
       }
     )
       .setOrigin(0.5, 0)
       .setDepth(20001);
 
     this.dialogObjects.push(box, text);
-    this.ui.ignoreWorldObject(box);
-    this.ui.ignoreWorldObject(text);
+    this.ui.showOnUiCamera(box);
+    this.ui.showOnUiCamera(text);
 
-    const startY = centerY + 28;
+    const startY = centerY + 56;
 
     choices.forEach((choice, index) => {
       const enabled = choice.enabled !== false;
-      const y = startY + index * 44;
+      const y = startY + index * 88;
 
       const button = this.add.rectangle(
         centerX,
         y,
-        300,
-        34,
+        600,
+        68,
         enabled ? 0x6f3a22 : 0x3a302a,
         enabled ? 0.96 : 0.72
       )
@@ -249,7 +251,7 @@ export class DesertMarketScene extends Phaser.Scene {
 
       const label = this.add.text(centerX, y, choice.label, {
         fontFamily: 'Arial',
-        fontSize: '15px',
+        fontSize: '30px',
         color: enabled ? '#fff1c7' : '#c9bca7',
         fontStyle: enabled ? 'bold' : 'normal'
       })
@@ -264,8 +266,8 @@ export class DesertMarketScene extends Phaser.Scene {
       }
 
       this.dialogObjects.push(button, label);
-      this.ui.ignoreWorldObject(button);
-      this.ui.ignoreWorldObject(label);
+      this.ui.showOnUiCamera(button);
+      this.ui.showOnUiCamera(label);
     });
   }
 
