@@ -65,6 +65,17 @@ function buildHorizontalRanges(ranges: Array<{ c1: number; c2: number; f: number
  * - C63/F12 a C71/F12
  * - C61/F11 a C71/F11
  * - C63/F10 a C71/F10
+ * - C67/F9 a C74/F9
+ * - C67/F8 a C74/F8
+ * - C67/F7 a C74/F7
+ * - C67/F6 a C71/F6
+ * - C72/F12 a C73/F12
+ * - C73/F13 a C76/F13
+ * - C75/F14 a C83/F14
+ * - C77/F15 a C81/F15
+ * - C82/F13 a C83/F13
+ * - C83/F12 a C84/F12
+ * - C84/F11 a C85/F11
  */
 export const DESERT_WALKABLE_CELLS: ReadonlySet<string> = buildHorizontalRanges([
   { c1: 5, c2: 8, f: 12 },
@@ -104,7 +115,18 @@ export const DESERT_WALKABLE_CELLS: ReadonlySet<string> = buildHorizontalRanges(
   { c1: 64, c2: 70, f: 13 },
   { c1: 63, c2: 71, f: 12 },
   { c1: 61, c2: 71, f: 11 },
-  { c1: 63, c2: 71, f: 10 }
+  { c1: 63, c2: 71, f: 10 },
+  { c1: 67, c2: 74, f: 9 },
+  { c1: 67, c2: 74, f: 8 },
+  { c1: 67, c2: 74, f: 7 },
+  { c1: 67, c2: 71, f: 6 },
+  { c1: 72, c2: 73, f: 12 },
+  { c1: 73, c2: 76, f: 13 },
+  { c1: 75, c2: 83, f: 14 },
+  { c1: 77, c2: 81, f: 15 },
+  { c1: 82, c2: 83, f: 13 },
+  { c1: 83, c2: 84, f: 12 },
+  { c1: 84, c2: 85, f: 11 }
 ]);
 
 export function getDesertFootCell(spriteX: number, spriteY: number): DesertGridCell | null {
