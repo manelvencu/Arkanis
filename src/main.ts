@@ -15,6 +15,7 @@ import { FireLandsScene } from './scenes/FireLandsScene';
 import { DesertScene } from './scenes/DesertScene';
 import { TempleScene } from './scenes/TempleScene';
 import { DesertMarketScene } from './scenes/DesertMarketScene';
+import { MazeScene } from './scenes/MazeScene';
 import { DevMenuScene } from './scenes/DevMenuScene';
 import { installTrainingGameOverHook } from './gameOverHook';
 import { installTrainingTerrainRefinement } from './trainingTerrainRefinement';
@@ -93,6 +94,7 @@ const config: Phaser.Types.Core.GameConfig = {
     DesertScene,
     TempleScene,
     DesertMarketScene,
+    MazeScene,
     DevMenuScene,
     GameOverScene
   ]
