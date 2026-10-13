@@ -50,6 +50,10 @@ const BLACK_SUN_DARKNESS_ALPHA = 0.94;
 const BLACK_SUN_SPOTLIGHT_STEP = 3;
 const CARPET_PIT_BLOCK_RADIUS = 46;
 const CARPET_PIT_USE_RADIUS = 58;
+const CARPET_PIT_POSITION = {
+  column: 56,
+  rows: [34, 35]
+} as const;
 const FALSE_BRANCH_JUNCTION = { column: 68, row: 76 } as const;
 const BLACK_SUN_GATE = {
   columns: [48, 49],
@@ -79,8 +83,12 @@ const NORTH_GATE_ROW = 34;
 const RETURN_BRIDGE_COLUMNS = [6, 7] as const;
 const RETURN_BRIDGE_ROWS = [76, 77] as const;
 const SECOND_BLACK_SUN_GATE = {
-  column: 20,
-  rows: [14, 15]
+  column: 71,
+  rows: [24, 25]
+} as const;
+const SECOND_SACRED_BRAZIER_POSITION = {
+  column: 9,
+  row: 24
 } as const;
 
 type MazeLandmarkId =
@@ -368,6 +376,16 @@ function findMazeLandmarkCells(): MazeLandmark[] {
         color: definition.color,
         column: SACRED_BRAZIER_POSITION.column,
         row: SACRED_BRAZIER_POSITION.rows[0]
+      };
+    }
+
+    if (definition.id === 'carpetPit') {
+      return {
+        id: definition.id,
+        label: definition.label,
+        color: definition.color,
+        column: CARPET_PIT_POSITION.column,
+        row: CARPET_PIT_POSITION.rows[0]
       };
     }
 
@@ -704,6 +722,9 @@ export class MazeScene extends Phaser.Scene {
   private postFragmentSouthGate?: Phaser.GameObjects.Rectangle;
   private secondBlackSunObject?: Phaser.GameObjects.Container;
   private secondBlackSunTriggered = false;
+  private secondSacredBrazierLit = false;
+  private secondSacredBrazierFlame?: Phaser.GameObjects.Ellipse;
+  private secondSacredBrazierGlow?: Phaser.GameObjects.Ellipse;
   private postFragmentScorpionsSpawned = new Set<string>();
   private isGameOver = false;
 
@@ -745,6 +766,9 @@ export class MazeScene extends Phaser.Scene {
     this.postFragmentSouthGate = undefined;
     this.secondBlackSunObject = undefined;
     this.secondBlackSunTriggered = false;
+    this.secondSacredBrazierLit = false;
+    this.secondSacredBrazierFlame = undefined;
+    this.secondSacredBrazierGlow = undefined;
     this.postFragmentScorpionsSpawned.clear();
     this.isGameOver = false;
   }
@@ -778,6 +802,7 @@ export class MazeScene extends Phaser.Scene {
     this.createDesertFragment();
     this.createPostFragmentRouteVisuals();
     this.createSecondBlackSun();
+    this.createSecondSacredBrazier();
     this.createLandmarkMarkers();
     this.createPlayer();
     this.createBlackSun();
@@ -876,6 +901,7 @@ export class MazeScene extends Phaser.Scene {
     this.checkFinalGateUnlock();
     this.checkDesertFragmentInteraction();
     this.checkSecondBlackSunActivation();
+    this.checkSecondSacredBrazier();
     this.updatePostFragmentThreats(time);
     this.updateDarknessMask();
   }
@@ -977,8 +1003,12 @@ export class MazeScene extends Phaser.Scene {
 
     const pit = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
     if (pit && !getVillageProgress().desertCarpetUsedInMaze) {
-      const pitX = (pit.column - 0.5) * GRID_SIZE;
-      const pitY = (pit.row - 0.5) * GRID_SIZE;
+      const pitX = (CARPET_PIT_POSITION.column - 0.5) * GRID_SIZE;
+      const pitFirstY =
+        (CARPET_PIT_POSITION.rows[0] - 0.5) * GRID_SIZE;
+      const pitSecondY =
+        (CARPET_PIT_POSITION.rows[1] - 0.5) * GRID_SIZE;
+      const pitY = (pitFirstY + pitSecondY) / 2;
 
       if (
         Phaser.Math.Distance.Between(footX, footY, pitX, pitY) <
@@ -1095,8 +1125,12 @@ export class MazeScene extends Phaser.Scene {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
     if (!landmark) return;
 
-    const x = (landmark.column - 0.5) * GRID_SIZE;
-    const y = (landmark.row - 0.5) * GRID_SIZE;
+    const x = (CARPET_PIT_POSITION.column - 0.5) * GRID_SIZE;
+    const firstRowCenter =
+      (CARPET_PIT_POSITION.rows[0] - 0.5) * GRID_SIZE;
+    const secondRowCenter =
+      (CARPET_PIT_POSITION.rows[1] - 0.5) * GRID_SIZE;
+    const y = (firstRowCenter + secondRowCenter) / 2;
 
     if (getVillageProgress().desertCarpetUsedInMaze) {
       this.placeCarpetOverPit(x, y);
@@ -1130,8 +1164,12 @@ export class MazeScene extends Phaser.Scene {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
     if (!landmark || getVillageProgress().desertCarpetUsedInMaze) return;
 
-    const x = (landmark.column - 0.5) * GRID_SIZE;
-    const y = (landmark.row - 0.5) * GRID_SIZE;
+    const x = (CARPET_PIT_POSITION.column - 0.5) * GRID_SIZE;
+    const firstRowCenter =
+      (CARPET_PIT_POSITION.rows[0] - 0.5) * GRID_SIZE;
+    const secondRowCenter =
+      (CARPET_PIT_POSITION.rows[1] - 0.5) * GRID_SIZE;
+    const y = (firstRowCenter + secondRowCenter) / 2;
     const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
     const distance = Phaser.Math.Distance.Between(this.player.x, footY, x, y);
 
@@ -2101,6 +2139,134 @@ export class MazeScene extends Phaser.Scene {
     )
       .setStrokeStyle(3, 0x8f755e, 0.95)
       .setDepth(132);
+  }
+
+  private createSecondSacredBrazier(): void {
+    const x = (SECOND_SACRED_BRAZIER_POSITION.column - 0.5) * GRID_SIZE;
+    const y = (SECOND_SACRED_BRAZIER_POSITION.row - 0.5) * GRID_SIZE;
+
+    this.add.ellipse(x, y + 11, 42, 15, 0x2b211b, 0.75)
+      .setDepth(123);
+
+    this.add.rectangle(x, y + 4, 34, 20, 0x5d4638, 1)
+      .setStrokeStyle(3, 0xa98965, 0.95)
+      .setDepth(124);
+
+    this.add.ellipse(x, y - 5, 38, 16, 0x33251d, 1)
+      .setStrokeStyle(3, 0xb69368, 0.95)
+      .setDepth(125);
+
+    this.secondSacredBrazierGlow = this.add.ellipse(
+      x,
+      y - 18,
+      42,
+      42,
+      0xe2752f,
+      0.10
+    ).setDepth(126);
+
+    this.secondSacredBrazierFlame = this.add.ellipse(
+      x,
+      y - 17,
+      13,
+      25,
+      0xe2752f,
+      0.32
+    )
+      .setStrokeStyle(2, 0xffc65f, 0.35)
+      .setDepth(127);
+
+    this.add.text(x, y - 38, 'BRASERO SAGRADO', {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: '#ffe4b8',
+      fontStyle: 'bold',
+      backgroundColor: 'rgba(44, 25, 14, 0.84)',
+      padding: { x: 5, y: 3 }
+    })
+      .setOrigin(0.5, 1)
+      .setDepth(128);
+
+    this.tweens.add({
+      targets: [
+        this.secondSacredBrazierFlame,
+        this.secondSacredBrazierGlow
+      ],
+      scaleX: 1.08,
+      scaleY: 1.15,
+      alpha: '+=0.08',
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private checkSecondSacredBrazier(): void {
+    if (
+      !this.postFragmentRouteActive ||
+      !this.secondBlackSunTriggered ||
+      this.secondSacredBrazierLit ||
+      !this.blackSunActivated
+    ) {
+      return;
+    }
+
+    const x = (SECOND_SACRED_BRAZIER_POSITION.column - 0.5) * GRID_SIZE;
+    const y = (SECOND_SACRED_BRAZIER_POSITION.row - 0.5) * GRID_SIZE;
+    const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
+
+    if (
+      Phaser.Math.Distance.Between(this.player.x, footY, x, y) >
+      SACRED_BRAZIER_TRIGGER_RADIUS
+    ) {
+      return;
+    }
+
+    this.secondSacredBrazierLit = true;
+    this.blackSunActivated = false;
+
+    if (this.secondSacredBrazierFlame && this.secondSacredBrazierGlow) {
+      this.tweens.killTweensOf([
+        this.secondSacredBrazierFlame,
+        this.secondSacredBrazierGlow
+      ]);
+
+      this.secondSacredBrazierFlame
+        .setFillStyle(0xff8a2a, 1)
+        .setStrokeStyle(3, 0xffe27a, 1)
+        .setScale(1.15, 1.35);
+
+      this.secondSacredBrazierGlow
+        .setFillStyle(0xffb13b, 0.28)
+        .setScale(1.45);
+    }
+
+    this.ui.updateStatus(
+      'El segundo Brasero Sagrado ha devuelto la luz al laberinto.'
+    );
+    this.cameras.main.flash(380, 255, 205, 110, false);
+
+    if (this.darknessOverlay) {
+      const overlay = this.darknessOverlay;
+      this.tweens.killTweensOf(overlay);
+      this.tweens.add({
+        targets: overlay,
+        alpha: 0,
+        duration: 1100,
+        ease: 'Sine.easeOut',
+        onComplete: () => {
+          overlay.destroy();
+          if (this.darknessOverlay === overlay) {
+            this.darknessOverlay = undefined;
+          }
+        }
+      });
+    }
+
+    this.time.delayedCall(2600, () => {
+      if (this.scene.isActive()) this.ui.updateStatus('');
+    });
   }
 
   private createSecondBlackSun(): void {
