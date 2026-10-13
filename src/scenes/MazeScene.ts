@@ -52,8 +52,12 @@ const CARPET_PIT_BLOCK_RADIUS = 46;
 const CARPET_PIT_USE_RADIUS = 58;
 const FALSE_BRANCH_JUNCTION = { column: 68, row: 76 } as const;
 const BLACK_SUN_GATE = {
-  column: 53,
-  rows: [68, 69]
+  columns: [48, 49],
+  rows: [67, 68]
+} as const;
+const SACRED_BRAZIER_POSITION = {
+  column: 32,
+  rows: [60, 61]
 } as const;
 const MOVING_WALL_TRIGGER_RADIUS = 26;
 const SACRED_BRAZIER_TRIGGER_RADIUS = 34;
@@ -352,8 +356,18 @@ function findMazeLandmarkCells(): MazeLandmark[] {
         id: definition.id,
         label: definition.label,
         color: definition.color,
-        column: BLACK_SUN_GATE.column,
+        column: BLACK_SUN_GATE.columns[0],
         row: BLACK_SUN_GATE.rows[0]
+      };
+    }
+
+    if (definition.id === 'sacredBrazier') {
+      return {
+        id: definition.id,
+        label: definition.label,
+        color: definition.color,
+        column: SACRED_BRAZIER_POSITION.column,
+        row: SACRED_BRAZIER_POSITION.rows[0]
       };
     }
 
@@ -1349,8 +1363,12 @@ export class MazeScene extends Phaser.Scene {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'sacredBrazier');
     if (!landmark) return;
 
-    const x = (landmark.column - 0.5) * GRID_SIZE;
-    const y = (landmark.row - 0.5) * GRID_SIZE;
+    const x = (SACRED_BRAZIER_POSITION.column - 0.5) * GRID_SIZE;
+    const firstRowCenter =
+      (SACRED_BRAZIER_POSITION.rows[0] - 0.5) * GRID_SIZE;
+    const secondRowCenter =
+      (SACRED_BRAZIER_POSITION.rows[1] - 0.5) * GRID_SIZE;
+    const y = (firstRowCenter + secondRowCenter) / 2;
 
     this.add.ellipse(x, y + 11, 42, 15, 0x2b211b, 0.75)
       .setDepth(123);
@@ -1399,8 +1417,12 @@ export class MazeScene extends Phaser.Scene {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'sacredBrazier');
     if (!landmark) return;
 
-    const x = (landmark.column - 0.5) * GRID_SIZE;
-    const y = (landmark.row - 0.5) * GRID_SIZE;
+    const x = (SACRED_BRAZIER_POSITION.column - 0.5) * GRID_SIZE;
+    const firstRowCenter =
+      (SACRED_BRAZIER_POSITION.rows[0] - 0.5) * GRID_SIZE;
+    const secondRowCenter =
+      (SACRED_BRAZIER_POSITION.rows[1] - 0.5) * GRID_SIZE;
+    const y = (firstRowCenter + secondRowCenter) / 2;
     const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
 
     if (
@@ -1865,11 +1887,8 @@ export class MazeScene extends Phaser.Scene {
   private checkFinalGateUnlock(): void {
     if (this.finalGateOpen) return;
 
-    const progress = getVillageProgress();
     const mandatoryMilestonesComplete =
       this.blackSunTriggeredEver &&
-      progress.desertCarpetUsedInMaze &&
-      this.movingWallSolved &&
       this.sacredBrazierLit;
 
     if (!mandatoryMilestonesComplete) return;
@@ -2178,7 +2197,11 @@ export class MazeScene extends Phaser.Scene {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'blackSun');
     if (!landmark) return;
 
-    const x = (BLACK_SUN_GATE.column - 0.5) * GRID_SIZE;
+    const firstColumnCenter =
+      (BLACK_SUN_GATE.columns[0] - 0.5) * GRID_SIZE;
+    const secondColumnCenter =
+      (BLACK_SUN_GATE.columns[1] - 0.5) * GRID_SIZE;
+    const x = (firstColumnCenter + secondColumnCenter) / 2;
     const firstRowCenter = (BLACK_SUN_GATE.rows[0] - 0.5) * GRID_SIZE;
     const secondRowCenter = (BLACK_SUN_GATE.rows[1] - 0.5) * GRID_SIZE;
     const y = (firstRowCenter + secondRowCenter) / 2;
@@ -2239,7 +2262,9 @@ export class MazeScene extends Phaser.Scene {
     // en este punto. No se puede continuar por esta ruta sin atravesar una de
     // las dos celdas y, por tanto, sin activar la oscuridad.
     const crossedBlackSunGate =
-      column === BLACK_SUN_GATE.column &&
+      BLACK_SUN_GATE.columns.includes(
+        column as (typeof BLACK_SUN_GATE.columns)[number]
+      ) &&
       BLACK_SUN_GATE.rows.includes(
         row as (typeof BLACK_SUN_GATE.rows)[number]
       );
