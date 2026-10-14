@@ -709,7 +709,7 @@ export class MazeScene extends Phaser.Scene {
   private sacredBrazierGlow?: Phaser.GameObjects.Ellipse;
   private scorpions: Phaser.Physics.Arcade.Sprite[] = [];
   private activatedScorpionCracks = new Set<string>();
-  private statueProjectiles: Phaser.GameObjects.Arc[] = [];
+  private statueProjectiles: Phaser.GameObjects.Image[] = [];
   private nextStatueShotAt = 0;
   private statueShotIndex = 0;
   private blackSunTriggeredEver = false;
@@ -805,6 +805,11 @@ export class MazeScene extends Phaser.Scene {
     this.load.image(
       'maze-black-sun',
       './assets/world/desert/desert-temple/objects/black-sun.png'
+    );
+
+    this.load.image(
+      'maze-fireball',
+      './assets/world/desert/desert-temple/objects/fireball.png'
     );
 
     this.load.image(
@@ -1889,14 +1894,8 @@ export class MazeScene extends Phaser.Scene {
       (row - 0.5) * GRID_SIZE +
       directionY * (GRID_SIZE * 0.58);
 
-    const projectile = this.add.circle(
-      x,
-      y,
-      7,
-      0xd99b48,
-      1
-    )
-      .setStrokeStyle(2, 0xffdfa0, 1)
+    const projectile = this.add.image(x, y, 'maze-fireball')
+      .setDisplaySize(18, 18)
       .setDepth(135)
       .setData('bornAt', time)
       .setData('directionX', directionX)
@@ -1906,8 +1905,8 @@ export class MazeScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: projectile,
-      scaleX: 1.28,
-      scaleY: 1.28,
+      scaleX: projectile.scaleX * 1.08,
+      scaleY: projectile.scaleY * 1.08,
       duration: 110,
       yoyo: true,
       repeat: -1
