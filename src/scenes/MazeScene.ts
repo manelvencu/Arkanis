@@ -858,7 +858,6 @@ export class MazeScene extends Phaser.Scene {
     this.createScorpionCracks();
     this.createStatueCorridor();
     this.createPlayerAnimations();
-    this.createGridGuide();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
 
@@ -1015,8 +1014,9 @@ export class MazeScene extends Phaser.Scene {
     if (!MAZE_WALKABLE_CELLS.has(`${column}:${row}`)) return false;
     if (this.movingWallBlockedCells.has(`${column}:${row}`)) return false;
 
-    // Pedestal del Altar Solar: cuatro celdas físicas no transitables.
-    if ((column === 40 || column === 41) && (row === 41 || row === 42)) {
+    // Solo la fila superior de la base del altar impide el paso.
+    // C40F42 y C41F42 quedan transitables para recoger el fragmento.
+    if ((column === 40 || column === 41) && row === 41) {
       return false;
     }
 
@@ -1930,14 +1930,11 @@ export class MazeScene extends Phaser.Scene {
     if (!this.fragmentObject || getVillageProgress().desertFragmentObtained) return;
 
     const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
-    const distance = Phaser.Math.Distance.Between(
-      this.player.x,
-      footY,
-      this.fragmentObject.x,
-      this.fragmentObject.y
-    );
+    const column = Math.floor(this.player.x / GRID_SIZE) + 1;
+    const row = Math.floor(footY / GRID_SIZE) + 1;
+    const onCollectibleTile = row === 42 && (column === 40 || column === 41);
 
-    if (distance > FRAGMENT_INTERACTION_RADIUS) {
+    if (!onCollectibleTile) {
       if (this.fragmentHintShown) {
         this.fragmentHintShown = false;
         this.ui.updateStatus('');
