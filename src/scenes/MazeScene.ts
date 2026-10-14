@@ -705,8 +705,6 @@ export class MazeScene extends Phaser.Scene {
   private movingWallObjects = new Map<string, Phaser.GameObjects.Image>();
   private movingWallBlockedCells = new Set<string>();
   private sacredBrazierLit = false;
-  private sacredBrazierFlame?: Phaser.GameObjects.Ellipse;
-  private sacredBrazierGlow?: Phaser.GameObjects.Ellipse;
   private scorpions: Phaser.Physics.Arcade.Sprite[] = [];
   private activatedScorpionCracks = new Set<string>();
   private statueProjectiles: Phaser.GameObjects.Image[] = [];
@@ -723,8 +721,6 @@ export class MazeScene extends Phaser.Scene {
   private secondBlackSunObject?: Phaser.GameObjects.Container;
   private secondBlackSunTriggered = false;
   private secondSacredBrazierLit = false;
-  private secondSacredBrazierFlame?: Phaser.GameObjects.Ellipse;
-  private secondSacredBrazierGlow?: Phaser.GameObjects.Ellipse;
   private postFragmentScorpionsSpawned = new Set<string>();
   private isGameOver = false;
 
@@ -1449,13 +1445,6 @@ export class MazeScene extends Phaser.Scene {
       .setDisplaySize(GRID_SIZE, GRID_SIZE)
       .setDepth(125);
 
-    this.sacredBrazierGlow = this.add.ellipse(x, y - 8, 28, 28, 0xe2752f, 0.06)
-      .setDepth(126);
-
-    this.sacredBrazierFlame = this.add.ellipse(x, y - 8, 7, 12, 0xe2752f, 0.10)
-      .setStrokeStyle(1, 0xffc65f, 0.10)
-      .setDepth(127);
-
     this.add.text(x, y - 38, 'BRASERO SAGRADO', {
       fontFamily: 'Arial',
       fontSize: '11px',
@@ -1467,16 +1456,6 @@ export class MazeScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(128);
 
-    this.tweens.add({
-      targets: [this.sacredBrazierFlame, this.sacredBrazierGlow],
-      scaleX: 1.08,
-      scaleY: 1.15,
-      alpha: '+=0.08',
-      duration: 700,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
   }
 
   private checkSacredBrazier(): void {
@@ -1502,32 +1481,6 @@ export class MazeScene extends Phaser.Scene {
 
     this.sacredBrazierLit = true;
     this.blackSunActivated = false;
-
-    if (this.sacredBrazierFlame && this.sacredBrazierGlow) {
-      this.tweens.killTweensOf([
-        this.sacredBrazierFlame,
-        this.sacredBrazierGlow
-      ]);
-
-      this.sacredBrazierFlame
-        .setFillStyle(0xff8a2a, 1)
-        .setStrokeStyle(3, 0xffe27a, 1)
-        .setScale(1.15, 1.35);
-
-      this.sacredBrazierGlow
-        .setFillStyle(0xffb13b, 0.28)
-        .setScale(1.45);
-
-      this.tweens.add({
-        targets: [this.sacredBrazierFlame, this.sacredBrazierGlow],
-        scaleX: '+=0.08',
-        scaleY: '+=0.12',
-        duration: 520,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-    }
 
     this.ui.updateStatus('El Brasero Sagrado ha devuelto la luz al laberinto.');
     this.cameras.main.flash(380, 255, 205, 110, false);
@@ -2170,13 +2123,6 @@ export class MazeScene extends Phaser.Scene {
       .setDisplaySize(GRID_SIZE, GRID_SIZE)
       .setDepth(125);
 
-    this.secondSacredBrazierGlow = this.add.ellipse(x, y - 8, 28, 28, 0xe2752f, 0.06)
-      .setDepth(126);
-
-    this.secondSacredBrazierFlame = this.add.ellipse(x, y - 8, 7, 12, 0xe2752f, 0.10)
-      .setStrokeStyle(1, 0xffc65f, 0.10)
-      .setDepth(127);
-
     this.add.text(x, y - 38, 'BRASERO SAGRADO', {
       fontFamily: 'Arial',
       fontSize: '11px',
@@ -2188,19 +2134,6 @@ export class MazeScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(128);
 
-    this.tweens.add({
-      targets: [
-        this.secondSacredBrazierFlame,
-        this.secondSacredBrazierGlow
-      ],
-      scaleX: 1.08,
-      scaleY: 1.15,
-      alpha: '+=0.08',
-      duration: 700,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
   }
 
   private checkSecondSacredBrazier(): void {
@@ -2226,22 +2159,6 @@ export class MazeScene extends Phaser.Scene {
 
     this.secondSacredBrazierLit = true;
     this.blackSunActivated = false;
-
-    if (this.secondSacredBrazierFlame && this.secondSacredBrazierGlow) {
-      this.tweens.killTweensOf([
-        this.secondSacredBrazierFlame,
-        this.secondSacredBrazierGlow
-      ]);
-
-      this.secondSacredBrazierFlame
-        .setFillStyle(0xff8a2a, 1)
-        .setStrokeStyle(3, 0xffe27a, 1)
-        .setScale(1.15, 1.35);
-
-      this.secondSacredBrazierGlow
-        .setFillStyle(0xffb13b, 0.28)
-        .setScale(1.45);
-    }
 
     this.ui.updateStatus(
       'El segundo Brasero Sagrado ha devuelto la luz al laberinto.'
