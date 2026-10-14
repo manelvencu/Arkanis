@@ -1250,19 +1250,7 @@ export class MazeScene extends Phaser.Scene {
     // 3) al salir de la zona, los muros quedan abiertos para permitir regreso.
     this.setMovingWallPhase(0, false);
 
-    const x = (landmark.column - 0.5) * GRID_SIZE;
-    const y = (landmark.row - 0.5) * GRID_SIZE;
 
-    this.add.text(x + GRID_SIZE, y - 42, 'MUROS MÓVILES', {
-      fontFamily: 'Arial',
-      fontSize: '11px',
-      color: '#eee8dc',
-      fontStyle: 'bold',
-      backgroundColor: 'rgba(47, 43, 39, 0.84)',
-      padding: { x: 5, y: 3 }
-    })
-      .setOrigin(0.5, 1)
-      .setDepth(128);
   }
 
   private movingWallCellsForPhase(): {
