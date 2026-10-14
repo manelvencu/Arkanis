@@ -51,7 +51,7 @@ const BLACK_SUN_SPOTLIGHT_STEP = 3;
 const CARPET_PIT_BLOCK_RADIUS = 46;
 const CARPET_PIT_USE_RADIUS = 58;
 const CARPET_PIT_POSITION = {
-  columns: [57, 58],
+  columns: [56, 57],
   rows: [34, 35]
 } as const;
 const FALSE_BRANCH_JUNCTION = { column: 68, row: 76 } as const;
@@ -2001,22 +2001,6 @@ export class MazeScene extends Phaser.Scene {
     this.northGateBlocks = undefined;
     this.createClosedSouthGate();
     this.createPostFragmentScorpionCracks();
-
-    const northX =
-      ((NORTH_GATE_COLUMNS[0] + NORTH_GATE_COLUMNS[3]) / 2 - 0.5) * GRID_SIZE;
-    const northY = (NORTH_GATE_ROW - 0.5) * GRID_SIZE;
-
-    this.cameras.main.shake(320, 0.005);
-    this.add.rectangle(
-      northX,
-      northY,
-      GRID_SIZE * NORTH_GATE_COLUMNS.length,
-      GRID_SIZE,
-      0xe8c879,
-      0.18
-    )
-      .setStrokeStyle(2, 0xffe8a8, 0.55)
-      .setDepth(118);
 
     this.time.delayedCall(1100, () => {
       if (this.scene.isActive()) {
