@@ -26,8 +26,42 @@ export class DesertJewelRevealScene extends Phaser.Scene {
     const assembledFit = Math.min(width / assembled.width, height / assembled.height);
     assembled.setScale(assembledFit).setAlpha(0);
 
-    // Primera etapa: aparece el fragmento desde un punto y crece hasta
-    // ocupar el área visible sin distorsionar su proporción.
+    // El PNG del trozo tiene transparencia asimétrica: el dibujo real está
+    // en x430..838, y371..741 de un lienzo de 846x800. Corregimos su
+    // desplazamiento para encajarlo en el hueco inferior derecho de la joya.
+    const shardArtOffsetX = (430 + 838) / 2 - shard.width / 2;
+    const shardArtOffsetY = (371 + 741) / 2 - shard.height / 2;
+    const targetX = width / 2 + (824 - assembled.width / 2) * assembledFit;
+    const targetY = height / 2 + (978 - assembled.height / 2) * assembledFit;
+    const finalScale = assembledFit * 0.98;
+    const finalImageX = targetX - shardArtOffsetX * finalScale;
+    const finalImageY = targetY - shardArtOffsetY * finalScale;
+
+    // Humo dorado semitransparente, sin assets adicionales ni flashes opacos.
+    const raiseDust = () => {
+      for (let index = 0; index < 22; index += 1) {
+        const angle = (index / 22) * Math.PI * 2;
+        const radius = 24 + (index % 5) * 15;
+        const dust = this.add.circle(
+          targetX + Math.cos(angle) * radius,
+          targetY + Math.sin(angle) * radius,
+          18 + (index % 4) * 12,
+          index % 3 === 0 ? 0xf2ce79 : 0xb79b65,
+          0.0
+        ).setDepth(10);
+        this.tweens.add({
+          targets: dust,
+          x: dust.x + Math.cos(angle) * (70 + index % 4 * 20),
+          y: dust.y - 55 - index % 5 * 13,
+          scale: 1.65,
+          alpha: { from: 0.25, to: 0 },
+          duration: 1200 + index % 4 * 110,
+          ease: 'Sine.easeOut',
+          onComplete: () => dust.destroy()
+        });
+      }
+    };
+
     this.tweens.add({
       targets: shard,
       scaleX: shardFit,
@@ -36,29 +70,36 @@ export class DesertJewelRevealScene extends Phaser.Scene {
       duration: 1800,
       ease: 'Cubic.easeOut',
       onComplete: () => {
-        this.time.delayedCall(450, () => {
-          // La pieza del desierto corresponde al sector inferior derecho
-          // (posición 4 en sentido horario). La joya final se revela mientras
-          // el fragmento viaja a ese sector y se funde suavemente con ella.
-          this.tweens.add({
-            targets: assembled,
-            alpha: 1,
-            duration: 1250,
-            ease: 'Sine.easeInOut'
-          });
+        this.time.delayedCall(400, () => {
+          raiseDust();
+          // El humo oculta el punto de unión mientras el trozo converge
+          // en tamaño y posición con el sector 4 de la joya completa.
           this.tweens.add({
             targets: shard,
-            x: width * 0.66,
-            y: height * 0.66,
-            scaleX: shardFit * 0.22,
-            scaleY: shardFit * 0.22,
-            alpha: 0,
-            duration: 1250,
-            ease: 'Cubic.easeInOut',
-            onComplete: () => {
-              shard.destroy();
-              this.readyToContinue = true;
-            }
+            x: finalImageX,
+            y: finalImageY,
+            scaleX: finalScale,
+            scaleY: finalScale,
+            duration: 1350,
+            ease: 'Cubic.easeInOut'
+          });
+          this.time.delayedCall(460, () => {
+            this.tweens.add({
+              targets: assembled,
+              alpha: 1,
+              duration: 1050,
+              ease: 'Sine.easeInOut'
+            });
+            this.tweens.add({
+              targets: shard,
+              alpha: 0,
+              duration: 1050,
+              ease: 'Sine.easeInOut',
+              onComplete: () => {
+                shard.destroy();
+                this.readyToContinue = true;
+              }
+            });
           });
         });
       }
