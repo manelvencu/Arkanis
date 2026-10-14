@@ -717,7 +717,7 @@ export class MazeScene extends Phaser.Scene {
   private fragmentObject?: Phaser.GameObjects.Container;
   private fragmentHintShown = false;
   private postFragmentRouteActive = false;
-  private postFragmentSouthGate?: Phaser.GameObjects.Rectangle;
+  private postFragmentSouthGate?: Phaser.GameObjects.Container;
   private secondBlackSunObject?: Phaser.GameObjects.Container;
   private secondBlackSunTriggered = false;
   private secondSacredBrazierLit = false;
@@ -834,7 +834,6 @@ export class MazeScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#6e4a2b');
 
     this.createFloorAndWalls();
-    this.createCenterChamberMarker();
     this.createFinalGate();
     this.createDesertFragment();
     this.createPostFragmentRouteVisuals();
@@ -1445,16 +1444,6 @@ export class MazeScene extends Phaser.Scene {
       .setDisplaySize(GRID_SIZE, GRID_SIZE)
       .setDepth(125);
 
-    this.add.text(x, y - 38, 'BRASERO SAGRADO', {
-      fontFamily: 'Arial',
-      fontSize: '11px',
-      color: '#ffe4b8',
-      fontStyle: 'bold',
-      backgroundColor: 'rgba(44, 25, 14, 0.84)',
-      padding: { x: 5, y: 3 }
-    })
-      .setOrigin(0.5, 1)
-      .setDepth(128);
 
   }
 
@@ -1946,8 +1935,6 @@ export class MazeScene extends Phaser.Scene {
   }
 
   private createDesertFragment(): void {
-    if (getVillageProgress().desertFragmentObtained) return;
-
     const centerX =
       ((CENTER_ROOM.left + CENTER_ROOM.right) / 2 - 0.5) * GRID_SIZE;
     const centerY =
@@ -2002,29 +1989,11 @@ export class MazeScene extends Phaser.Scene {
     if (!obtainDesertFragment()) return;
 
     this.fragmentHintShown = false;
-    const fragment = this.fragmentObject;
-    this.fragmentObject = undefined;
-
+    // El altar permanece donde está: la recompensa solo se entrega una vez.
     this.activatePostFragmentRoute();
-
-    this.ui.updateStatus(
-      'Has recuperado el fragmento. El acceso sur se ha cerrado: busca la nueva salida al norte.'
-    );
-    this.cameras.main.flash(420, 255, 226, 120, false);
-
-    this.tweens.add({
-      targets: fragment,
-      scaleX: 1.7,
-      scaleY: 1.7,
-      alpha: 0,
-      duration: 420,
-      ease: 'Sine.easeOut',
-      onComplete: () => fragment.destroy()
-    });
-
-    this.time.delayedCall(3200, () => {
-      if (this.scene.isActive()) this.ui.updateStatus('');
-    });
+    this.ui.updateStatus('');
+    this.scene.launch('DesertJewelRevealScene');
+    this.scene.pause();
   }
 
   private createPostFragmentRouteVisuals(): void {
@@ -2075,15 +2044,18 @@ export class MazeScene extends Phaser.Scene {
       ((FINAL_GATE_COLUMNS[0] + FINAL_GATE_COLUMNS[3]) / 2 - 0.5) * GRID_SIZE;
     const gateY = (FINAL_GATE_ROW - 0.5) * GRID_SIZE;
 
-    this.postFragmentSouthGate = this.add.rectangle(
-      gateX,
-      gateY,
-      GRID_SIZE * FINAL_GATE_COLUMNS.length,
-      GRID_SIZE,
-      0x3b2a24,
-      0.98
-    )
-      .setStrokeStyle(3, 0x8f755e, 0.95)
+    // El cierre utiliza exactamente la textura de los muros móviles.
+    const blocks: Phaser.GameObjects.Image[] = [];
+    for (let index = 0; index < FINAL_GATE_COLUMNS.length; index += 1) {
+      blocks.push(
+        this.add.image(
+          (FINAL_GATE_COLUMNS[index] - 0.5) * GRID_SIZE - gateX,
+          0,
+          'maze-moving-stone-block'
+        ).setDisplaySize(GRID_SIZE, GRID_SIZE)
+      );
+    }
+    this.postFragmentSouthGate = this.add.container(gateX, gateY, blocks)
       .setDepth(132);
   }
 
@@ -2095,16 +2067,6 @@ export class MazeScene extends Phaser.Scene {
       .setDisplaySize(GRID_SIZE, GRID_SIZE)
       .setDepth(125);
 
-    this.add.text(x, y - 38, 'BRASERO SAGRADO', {
-      fontFamily: 'Arial',
-      fontSize: '11px',
-      color: '#ffe4b8',
-      fontStyle: 'bold',
-      backgroundColor: 'rgba(44, 25, 14, 0.84)',
-      padding: { x: 5, y: 3 }
-    })
-      .setOrigin(0.5, 1)
-      .setDepth(128);
 
   }
 
@@ -2470,27 +2432,6 @@ export class MazeScene extends Phaser.Scene {
         );
       }
     }
-  }
-
-  private createCenterChamberMarker(): void {
-    const centerX = ((CENTER_ROOM.left + CENTER_ROOM.right) / 2 - 0.5) * GRID_SIZE;
-    const centerY = ((CENTER_ROOM.top + CENTER_ROOM.bottom) / 2 - 0.5) * GRID_SIZE;
-
-    this.add.circle(centerX, centerY, 52, 0xd9b94e, 0.22)
-      .setStrokeStyle(4, 0xffe89a, 0.8)
-      .setDepth(20);
-
-    this.add.text(centerX, centerY - 2, 'FRAGMENTO\nCENTRAL', {
-      fontFamily: 'Arial',
-      fontSize: '18px',
-      color: '#fff1b4',
-      fontStyle: 'bold',
-      align: 'center',
-      stroke: '#4a2b18',
-      strokeThickness: 4
-    })
-      .setOrigin(0.5)
-      .setDepth(21);
   }
 
   private createGridGuide(): void {
