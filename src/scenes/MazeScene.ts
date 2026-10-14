@@ -799,6 +799,11 @@ export class MazeScene extends Phaser.Scene {
       './assets/world/desert/desert-temple/objects/black-sun.png'
     );
 
+    this.load.image(
+      'maze-sacred-brazier',
+      './assets/world/desert/desert-temple/objects/brasero-sagrado.png'
+    );
+
     const assets = CHARACTER_ASSETS[this.characterId === 'lupe' ? 'lupe' : 'tiana'];
     Object.entries(assets).forEach(([key, path]) => {
       this.load.image(`maze-player-${key}`, path);
@@ -1427,22 +1432,15 @@ export class MazeScene extends Phaser.Scene {
       (SACRED_BRAZIER_POSITION.rows[1] - 0.5) * GRID_SIZE;
     const y = (firstRowCenter + secondRowCenter) / 2;
 
-    this.add.ellipse(x, y + 11, 42, 15, 0x2b211b, 0.75)
-      .setDepth(123);
-
-    this.add.rectangle(x, y + 4, 34, 20, 0x5d4638, 1)
-      .setStrokeStyle(3, 0xa98965, 0.95)
-      .setDepth(124);
-
-    this.add.ellipse(x, y - 5, 38, 16, 0x33251d, 1)
-      .setStrokeStyle(3, 0xb69368, 0.95)
+    this.add.image(x, y, 'maze-sacred-brazier')
+      .setDisplaySize(GRID_SIZE, GRID_SIZE)
       .setDepth(125);
 
-    this.sacredBrazierGlow = this.add.ellipse(x, y - 18, 42, 42, 0xe2752f, 0.10)
+    this.sacredBrazierGlow = this.add.ellipse(x, y - 8, 28, 28, 0xe2752f, 0.06)
       .setDepth(126);
 
-    this.sacredBrazierFlame = this.add.ellipse(x, y - 17, 13, 25, 0xe2752f, 0.32)
-      .setStrokeStyle(2, 0xffc65f, 0.35)
+    this.sacredBrazierFlame = this.add.ellipse(x, y - 8, 7, 12, 0xe2752f, 0.10)
+      .setStrokeStyle(1, 0xffc65f, 0.10)
       .setDepth(127);
 
     this.add.text(x, y - 38, 'BRASERO SAGRADO', {
@@ -2164,35 +2162,15 @@ export class MazeScene extends Phaser.Scene {
     const x = (SECOND_SACRED_BRAZIER_POSITION.column - 0.5) * GRID_SIZE;
     const y = (SECOND_SACRED_BRAZIER_POSITION.row - 0.5) * GRID_SIZE;
 
-    this.add.ellipse(x, y + 11, 42, 15, 0x2b211b, 0.75)
-      .setDepth(123);
-
-    this.add.rectangle(x, y + 4, 34, 20, 0x5d4638, 1)
-      .setStrokeStyle(3, 0xa98965, 0.95)
-      .setDepth(124);
-
-    this.add.ellipse(x, y - 5, 38, 16, 0x33251d, 1)
-      .setStrokeStyle(3, 0xb69368, 0.95)
+    this.add.image(x, y, 'maze-sacred-brazier')
+      .setDisplaySize(GRID_SIZE, GRID_SIZE)
       .setDepth(125);
 
-    this.secondSacredBrazierGlow = this.add.ellipse(
-      x,
-      y - 18,
-      42,
-      42,
-      0xe2752f,
-      0.10
-    ).setDepth(126);
+    this.secondSacredBrazierGlow = this.add.ellipse(x, y - 8, 28, 28, 0xe2752f, 0.06)
+      .setDepth(126);
 
-    this.secondSacredBrazierFlame = this.add.ellipse(
-      x,
-      y - 17,
-      13,
-      25,
-      0xe2752f,
-      0.32
-    )
-      .setStrokeStyle(2, 0xffc65f, 0.35)
+    this.secondSacredBrazierFlame = this.add.ellipse(x, y - 8, 7, 12, 0xe2752f, 0.10)
+      .setStrokeStyle(1, 0xffc65f, 0.10)
       .setDepth(127);
 
     this.add.text(x, y - 38, 'BRASERO SAGRADO', {
@@ -2302,9 +2280,9 @@ export class MazeScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: sun,
-      scaleX: 1.12,
-      scaleY: 1.12,
-      alpha: 0.5,
+      scaleX: sun.scaleX * 1.03,
+      scaleY: sun.scaleY * 1.03,
+      alpha: 0.92,
       duration: 900,
       yoyo: true,
       repeat: -1,
@@ -2392,9 +2370,9 @@ export class MazeScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: sun,
-      scaleX: 1.12,
-      scaleY: 1.12,
-      alpha: 0.5,
+      scaleX: sun.scaleX * 1.03,
+      scaleY: sun.scaleY * 1.03,
+      alpha: 0.92,
       duration: 900,
       yoyo: true,
       repeat: -1,
