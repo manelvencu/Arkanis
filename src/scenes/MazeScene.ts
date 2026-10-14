@@ -702,7 +702,7 @@ export class MazeScene extends Phaser.Scene {
   private movingWallPhase = 0;
   private movingWallSolved = false;
   private movingWallReleasePending = false;
-  private movingWallObjects = new Map<string, Phaser.GameObjects.Rectangle>();
+  private movingWallObjects = new Map<string, Phaser.GameObjects.Image>();
   private movingWallBlockedCells = new Set<string>();
   private sacredBrazierLit = false;
   private sacredBrazierFlame?: Phaser.GameObjects.Ellipse;
@@ -779,6 +779,10 @@ export class MazeScene extends Phaser.Scene {
     this.load.image(
       'maze-static-stone-block',
       './assets/world/desert/desert-temple/walls/desert-stone-block-01.png'
+    );
+    this.load.image(
+      'maze-moving-stone-block',
+      './assets/world/desert/desert-temple/walls/desert-stone-block-02.png'
     );
 
     this.load.image(
@@ -1055,7 +1059,7 @@ export class MazeScene extends Phaser.Scene {
 
   private createFloorAndWalls(): void {
     const floor = this.add.graphics().setDepth(0);
-    floor.fillStyle(0xb88955, 1);
+    floor.fillStyle(0x2f3133, 1);
     floor.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     for (let row = 1; row <= WORLD_ROWS; row += 1) {
@@ -1070,8 +1074,8 @@ export class MazeScene extends Phaser.Scene {
             column <= CENTER_ROOM.right &&
             row >= CENTER_ROOM.top &&
             row <= CENTER_ROOM.bottom
-              ? 0xc9a260
-              : 0xb88955,
+              ? 0x45484b
+              : 0x303235,
             1
           );
           floor.fillRect(x, y, GRID_SIZE, GRID_SIZE);
@@ -1311,18 +1315,23 @@ export class MazeScene extends Phaser.Scene {
 
       const x = (cell.column - 0.5) * GRID_SIZE;
       const y = (cell.row - 0.5) * GRID_SIZE;
-      const wall = this.add.rectangle(x, y, GRID_SIZE - 2, GRID_SIZE - 2, 0x62564d, 1)
-        .setStrokeStyle(2, 0xb0a08c, 0.9)
+      const wall = this.add.image(
+        x,
+        y,
+        'maze-moving-stone-block'
+      )
+        .setDisplaySize(GRID_SIZE, GRID_SIZE)
         .setDepth(132);
 
-      wall.setScale(1, animate ? 0.08 : 1);
+      wall.setScale(wall.scaleX, animate ? wall.scaleY * 0.08 : wall.scaleY);
       wall.setAlpha(animate ? 0 : 1);
       this.movingWallObjects.set(key, wall);
 
       if (animate) {
+        const targetScaleY = wall.scaleX;
         this.tweens.add({
           targets: wall,
-          scaleY: 1,
+          scaleY: targetScaleY,
           alpha: 1,
           duration: 300,
           ease: 'Sine.easeOut'
