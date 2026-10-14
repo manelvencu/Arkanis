@@ -794,6 +794,11 @@ export class MazeScene extends Phaser.Scene {
       './assets/world/desert/enemies/scorpions/escorpion_up_01.png'
     );
 
+    this.load.image(
+      'maze-black-sun',
+      './assets/world/desert/desert-temple/objects/black-sun.png'
+    );
+
     const assets = CHARACTER_ASSETS[this.characterId === 'lupe' ? 'lupe' : 'tiana'];
     Object.entries(assets).forEach(([key, path]) => {
       this.load.image(`maze-player-${key}`, path);
@@ -2289,21 +2294,14 @@ export class MazeScene extends Phaser.Scene {
     const secondY = (SECOND_BLACK_SUN_GATE.rows[1] - 0.5) * GRID_SIZE;
     const y = (firstY + secondY) / 2;
 
-    const aura = this.add.circle(0, 0, 30, 0x5c365f, 0.20)
-      .setStrokeStyle(2, 0xa76aa8, 0.62);
-    const outer = this.add.circle(0, 0, 17, 0x17101a, 1)
-      .setStrokeStyle(3, 0x6f4a73, 1);
-    const core = this.add.circle(0, 0, 9, 0x020104, 1)
-      .setStrokeStyle(2, 0xb58bb5, 0.8);
+    const sun = this.add.image(0, 0, 'maze-black-sun')
+      .setDisplaySize(GRID_SIZE, GRID_SIZE);
 
-    this.secondBlackSunObject = this.add.container(
-      x,
-      y,
-      [aura, outer, core]
-    ).setDepth(130);
+    this.secondBlackSunObject = this.add.container(x, y, [sun])
+      .setDepth(130);
 
     this.tweens.add({
-      targets: [aura, outer],
+      targets: sun,
       scaleX: 1.12,
       scaleY: 1.12,
       alpha: 0.5,
@@ -2386,38 +2384,14 @@ export class MazeScene extends Phaser.Scene {
     const secondRowCenter = (BLACK_SUN_GATE.rows[1] - 0.5) * GRID_SIZE;
     const y = (firstRowCenter + secondRowCenter) / 2;
 
-    const aura = this.add.circle(0, 0, 30, 0x5c365f, 0.22)
-      .setStrokeStyle(2, 0xa76aa8, 0.65);
-    const outer = this.add.circle(0, 0, 17, 0x17101a, 1)
-      .setStrokeStyle(3, 0x6f4a73, 1);
-    const core = this.add.circle(0, 0, 9, 0x020104, 1)
-      .setStrokeStyle(2, 0xb58bb5, 0.8);
+    const sun = this.add.image(0, 0, 'maze-black-sun')
+      .setDisplaySize(GRID_SIZE, GRID_SIZE);
 
-    const rays = this.add.graphics();
-    rays.lineStyle(2, 0x8f628f, 0.85);
-    for (let index = 0; index < 8; index += 1) {
-      const angle = (Math.PI * 2 * index) / 8;
-      rays.beginPath();
-      rays.moveTo(Math.cos(angle) * 20, Math.sin(angle) * 20);
-      rays.lineTo(Math.cos(angle) * 27, Math.sin(angle) * 27);
-      rays.strokePath();
-    }
-
-    const label = this.add.text(0, -34, 'SOL NEGRO', {
-      fontFamily: 'Arial',
-      fontSize: '11px',
-      color: '#e8cbea',
-      fontStyle: 'bold',
-      align: 'center',
-      backgroundColor: 'rgba(20, 12, 22, 0.86)',
-      padding: { x: 5, y: 3 }
-    }).setOrigin(0.5, 1);
-
-    this.blackSunObject = this.add.container(x, y, [aura, rays, outer, core, label])
+    this.blackSunObject = this.add.container(x, y, [sun])
       .setDepth(130);
 
     this.tweens.add({
-      targets: [aura, outer],
+      targets: sun,
       scaleX: 1.12,
       scaleY: 1.12,
       alpha: 0.5,
