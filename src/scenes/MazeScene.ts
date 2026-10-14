@@ -718,6 +718,7 @@ export class MazeScene extends Phaser.Scene {
   private fragmentHintShown = false;
   private postFragmentRouteActive = false;
   private postFragmentSouthGate?: Phaser.GameObjects.Container;
+  private northGateBlocks?: Phaser.GameObjects.Container;
   private secondBlackSunObject?: Phaser.GameObjects.Container;
   private secondBlackSunTriggered = false;
   private secondSacredBrazierLit = false;
@@ -758,6 +759,7 @@ export class MazeScene extends Phaser.Scene {
     this.fragmentHintShown = false;
     this.postFragmentRouteActive = getVillageProgress().desertFragmentObtained;
     this.postFragmentSouthGate = undefined;
+    this.northGateBlocks = undefined;
     this.secondBlackSunObject = undefined;
     this.secondBlackSunTriggered = false;
     this.secondSacredBrazierLit = false;
@@ -1004,6 +1006,11 @@ export class MazeScene extends Phaser.Scene {
 
     if (!MAZE_WALKABLE_CELLS.has(`${column}:${row}`)) return false;
     if (this.movingWallBlockedCells.has(`${column}:${row}`)) return false;
+
+    // Pedestal del Altar Solar: cuatro celdas físicas no transitables.
+    if ((column === 40 || column === 41) && (row === 41 || row === 42)) {
+      return false;
+    }
 
     if (
       (!this.finalGateOpen || this.postFragmentRouteActive) &&
@@ -1940,25 +1947,13 @@ export class MazeScene extends Phaser.Scene {
     const centerY =
       ((CENTER_ROOM.top + CENTER_ROOM.bottom) / 2 - 0.5) * GRID_SIZE;
 
-    // El altar ocupa tres bloques visuales, centrado en la cámara del laberinto.
-    // El contenedor conserva la interacción y la recogida del fragmento.
-    const altar = this.add.image(0, 0, 'maze-solar-altar')
+    // La base ocupa C40-C41 / F41-F42. El sprite sobresale por arriba;
+    // la profundidad sigue la base para pasar por delante o por detrás.
+    const altar = this.add.image(0, -GRID_SIZE * 0.5, 'maze-solar-altar')
       .setDisplaySize(GRID_SIZE * 3, GRID_SIZE * 3);
 
-    this.fragmentObject = this.add.container(
-      centerX,
-      centerY,
-      [altar]
-    ).setDepth(140);
-
-    this.tweens.add({
-      targets: this.fragmentObject,
-      y: centerY - 3,
-      duration: 1100,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
+    this.fragmentObject = this.add.container(centerX, centerY, [altar])
+      .setDepth((42 - 0.5) * GRID_SIZE);
   }
 
   private checkDesertFragmentInteraction(): void {
@@ -1997,14 +1992,31 @@ export class MazeScene extends Phaser.Scene {
   }
 
   private createPostFragmentRouteVisuals(): void {
-    if (!this.postFragmentRouteActive) return;
-    this.createClosedSouthGate();
+    if (this.postFragmentRouteActive) {
+      this.createClosedSouthGate();
+    } else {
+      this.createClosedNorthGate();
+    }
+  }
+
+  private createClosedNorthGate(): void {
+    if (this.northGateBlocks) return;
+    const blocks = NORTH_GATE_COLUMNS.map((column) =>
+      this.add.image(
+        (column - 0.5) * GRID_SIZE,
+        (NORTH_GATE_ROW - 0.5) * GRID_SIZE,
+        'maze-moving-stone-block'
+      ).setDisplaySize(GRID_SIZE, GRID_SIZE)
+    );
+    this.northGateBlocks = this.add.container(0, 0, blocks).setDepth(132);
   }
 
   private activatePostFragmentRoute(): void {
     if (this.postFragmentRouteActive) return;
 
     this.postFragmentRouteActive = true;
+    this.northGateBlocks?.destroy();
+    this.northGateBlocks = undefined;
     this.createClosedSouthGate();
     this.createPostFragmentScorpionCracks();
 
