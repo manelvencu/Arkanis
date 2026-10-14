@@ -777,6 +777,11 @@ export class MazeScene extends Phaser.Scene {
     preloadPlayableUiAssets(this);
 
     this.load.image(
+      'maze-static-stone-block',
+      './assets/world/desert/desert-temple/walls/desert-stone-block-01.png'
+    );
+
+    this.load.image(
       'maze-scorpion-down-01',
       './assets/world/desert/enemies/scorpions/escorpion_down_01.png'
     );
@@ -1053,8 +1058,6 @@ export class MazeScene extends Phaser.Scene {
     floor.fillStyle(0xb88955, 1);
     floor.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-    const walls = this.add.graphics().setDepth(50);
-
     for (let row = 1; row <= WORLD_ROWS; row += 1) {
       for (let column = 1; column <= WORLD_COLUMNS; column += 1) {
         const key = `${column}:${row}`;
@@ -1075,14 +1078,16 @@ export class MazeScene extends Phaser.Scene {
           continue;
         }
 
-        // Pared provisional: sombra frontal + piedra superior. Más adelante
-        // se sustituirá por módulos artísticos semicenitales.
-        walls.fillStyle(0x3d281d, 0.85);
-        walls.fillRect(x + 2, y + 8, GRID_SIZE - 2, GRID_SIZE - 6);
-        walls.fillStyle(0x72513a, 1);
-        walls.fillRect(x, y, GRID_SIZE - 2, GRID_SIZE - 8);
-        walls.lineStyle(1, 0x9b7554, 0.65);
-        walls.strokeRect(x, y, GRID_SIZE - 2, GRID_SIZE - 8);
+        // Cada celda no transitable se construye ahora con una única piedra
+        // modular. El footprint lógico sigue siendo exactamente 32x32, por lo
+        // que no cambia ninguna colisión ni la geometría del laberinto.
+        this.add.image(
+          x + GRID_SIZE / 2,
+          y + GRID_SIZE / 2,
+          'maze-static-stone-block'
+        )
+          .setDisplaySize(GRID_SIZE, GRID_SIZE)
+          .setDepth(50);
       }
     }
   }
