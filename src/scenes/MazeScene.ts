@@ -769,8 +769,12 @@ export class MazeScene extends Phaser.Scene {
     preloadPlayableUiAssets(this);
 
     this.load.image(
-      'maze-dirt-ground',
-      './assets/environment/dirt-ground-01.png'
+      'maze-temple-grey-tile',
+      './assets/world/desert/desert-temple/objects/temple-grey-tile.png'
+    );
+    this.load.image(
+      'maze-temple-grey-tile-broken',
+      './assets/world/desert/desert-temple/objects/temple-grey-tile-broken.png'
     );
     this.load.image(
       'maze-static-stone-block',
@@ -1082,13 +1086,11 @@ export class MazeScene extends Phaser.Scene {
   }
 
   private createFloorAndWalls(): void {
-    // Textura de tierra repetida a escala uniforme en todo el suelo.
-    // Las piedras cubren las celdas no transitables sin cambiar la geometría.
-    const groundFrame = this.textures.get('maze-dirt-ground').get();
-    const groundScale = (GRID_SIZE * 4) / groundFrame.width;
-    this.add.tileSprite(0, 0, WORLD_WIDTH, WORLD_HEIGHT, 'maze-dirt-ground')
+    // Una textura de 32x32 por bloque; las paredes tapan las celdas sólidas.
+    const groundFrame = this.textures.get('maze-temple-grey-tile').get();
+    this.add.tileSprite(0, 0, WORLD_WIDTH, WORLD_HEIGHT, 'maze-temple-grey-tile')
       .setOrigin(0, 0)
-      .setTileScale(groundScale)
+      .setTileScale(GRID_SIZE / groundFrame.width, GRID_SIZE / groundFrame.height)
       .setDepth(0);
 
     for (let row = 1; row <= WORLD_ROWS; row += 1) {
@@ -1505,24 +1507,29 @@ export class MazeScene extends Phaser.Scene {
     });
   }
 
+  private createScorpionCrackTile(column: number, row: number): void {
+    this.add.image(
+      (column - 0.5) * GRID_SIZE,
+      (row - 0.5) * GRID_SIZE,
+      'maze-temple-grey-tile-broken'
+    )
+      .setDisplaySize(GRID_SIZE, GRID_SIZE)
+      .setDepth(1);
+  }
+
   private createScorpionCracks(): void {
     for (const crack of MAZE_SCORPION_CRACKS) {
-      const x = (crack.column - 0.5) * GRID_SIZE;
-      const y = (crack.row - 0.5) * GRID_SIZE;
-
-      const graphics = this.add.graphics().setDepth(114);
-      graphics.lineStyle(2, 0x3a261d, 0.95);
-      graphics.beginPath();
-      graphics.moveTo(x - 13, y - 3);
-      graphics.lineTo(x - 5, y + 2);
-      graphics.lineTo(x - 9, y + 10);
-      graphics.moveTo(x - 5, y + 2);
-      graphics.lineTo(x + 4, y - 5);
-      graphics.lineTo(x + 12, y + 2);
-      graphics.moveTo(x + 4, y - 5);
-      graphics.lineTo(x + 8, y - 13);
-      graphics.strokePath();
+      this.createScorpionCrackTile(crack.column, crack.row);
     }
+
+    if (this.postFragmentRouteActive) {
+      this.createPostFragmentScorpionCracks();
+    }
+  }
+
+  private createPostFragmentScorpionCracks(): void {
+    this.createScorpionCrackTile(60, 16);
+    this.createScorpionCrackTile(5, 53);
   }
 
   private updateScorpionCracks(time: number, delta: number): void {
@@ -2030,6 +2037,7 @@ export class MazeScene extends Phaser.Scene {
 
     this.postFragmentRouteActive = true;
     this.createClosedSouthGate();
+    this.createPostFragmentScorpionCracks();
 
     const northX =
       ((NORTH_GATE_COLUMNS[0] + NORTH_GATE_COLUMNS[3]) / 2 - 0.5) * GRID_SIZE;
