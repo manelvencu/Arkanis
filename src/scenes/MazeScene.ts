@@ -769,6 +769,10 @@ export class MazeScene extends Phaser.Scene {
     preloadPlayableUiAssets(this);
 
     this.load.image(
+      'maze-dirt-ground',
+      './assets/environment/dirt-ground-01.png'
+    );
+    this.load.image(
       'maze-static-stone-block',
       './assets/world/desert/desert-temple/walls/desert-stone-block-01.png'
     );
@@ -1073,9 +1077,14 @@ export class MazeScene extends Phaser.Scene {
   }
 
   private createFloorAndWalls(): void {
-    const floor = this.add.graphics().setDepth(0);
-    floor.fillStyle(0x2f3133, 1);
-    floor.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    // Textura de tierra repetida a escala uniforme en todo el suelo.
+    // Las piedras cubren las celdas no transitables sin cambiar la geometría.
+    const groundFrame = this.textures.get('maze-dirt-ground').get();
+    const groundScale = (GRID_SIZE * 4) / groundFrame.width;
+    this.add.tileSprite(0, 0, WORLD_WIDTH, WORLD_HEIGHT, 'maze-dirt-ground')
+      .setOrigin(0, 0)
+      .setTileScale(groundScale)
+      .setDepth(0);
 
     for (let row = 1; row <= WORLD_ROWS; row += 1) {
       for (let column = 1; column <= WORLD_COLUMNS; column += 1) {
@@ -1083,19 +1092,7 @@ export class MazeScene extends Phaser.Scene {
         const x = (column - 1) * GRID_SIZE;
         const y = (row - 1) * GRID_SIZE;
 
-        if (MAZE_WALKABLE_CELLS.has(key)) {
-          floor.fillStyle(
-            column >= CENTER_ROOM.left &&
-            column <= CENTER_ROOM.right &&
-            row >= CENTER_ROOM.top &&
-            row <= CENTER_ROOM.bottom
-              ? 0x45484b
-              : 0x303235,
-            1
-          );
-          floor.fillRect(x, y, GRID_SIZE, GRID_SIZE);
-          continue;
-        }
+        if (MAZE_WALKABLE_CELLS.has(key)) continue;
 
         // Cada celda no transitable se construye ahora con una única piedra
         // modular. El footprint lógico sigue siendo exactamente 32x32, por lo
