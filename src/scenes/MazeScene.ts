@@ -781,6 +781,14 @@ export class MazeScene extends Phaser.Scene {
       './assets/world/desert/desert-temple/walls/desert-stone-block-01.png'
     );
     this.load.image(
+      'maze-shoot-down-block',
+      './assets/world/desert/desert-temple/walls/desert-stone-block-shoot-down.png'
+    );
+    this.load.image(
+      'maze-shoot-right-block',
+      './assets/world/desert/desert-temple/walls/desert-stone-block-shoot-right.png'
+    );
+    this.load.image(
       'maze-moving-stone-block',
       './assets/world/desert/desert-temple/walls/desert-stone-block-02.png'
     );
@@ -1772,23 +1780,20 @@ export class MazeScene extends Phaser.Scene {
     directionX: -1 | 0 | 1,
     directionY: -1 | 0 | 1
   ): void {
+    // El disparo hacia arriba sale de la piedra normal: la boca queda oculta
+    // por la perspectiva semicenital. No se superpone ninguna lanzadora.
+    if (directionY === -1) return;
+
     const x = (column - 0.5) * GRID_SIZE;
     const y = (row - 0.5) * GRID_SIZE;
+    const texture = directionY === 1
+      ? 'maze-shoot-down-block'
+      : 'maze-shoot-right-block';
 
-    const base = this.add.rectangle(0, 8, 24, 22, 0x66594c, 1)
-      .setStrokeStyle(2, 0xa99a86, 0.9);
-    const head = this.add.circle(0, -8, 9, 0x796b5b, 1)
-      .setStrokeStyle(2, 0xb5a590, 0.9);
-    const mouth = this.add.rectangle(
-      directionX * 9,
-      -6 + directionY * 9,
-      directionX === 0 ? 5 : 9,
-      directionY === 0 ? 5 : 9,
-      0x231b16,
-      1
-    );
-
-    this.add.container(x, y, [base, head, mouth]).setDepth(129);
+    this.add.image(x, y, texture)
+      .setDisplaySize(GRID_SIZE, GRID_SIZE)
+      .setFlipX(directionX === -1)
+      .setDepth(129);
   }
 
   private updateStatueCorridor(time: number, delta: number): void {
