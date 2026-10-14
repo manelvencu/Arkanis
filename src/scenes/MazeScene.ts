@@ -696,8 +696,8 @@ export class MazeScene extends Phaser.Scene {
   private blackSunActivated = false;
   private blackSunObject?: Phaser.GameObjects.Container;
   private darknessOverlay?: Phaser.GameObjects.Graphics;
-  private carpetPit?: Phaser.GameObjects.Ellipse;
-  private carpetOnPit?: Phaser.GameObjects.Rectangle;
+  private carpetPit?: Phaser.GameObjects.Image;
+  private carpetOnPit?: Phaser.GameObjects.Image;
   private carpetPitHintShown = false;
   private movingWallPhase = 0;
   private movingWallSolved = false;
@@ -777,6 +777,14 @@ export class MazeScene extends Phaser.Scene {
     this.load.image(
       'maze-temple-grey-tile-broken',
       './assets/world/desert/desert-temple/objects/temple-grey-tile-broken.png'
+    );
+    this.load.image(
+      'maze-hole-tile',
+      './assets/world/desert/desert-temple/objects/hole-tile.png'
+    );
+    this.load.image(
+      'maze-orient-carpet',
+      './assets/world/desert/desert-temple/objects/orient-carpet.png'
     );
     this.load.image(
       'maze-static-stone-block',
@@ -1171,27 +1179,9 @@ export class MazeScene extends Phaser.Scene {
       return;
     }
 
-    const shadow = this.add.ellipse(x, y + 4, 78, 54, 0x1b100b, 0.68)
+    this.carpetPit = this.add.image(x, y, 'maze-hole-tile')
+      .setDisplaySize(GRID_SIZE * 2, GRID_SIZE * 2)
       .setDepth(116);
-    this.carpetPit = this.add.ellipse(x, y, 70, 46, 0x050302, 1)
-      .setStrokeStyle(4, 0x51362b, 1)
-      .setDepth(117);
-
-    this.add.ellipse(x, y - 2, 52, 30, 0x000000, 0.72)
-      .setDepth(118);
-
-    this.add.text(x, y - 34, 'AGUJERO', {
-      fontFamily: 'Arial',
-      fontSize: '11px',
-      color: '#ffe3b7',
-      fontStyle: 'bold',
-      backgroundColor: 'rgba(28, 16, 10, 0.82)',
-      padding: { x: 5, y: 3 }
-    })
-      .setOrigin(0.5, 1)
-      .setDepth(119);
-
-    shadow.setData('mazePitVisual', true);
   }
 
   private checkCarpetPitInteraction(): void {
@@ -1247,15 +1237,9 @@ export class MazeScene extends Phaser.Scene {
 
     if (this.carpetOnPit) return;
 
-    this.carpetOnPit = this.add.rectangle(x, y, 74, 50, 0xb73931, 1)
-      .setStrokeStyle(4, 0xe4c269, 1)
-      .setAngle(-4)
+    this.carpetOnPit = this.add.image(x, y, 'maze-orient-carpet')
+      .setDisplaySize(GRID_SIZE * 4, GRID_SIZE * 4)
       .setDepth(119);
-
-    this.add.rectangle(x, y, 58, 34, 0x7d2524, 1)
-      .setStrokeStyle(2, 0xf0d483, 0.9)
-      .setAngle(-4)
-      .setDepth(120);
   }
 
   private createMovingWalls(): void {
