@@ -745,8 +745,6 @@ export class MazeScene extends Phaser.Scene {
     this.movingWallObjects.clear();
     this.movingWallBlockedCells.clear();
     this.sacredBrazierLit = false;
-    this.sacredBrazierFlame = undefined;
-    this.sacredBrazierGlow = undefined;
     this.scorpions = [];
     this.activatedScorpionCracks.clear();
     this.statueProjectiles = [];
@@ -763,8 +761,6 @@ export class MazeScene extends Phaser.Scene {
     this.secondBlackSunObject = undefined;
     this.secondBlackSunTriggered = false;
     this.secondSacredBrazierLit = false;
-    this.secondSacredBrazierFlame = undefined;
-    this.secondSacredBrazierGlow = undefined;
     this.postFragmentScorpionsSpawned.clear();
     this.isGameOver = false;
   }
