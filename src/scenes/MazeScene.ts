@@ -51,7 +51,7 @@ const BLACK_SUN_SPOTLIGHT_STEP = 3;
 const CARPET_PIT_BLOCK_RADIUS = 46;
 const CARPET_PIT_USE_RADIUS = 58;
 const CARPET_PIT_POSITION = {
-  column: 56,
+  columns: [57, 58],
   rows: [34, 35]
 } as const;
 const FALSE_BRANCH_JUNCTION = { column: 68, row: 76 } as const;
@@ -384,7 +384,7 @@ function findMazeLandmarkCells(): MazeLandmark[] {
         id: definition.id,
         label: definition.label,
         color: definition.color,
-        column: CARPET_PIT_POSITION.column,
+        column: CARPET_PIT_POSITION.columns[0],
         row: CARPET_PIT_POSITION.rows[0]
       };
     }
@@ -1054,16 +1054,14 @@ export class MazeScene extends Phaser.Scene {
 
     const pit = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
     if (pit && !getVillageProgress().desertCarpetUsedInMaze) {
-      const pitX = (CARPET_PIT_POSITION.column - 0.5) * GRID_SIZE;
-      const pitFirstY =
-        (CARPET_PIT_POSITION.rows[0] - 0.5) * GRID_SIZE;
-      const pitSecondY =
-        (CARPET_PIT_POSITION.rows[1] - 0.5) * GRID_SIZE;
-      const pitY = (pitFirstY + pitSecondY) / 2;
-
+      // Bloqueo completo de las cuatro celdas del agujero, sin pasar por los laterales.
       if (
-        Phaser.Math.Distance.Between(footX, footY, pitX, pitY) <
-        CARPET_PIT_BLOCK_RADIUS
+        CARPET_PIT_POSITION.columns.includes(
+          column as (typeof CARPET_PIT_POSITION.columns)[number]
+        ) &&
+        CARPET_PIT_POSITION.rows.includes(
+          row as (typeof CARPET_PIT_POSITION.rows)[number]
+        )
       ) {
         return false;
       }
@@ -1167,7 +1165,7 @@ export class MazeScene extends Phaser.Scene {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
     if (!landmark) return;
 
-    const x = (CARPET_PIT_POSITION.column - 0.5) * GRID_SIZE;
+    const x = ((CARPET_PIT_POSITION.columns[0] + CARPET_PIT_POSITION.columns[1]) / 2 - 0.5) * GRID_SIZE;
     const firstRowCenter =
       (CARPET_PIT_POSITION.rows[0] - 0.5) * GRID_SIZE;
     const secondRowCenter =
@@ -1188,7 +1186,7 @@ export class MazeScene extends Phaser.Scene {
     const landmark = MAZE_LANDMARKS.find((item) => item.id === 'carpetPit');
     if (!landmark || getVillageProgress().desertCarpetUsedInMaze) return;
 
-    const x = (CARPET_PIT_POSITION.column - 0.5) * GRID_SIZE;
+    const x = ((CARPET_PIT_POSITION.columns[0] + CARPET_PIT_POSITION.columns[1]) / 2 - 0.5) * GRID_SIZE;
     const firstRowCenter =
       (CARPET_PIT_POSITION.rows[0] - 0.5) * GRID_SIZE;
     const secondRowCenter =
@@ -1238,7 +1236,7 @@ export class MazeScene extends Phaser.Scene {
     if (this.carpetOnPit) return;
 
     this.carpetOnPit = this.add.image(x, y, 'maze-orient-carpet')
-      .setDisplaySize(GRID_SIZE * 4, GRID_SIZE * 4)
+      .setDisplaySize(GRID_SIZE * 2, GRID_SIZE * 2)
       .setDepth(119);
   }
 
