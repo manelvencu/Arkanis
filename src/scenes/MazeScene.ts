@@ -809,6 +809,11 @@ export class MazeScene extends Phaser.Scene {
     );
 
     this.load.image(
+      'maze-solar-altar',
+      './assets/world/desert/desert-temple/objects/altar-solar.png'
+    );
+
+    this.load.image(
       'maze-sacred-brazier',
       './assets/world/desert/desert-temple/objects/brasero-sagrado.png'
     );
@@ -1941,55 +1946,21 @@ export class MazeScene extends Phaser.Scene {
     const centerY =
       ((CENTER_ROOM.top + CENTER_ROOM.bottom) / 2 - 0.5) * GRID_SIZE;
 
-    const glow = this.add.circle(0, 0, 34, 0xffdd67, 0.18)
-      .setStrokeStyle(2, 0xffefad, 0.45);
-    const outer = this.add.polygon(
-      0,
-      0,
-      [
-        -12, 0,
-        0, -24,
-        12, 0,
-        0, 24
-      ],
-      0xf3c94d,
-      1
-    )
-      .setStrokeStyle(3, 0xfff1a1, 1);
-    const core = this.add.polygon(
-      0,
-      0,
-      [
-        -6, 0,
-        0, -14,
-        6, 0,
-        0, 14
-      ],
-      0xfff0a1,
-      1
-    );
+    // El altar ocupa tres bloques visuales, centrado en la cámara del laberinto.
+    // El contenedor conserva la interacción y la recogida del fragmento.
+    const altar = this.add.image(0, 0, 'maze-solar-altar')
+      .setDisplaySize(GRID_SIZE * 3, GRID_SIZE * 3);
 
     this.fragmentObject = this.add.container(
       centerX,
       centerY,
-      [glow, outer, core]
+      [altar]
     ).setDepth(140);
 
     this.tweens.add({
       targets: this.fragmentObject,
-      y: centerY - 8,
-      duration: 900,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
-
-    this.tweens.add({
-      targets: glow,
-      scaleX: 1.25,
-      scaleY: 1.25,
-      alpha: 0.28,
-      duration: 700,
+      y: centerY - 3,
+      duration: 1100,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
