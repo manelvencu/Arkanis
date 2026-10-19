@@ -15,6 +15,7 @@ const WORLD_ROWS = 96;
 const WORLD_WIDTH = WORLD_COLUMNS * GRID_SIZE;
 const WORLD_HEIGHT = WORLD_ROWS * GRID_SIZE;
 const GRID_TEXTURE_KEY = 'fire-lands-grid-guide';
+const BACKGROUND_TEXTURE_KEY = 'fire-lands-world-bg';
 
 const PLAYER_SIZE = 64;
 const PLAYER_SPEED = 180;
@@ -131,6 +132,7 @@ export class FireLandsScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.image(BACKGROUND_TEXTURE_KEY, './assets/world/fire-lands-world-01.webp');
     preloadPlayableUiAssets(this);
     const characterKey = this.characterId === 'lupe' ? 'lupe' : 'tiana';
     Object.entries(CHARACTER_ASSETS[characterKey]).forEach(([key, path]) => {
@@ -141,10 +143,13 @@ export class FireLandsScene extends Phaser.Scene {
   create(): void {
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    this.cameras.main.setBackgroundColor('#333036');
+    this.cameras.main.setBackgroundColor('#000000');
 
-    this.createSpatialZones();
-    this.createLavaRiversAndBridges();
+    // Fondo estático definitivo: ocupa exactamente el tablero 128x96.
+    // Sin polígonos de colores, textos de zonas ni puentes provisionales.
+    this.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, BACKGROUND_TEXTURE_KEY)
+      .setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT)
+      .setDepth(0);
     this.createGridGuide();
     this.createPlayer();
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -249,73 +254,6 @@ export class FireLandsScene extends Phaser.Scene {
     return BRIDGES.some((bridge) =>
       distanceToSegment(spriteX, footY, pixelPoint(bridge.from), pixelPoint(bridge.to)) <= GRID_SIZE * 1.15
     );
-  }
-
-  private createSpatialZones(): void {
-    // El fondo rojo es lava: únicamente los polígonos coloreados son caminables.
-    this.add.rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT / 2,
-      WORLD_WIDTH, WORLD_HEIGHT, 0xd52a1e).setDepth(0);
-    const ground = this.add.graphics().setDepth(1);
-    for (const zone of LAND_ZONES) {
-      const shape = zone.points.map(pixelPoint);
-      ground.fillStyle(zone.color, 1);
-      ground.fillPoints(shape, true);
-      ground.lineStyle(13, zone.outline, 1);
-      ground.strokePoints(shape, true);
-    }
-    // Indicadores de posición provisional de los futuros elementos jugables.
-    const landmarks: Array<[number, number, string, number]> = [
-      [11, 85, 'ZONA SEGURA', 0x315e34],
-      [39, 61, 'POBLADO · 15%', 0x545454],
-      [98, 81, 'ZONA HOSTIL', 0x383033],
-      [106, 48, 'ROCAS ARDIENTES', 0x6d3b2a],
-      [67, 32, 'RECOMPENSAS', 0x554739],
-      [29, 24, 'GRAN VOLCÁN', 0x44282a],
-      [71, 17, 'PASO AL ESTE', 0x473c43],
-      [110, 18, 'VOLCÁN FINAL', 0x4b2b2b]
-    ];
-    for (const [column, row, text, background] of landmarks) {
-      this.add.text(column * GRID_SIZE, row * GRID_SIZE, text, {
-        fontFamily: 'Arial', fontSize: '25px', color: '#ffffff',
-        fontStyle: 'bold', backgroundColor: '#' + background.toString(16).padStart(6, '0'),
-        padding: { x: 8, y: 6 }
-      }).setOrigin(0.5).setDepth(12);
-    }
-
-    // Algunas marcas inmóviles para dimensionar las futuras zonas de peligro.
-    const preview = this.add.graphics().setDepth(2);
-    preview.fillStyle(0xffa042, 1);
-    [[103,42],[111,46],[106,53],[28,18],[33,27]].forEach(([x,y]) => {
-      preview.fillCircle(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE * 0.75);
-    });
-  }
-
-  private createLavaRiversAndBridges(): void {
-    // Puentes provisionales, perfectamente alineados con las orillas.
-    const g = this.add.graphics().setDepth(5);
-    for (const bridge of BRIDGES) {
-      const start = pixelPoint(bridge.from);
-      const end = pixelPoint(bridge.to);
-      const dx = end.x - start.x;
-      const dy = end.y - start.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      const nx = -dy / length;
-      const ny = dx / length;
-      g.lineStyle(GRID_SIZE * 2.7, 0x30261f, 1);
-      g.strokeLineShape(new Phaser.Geom.Line(start.x, start.y, end.x, end.y));
-      g.lineStyle(GRID_SIZE * 2.2, 0xc6aa7c, 1);
-      g.strokeLineShape(new Phaser.Geom.Line(start.x, start.y, end.x, end.y));
-      // Tablones transversales para reconocer la posición de cada puente.
-      g.lineStyle(3, 0x66533b, 0.9);
-      for (let at = 0; at <= length; at += GRID_SIZE * 0.8) {
-        const px = start.x + dx * at / length;
-        const py = start.y + dy * at / length;
-        g.strokeLineShape(new Phaser.Geom.Line(
-          px - nx * GRID_SIZE * 1.05, py - ny * GRID_SIZE * 1.05,
-          px + nx * GRID_SIZE * 1.05, py + ny * GRID_SIZE * 1.05
-        ));
-      }
-    }
   }
 
   private createPlayer(): void {
