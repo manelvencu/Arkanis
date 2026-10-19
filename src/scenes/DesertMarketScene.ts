@@ -179,8 +179,13 @@ export class DesertMarketScene extends Phaser.Scene {
   }
 
   private dialogObjects: Phaser.GameObjects.GameObject[] = [];
+  private dialogKeyHandler?: (event: KeyboardEvent) => void;
 
   private clearDialog(): void {
+    if (this.dialogKeyHandler) {
+      this.input.keyboard?.off('keydown', this.dialogKeyHandler);
+      this.dialogKeyHandler = undefined;
+    }
     this.dialogObjects.forEach((object) => object.destroy());
     this.dialogObjects = [];
   }
@@ -237,41 +242,92 @@ export class DesertMarketScene extends Phaser.Scene {
 
     const startY = centerY + viewportHeight * 0.052;
 
+    const buttons: Phaser.GameObjects.Rectangle[] = [];
+    const selectable = choices
+      .map((choice, index) => choice.enabled !== false && !!choice.action ? index : -1)
+      .filter((index) => index >= 0);
+    // Si existe, «No comprar» es siempre la selección inicial.
+    let selected = selectable.find((index) => choices[index].label === 'No comprar')
+      ?? selectable[0] ?? -1;
+
+    const highlight = (): void => {
+      buttons.forEach((button, index) => {
+        const enabled = choices[index].enabled !== false && !!choices[index].action;
+        const focused = enabled && index === selected;
+        button.setFillStyle(!enabled ? 0x3a302a : focused ? 0x93632c : 0x6f3a22, enabled ? 0.96 : 0.72);
+        button.setStrokeStyle(focused ? 4 : 2, focused ? 0xffef9d : enabled ? 0xe2ba66 : 0x7a6c5c, 1);
+      });
+    };
+    const moveSelection = (direction: number): void => {
+      if (selectable.length < 2) return;
+      const current = selectable.indexOf(selected);
+      selected = selectable[(current + direction + selectable.length) % selectable.length];
+      highlight();
+    };
+    const confirmSelection = (): void => {
+      if (selected < 0 || this.closing) return;
+      choices[selected].action?.();
+    };
+
     choices.forEach((choice, index) => {
       const enabled = choice.enabled !== false;
       const y = startY + index * (viewportHeight * 0.081);
-
       const button = this.add.rectangle(
-        centerX,
-        y,
+        centerX, y,
         viewportWidth * 0.3125,
         viewportHeight * 0.063,
         enabled ? 0x6f3a22 : 0x3a302a,
         enabled ? 0.96 : 0.72
-      )
-        .setStrokeStyle(2, enabled ? 0xe2ba66 : 0x7a6c5c, 1)
-        .setDepth(20001);
+      ).setDepth(20001);
 
       const label = this.add.text(centerX, y, choice.label, {
         fontFamily: 'Arial',
         fontSize: `${Math.round(viewportHeight * 0.028)}px`,
         color: enabled ? '#fff1c7' : '#c9bca7',
         fontStyle: enabled ? 'bold' : 'normal'
-      })
-        .setOrigin(0.5)
-        .setDepth(20002);
+      }).setOrigin(0.5).setDepth(20002);
 
+      buttons.push(button);
       if (enabled && choice.action) {
         button.setInteractive({ useHandCursor: true });
-        button.on('pointerover', () => button.setFillStyle(0x8b4b2d, 1));
-        button.on('pointerout', () => button.setFillStyle(0x6f3a22, 0.96));
-        button.once('pointerdown', choice.action);
+        button.on('pointerover', () => { selected = index; highlight(); });
+        button.on('pointerdown', () => { selected = index; confirmSelection(); });
       }
 
       this.dialogObjects.push(button, label);
       this.ui.showOnUiCamera(button);
       this.ui.showOnUiCamera(label);
     });
+    highlight();
+
+    this.dialogKeyHandler = (event: KeyboardEvent): void => {
+      if (event.code === 'ArrowUp' || event.code === 'ArrowLeft') {
+        event.preventDefault();
+        moveSelection(-1);
+      } else if (event.code === 'ArrowDown' || event.code === 'ArrowRight') {
+        event.preventDefault();
+        moveSelection(1);
+      } else if (event.code === 'Enter' || event.code === 'NumpadEnter') {
+        event.preventDefault();
+        confirmSelection();
+      }
+    };
+    this.input.keyboard?.on('keydown', this.dialogKeyHandler);
+
+    // Flechas visibles y pulsables para las pantallas táctiles.
+    if (selectable.length > 1) {
+      [-1, 1].forEach((direction) => {
+        const arrow = this.add.text(
+          centerX + direction * viewportWidth * 0.19,
+          startY + (choices.length - 1) * viewportHeight * 0.04,
+          direction < 0 ? '◀' : '▶',
+          { fontFamily: 'Arial', fontSize: '34px', color: '#ffe7a0', fontStyle: 'bold' }
+        ).setOrigin(0.5).setDepth(20003).setInteractive({ useHandCursor: true });
+        arrow.on('pointerdown', () => moveSelection(direction));
+        this.dialogObjects.push(arrow);
+        this.ui.showOnUiCamera(arrow);
+      });
+    }
   }
 
   private exitToDesert(): void {
