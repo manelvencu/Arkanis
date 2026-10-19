@@ -7,7 +7,9 @@ const MAP_TIMEOUT_MS = 60_000;
 // aportada por el usuario, apuntando al centro visual del nombre.
 const MAP_TARGETS = {
   aldea: { x: 510 / 1220, y: 907 / 1567 },
-  desert: { x: 125 / 1220, y: 755 / 1567 }
+  desert: { x: 125 / 1220, y: 755 / 1567 },
+  // Punto orientativo para esta primera versión jugable del mundo del fuego.
+  fire: { x: 700 / 1220, y: 735 / 1567 }
 } as const;
 
 type WorldMapDestination = keyof typeof MAP_TARGETS;
@@ -253,7 +255,9 @@ export class WorldMapScene extends Phaser.Scene {
       onComplete: () => {
         this.cameras.main.fadeOut(850, 3, 2, 8);
         this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-          if (this.destination === 'desert') {
+          if (this.destination === 'fire') {
+            this.scene.start('FireLandsScene', { characterId: this.characterId });
+          } else if (this.destination === 'desert') {
             this.scene.start('DesertScene', { characterId: this.characterId });
           } else {
             this.scene.start('AldeaScene', { characterId: this.characterId });
