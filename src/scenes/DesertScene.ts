@@ -446,7 +446,6 @@ export class DesertScene extends Phaser.Scene {
     this.createWorldBackground();
     this.createBuildings();
     this.createPalms();
-    this.createGridGuide();
     this.createPlayer();
     this.createRocks();
     this.createSnakes();
