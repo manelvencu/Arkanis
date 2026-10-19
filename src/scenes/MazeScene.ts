@@ -1014,9 +1014,9 @@ export class MazeScene extends Phaser.Scene {
     if (!MAZE_WALKABLE_CELLS.has(`${column}:${row}`)) return false;
     if (this.movingWallBlockedCells.has(`${column}:${row}`)) return false;
 
-    // Solo la fila superior de la base del altar impide el paso.
-    // C40F42 y C41F42 quedan transitables para recoger el fragmento.
-    if ((column === 40 || column === 41) && row === 41) {
+    // Toda la base 2x2 del altar permanece bloqueada.
+    // El fragmento se recoge desde las celdas inmediatamente al sur (F43).
+    if ((column === 40 || column === 41) && (row === 41 || row === 42)) {
       return false;
     }
 
@@ -1932,7 +1932,7 @@ export class MazeScene extends Phaser.Scene {
     const footY = this.player.y + PLAYER_FOOT_OFFSET_Y;
     const column = Math.floor(this.player.x / GRID_SIZE) + 1;
     const row = Math.floor(footY / GRID_SIZE) + 1;
-    const onCollectibleTile = row === 42 && (column === 40 || column === 41);
+    const onCollectibleTile = row === 43 && (column === 40 || column === 41);
 
     if (!onCollectibleTile) {
       if (this.fragmentHintShown) {
