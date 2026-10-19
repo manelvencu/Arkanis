@@ -52,63 +52,6 @@ const CHARACTER_ASSETS = {
 
 
 
-type TerrainPoint = readonly [number, number];
-type TerrainRegion = {
-  name: string;
-  points: TerrainPoint[];
-  color: number;
-  outline: number;
-};
-type PrototypeBridge = { from: TerrainPoint; to: TerrainPoint; name: string };
-
-// Distribución del recorrido: inicio → poblado → hostiles → rocas ardientes
-// → recompensas → gran volcán → paso oriental → volcán final.
-// El resto del mundo es lava intransitable, no un suelo gris continuo.
-const LAND_ZONES: TerrainRegion[] = [
-  { name: 'ZONA SEGURA', color: 0x70a657, outline: 0x3c6840,
-    points: [[0,73],[8,72],[16,74],[23,80],[28,88],[31,96],[0,96]] },
-  { name: 'TRANSICIÓN', color: 0x637c4d, outline: 0x4d6043,
-    points: [[15,72],[22,69],[29,76],[28,84],[22,87],[15,81]] },
-  { name: 'POBLADO', color: 0x99999a, outline: 0x56535a,
-    points: [[16,49],[29,43],[51,43],[64,49],[71,60],[68,77],[56,84],[38,84],[26,79],[14,67]] },
-  { name: 'ZONA HOSTIL', color: 0x554d4c, outline: 0x292529,
-    points: [[76,71],[87,65],[105,65],[120,70],[123,81],[113,94],[91,93],[75,85]] },
-  { name: 'ROCAS ARDIENTES', color: 0x6d4f45, outline: 0x382c2c,
-    points: [[90,41],[101,34],[115,37],[121,47],[116,59],[101,60],[89,53]] },
-  { name: 'RECOMPENSAS', color: 0x898177, outline: 0x4e4543,
-    points: [[50,28],[61,22],[77,22],[85,30],[82,41],[68,45],[51,40]] },
-  { name: 'GRAN VOLCÁN', color: 0x4d4140, outline: 0x272326,
-    points: [[10,14],[20,8],[39,9],[50,20],[47,36],[32,40],[13,34],[7,24]] },
-  { name: 'PASO ORIENTAL', color: 0x645456, outline: 0x312c30,
-    points: [[59,12],[67,8],[80,11],[83,22],[72,27],[60,22]] },
-  { name: 'VOLCÁN FINAL', color: 0x504044, outline: 0x272125,
-    points: [[91,13],[103,5],[120,7],[127,18],[121,31],[104,32],[91,25]] }
-];
-const BRIDGES: PrototypeBridge[] = [
-  { name: 'Poblado → Hostiles', from: [63,72], to: [81,77] },
-  { name: 'Hostiles → Rocas', from: [108,71], to: [108,56] },
-  { name: 'Rocas → Recompensas', from: [92,45], to: [79,36] },
-  { name: 'Recompensas → Gran Volcán', from: [53,31], to: [45,27] },
-  { name: 'Gran Volcán → Paso Oriental', from: [45,18], to: [62,17] },
-  { name: 'Paso Oriental → Volcán Final', from: [79,17], to: [95,19] }
-];
-function pixelPoint(point: TerrainPoint): Phaser.Math.Vector2 {
-  return new Phaser.Math.Vector2(point[0] * GRID_SIZE, point[1] * GRID_SIZE);
-}
-const LAND_POLYGONS = LAND_ZONES.map((zone) => ({
-  name: zone.name,
-  polygon: new Phaser.Geom.Polygon(zone.points.map(pixelPoint))
-}));
-function distanceToSegment(x: number, y: number, start: Phaser.Math.Vector2, end: Phaser.Math.Vector2): number {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const lengthSquared = dx * dx + dy * dy;
-  const t = lengthSquared === 0 ? 0 : Phaser.Math.Clamp(
-    ((x - start.x) * dx + (y - start.y) * dy) / lengthSquared, 0, 1
-  );
-  return Phaser.Math.Distance.Between(x, y, start.x + t * dx, start.y + t * dy);
-}
-
 /** Prototipo de escala y distribución espacial de Las Tierras del Fuego. */
 export class FireLandsScene extends Phaser.Scene {
   private characterId: CharacterId = 'tiana';
@@ -236,24 +179,17 @@ export class FireLandsScene extends Phaser.Scene {
     const cell = column + ':' + row;
     if (cell === this.lastStatusCell) return;
     this.lastStatusCell = cell;
-    const region = LAND_POLYGONS.find((zone) =>
-      Phaser.Geom.Polygon.Contains(zone.polygon, footX, footY)
-    );
-    const area = region?.name ?? 'PUENTE';
-    this.ui.updateStatus('FUEGO · C' + column + 'F' + row + ' · ' + area
+    // Mientras diseñamos el mundo, todas las celdas son transitables.
+    this.ui.updateStatus('FUEGO · C' + column + 'F' + row
       + (this.overviewEnabled ? ' · M: VOLVER' : ' · M: VER MAPA'));
   }
 
   private isWalkableFootPoint(spriteX: number, spriteY: number): boolean {
     const footY = spriteY + 20;
-    if (spriteX < 14 || spriteX >= WORLD_WIDTH - 14 || footY < 14 || footY >= WORLD_HEIGHT - 14) return false;
-    if (LAND_POLYGONS.some((zone) =>
-      Phaser.Geom.Polygon.Contains(zone.polygon, spriteX, footY)
-    )) return true;
-    // Solo los seis puentes unen las islas: no se puede atravesar lava roja.
-    return BRIDGES.some((bridge) =>
-      distanceToSegment(spriteX, footY, pixelPoint(bridge.from), pixelPoint(bridge.to)) <= GRID_SIZE * 1.15
-    );
+    // Prototipo de exploración: lava, puentes e islas sin colisiones.
+    // Únicamente se impide abandonar los límites del mundo.
+    return spriteX >= 14 && spriteX < WORLD_WIDTH - 14
+      && footY >= 14 && footY < WORLD_HEIGHT - 14;
   }
 
   private createPlayer(): void {
