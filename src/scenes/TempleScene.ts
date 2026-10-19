@@ -308,10 +308,44 @@ export class TempleScene extends Phaser.Scene {
     if (!grantTempleReward(30)) return;
 
     const progress = getVillageProgress();
-    this.ui.updateCoins(progress.coins);
-    this.ui.pulseCoins();
+    // La recompensa ya está guardada, pero el contador se actualiza
+    // cuando las monedas animadas llegan al HUD.
     this.registry.set('arkanis.player.coins', progress.coins);
     this.showKingMessage();
+    this.animateTempleCoinReward(progress.coins);
+  }
+
+  private animateTempleCoinReward(totalCoins: number): void {
+    const startX = this.scale.width / 2;
+    const startY = this.scale.height / 2;
+    const goalX = this.scale.width * (770 / 960);
+    const goalY = this.scale.height * (41 / 540);
+    const numberOfCoins = 9;
+
+    for (let index = 0; index < numberOfCoins; index += 1) {
+      this.time.delayedCall(150 + index * 95, () => {
+        const coin = this.add.image(startX, startY, 'playable-coin')
+          .setDisplaySize(42, 42)
+          .setDepth(21000)
+          .setScrollFactor(0);
+        this.ui.showOnUiCamera(coin);
+        this.tweens.add({
+          targets: coin,
+          x: goalX,
+          y: goalY,
+          scale: 0.35,
+          duration: 650,
+          ease: 'Cubic.easeIn',
+          onComplete: () => {
+            coin.destroy();
+            if (index === numberOfCoins - 1) {
+              this.ui.updateCoins(totalCoins);
+              this.ui.pulseCoins();
+            }
+          }
+        });
+      });
+    }
   }
 
   private showKingMessage(): void {
