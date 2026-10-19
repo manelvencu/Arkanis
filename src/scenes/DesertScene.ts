@@ -179,10 +179,7 @@ export const DESERT_ENTRANCES = {
   shop: {
     column: 59,
     row: 18,
-    // Punto central exacto de C59/F18.
-    x: (59 - 0.5) * GRID_SIZE,
-    y: (18 - 0.5) * GRID_SIZE,
-    radius: 6
+    // La entrada se activa al pisar cualquier punto de C59/F18.
   },
   maze: {
     column: 85,
@@ -207,9 +204,7 @@ export function getDesertEntranceAtFootPoint(
   }
 
   const shop = DESERT_ENTRANCES.shop;
-  if (
-    Phaser.Math.Distance.Between(footX, footY, shop.x, shop.y) <= shop.radius
-  ) {
+  if (column === shop.column && row === shop.row) {
     return 'shop';
   }
 
