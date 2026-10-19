@@ -129,7 +129,6 @@ export class TempleScene extends Phaser.Scene {
       .setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT)
       .setDepth(0);
 
-    this.createGridGuide();
     this.createPlayer();
     this.createPlayerAnimations();
 
