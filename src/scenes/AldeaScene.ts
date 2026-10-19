@@ -531,7 +531,7 @@ export class AldeaScene extends Phaser.Scene {
       this.scene.start('WorldMapScene', {
         characterId: this.characterId,
         startAtMap: true,
-        destination: 'desert'
+        destination: 'fire'
       });
     });
   }
