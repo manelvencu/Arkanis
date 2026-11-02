@@ -191,30 +191,12 @@ export class WorldMapScene extends Phaser.Scene {
         this.canContinue = true;
         this.installContinueInput();
         if (this.destination === 'aldea') {
-          this.pulseAldea();
           this.mapTimeout = this.time.delayedCall(MAP_TIMEOUT_MS, () => this.beginMapTransition());
         }
       }
     });
 
     void veil;
-  }
-
-  private pulseAldea(): void {
-    if (!this.mapContainer || !this.mapImage) return;
-    const local = this.aldeaLocalPoint();
-    const glow = this.add.circle(local.x, local.y, 70, 0xffe28a, 0.08)
-      .setStrokeStyle(8, 0xffdc78, 0.88);
-    this.mapContainer.add(glow);
-    this.tweens.add({
-      targets: glow,
-      scale: 1.22,
-      alpha: 0.7,
-      duration: 900,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
   }
 
   private installContinueInput(): void {
@@ -234,16 +216,6 @@ export class WorldMapScene extends Phaser.Scene {
     const local = this.destinationLocalPoint();
     const targetScale = 5.6;
 
-    if (this.destination === 'aldea') {
-      const flash = this.add.circle(
-        this.mapContainer.x + local.x,
-        this.mapContainer.y + local.y,
-        90,
-        0xffe9a3,
-        0.18
-      ).setStrokeStyle(10, 0xffdc74, 0.95).setDepth(50);
-      this.tweens.add({ targets: flash, scale: 2.2, alpha: 0, duration: 850 });
-    }
     this.tweens.add({
       targets: this.mapContainer,
       scaleX: targetScale,
@@ -265,10 +237,6 @@ export class WorldMapScene extends Phaser.Scene {
         });
       }
     });
-  }
-
-  private aldeaLocalPoint(): Phaser.Math.Vector2 {
-    return this.targetLocalPoint('aldea');
   }
 
   private destinationLocalPoint(): Phaser.Math.Vector2 {
