@@ -30,6 +30,10 @@ export class DevMenuScene extends Phaser.Scene {
   private listContainer?: Phaser.GameObjects.Container;
   private contentHeight = 0;
   private scrollY = 0;
+  private activeScrollPointerId: number | null = null;
+  private lastPointerY = 0;
+  private touchStartY = 0;
+  private touchDragged = false;
 
   constructor() {
     super('DevMenuScene');
@@ -39,6 +43,8 @@ export class DevMenuScene extends Phaser.Scene {
     this.sourceSceneKey = data.sourceSceneKey;
     this.characterId = data.characterId ?? 'tiana';
     this.scrollY = 0;
+    this.activeScrollPointerId = null;
+    this.touchDragged = false;
   }
 
   create(): void {
@@ -51,7 +57,7 @@ export class DevMenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     });
 
-    this.add.text(70, 102, 'Selecciona una pantalla · Rueda / ↑↓ para desplazarte · ESC para volver', {
+    this.add.text(70, 102, 'Selecciona una pantalla · Arrastra / rueda / ↑↓ para desplazarte · ESC para volver', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '22px',
       color: '#aaaaaa'
@@ -60,6 +66,12 @@ export class DevMenuScene extends Phaser.Scene {
     const sections = this.buildSections();
     const container = this.add.container(0, TOP_MARGIN);
     this.listContainer = container;
+
+    // El contenido desplazable no debe invadir el título ni el pie del menú.
+    const clip = this.make.graphics({ x: 0, y: 0 });
+    clip.fillStyle(0xffffff);
+    clip.fillRect(0, TOP_MARGIN, VIEW_WIDTH, VIEW_HEIGHT - TOP_MARGIN - BOTTOM_MARGIN);
+    container.setMask(clip.createGeometryMask());
 
     let y = 0;
     sections.forEach((section) => {
@@ -85,7 +97,19 @@ export class DevMenuScene extends Phaser.Scene {
 
         item.on('pointerover', () => item.setStyle({ backgroundColor: '#303030', color: '#ffffff' }));
         item.on('pointerout', () => item.setStyle({ backgroundColor: '#171717', color: '#f2f2f2' }));
-        item.on('pointerdown', () => this.goTo(entry));
+        // Abrimos al SOLTAR y únicamente si fue un toque: deslizar el dedo
+        // sobre un botón jamás debe abrir una pantalla por accidente.
+        let pressedPointerId: number | null = null;
+        let pressedAt = -1;
+        item.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          pressedPointerId = pointer.id;
+          pressedAt = pointer.downTime;
+        });
+        item.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+          if (this.touchDragged || pointer.id !== pressedPointerId || pointer.downTime !== pressedAt) return;
+          pressedPointerId = null;
+          this.goTo(entry);
+        });
 
         container.add(item);
         y += ROW_HEIGHT;
@@ -100,6 +124,28 @@ export class DevMenuScene extends Phaser.Scene {
     this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _objects: Phaser.GameObjects.GameObject[], _dx: number, dy: number) => {
       this.scrollBy(dy * 0.7);
     });
+
+    // Scroll táctil: acepta arrastrar sobre las propias opciones y sobre el fondo.
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.activeScrollPointerId = pointer.id;
+      this.lastPointerY = pointer.y;
+      this.touchStartY = pointer.y;
+      this.touchDragged = false;
+    });
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.isDown || pointer.id !== this.activeScrollPointerId) return;
+      const changeY = pointer.y - this.lastPointerY;
+      this.lastPointerY = pointer.y;
+      if (Math.abs(pointer.y - this.touchStartY) > 12) this.touchDragged = true;
+      if (this.touchDragged) this.scrollBy(-changeY);
+    });
+    const endTouchScroll = (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id === this.activeScrollPointerId) this.activeScrollPointerId = null;
+      // touchDragged se conserva hasta el siguiente pointerdown, para impedir
+      // que un pointerup de un elemento se convierta en una selección accidental.
+    };
+    this.input.on('pointerup', endTouchScroll);
+    this.input.on('pointerupoutside', endTouchScroll);
 
     this.input.keyboard?.on('keydown-UP', () => this.scrollBy(-70));
     this.input.keyboard?.on('keydown-DOWN', () => this.scrollBy(70));
