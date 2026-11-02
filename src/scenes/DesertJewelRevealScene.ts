@@ -10,7 +10,7 @@ export class DesertJewelRevealScene extends Phaser.Scene {
 
   preload(): void {
     this.load.image('desert-jewel-shard', './assets/story/trozo-desierto-arkanis.png');
-    this.load.image('desert-jewel-assembled', './assets/story/Joya-trozos-1-3-4.png');
+    this.load.image('desert-jewel-assembled', './assets/story/Joya-trozos-1-4.png');
   }
 
   create(): void {
