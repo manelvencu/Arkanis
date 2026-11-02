@@ -44,14 +44,15 @@ export function takeNextNpcMessage(): { message: string; deliveredHolder: boolea
 
   const index = progress.npcMessageIndex;
   progress.npcMessageIndex += 1;
-  let deliveredHolder = false;
+  // Los NPC informan, pero solo el sacerdote puede entregar el contenedor.
+  return { message: messages[index], deliveredHolder: false };
+}
 
-  if (index === 2 && !progress.fragmentHolderReceived) {
-    progress.fragmentHolderReceived = true;
-    deliveredHolder = true;
-  }
-
-  return { message: messages[index], deliveredHolder };
+/** Entrega única del contenedor durante el encuentro con el sacerdote. */
+export function grantFragmentHolderFromPriest(): boolean {
+  if (progress.fragmentHolderReceived) return false;
+  progress.fragmentHolderReceived = true;
+  return true;
 }
 
 export function collectVillageCabinCoin(index: number): boolean {
