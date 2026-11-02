@@ -89,7 +89,7 @@ for (const [c1, f1, c2, f2] of FIRE_WALKABLE_RANGES) {
 
 // Amarillo = transitable con daño. Las tres casillas originales restan 20
 // puntos; las nuevas restan 10 puntos (10 % de la energía máxima de 100).
-const FIRE_DAMAGE_10_PERCENT_CELLS: ReadonlySet<string> = new Set([
+const FIRE_DAMAGE_10_PERCENT_CELLS: Set<string> = new Set([
   '36:65',
   '36:64',
   '37:64'
