@@ -34,7 +34,8 @@ const POT_GRID_POSITIONS: Array<[number, number]> = [
   [35, 12], [35, 20], [18, 15], [21, 21], [17, 22]
 ];
 
-const PORTAL_GRID_POSITION: [number, number] = [35, 15];
+// A la derecha de la cabaña 3, una fila por delante de su acceso (F10).
+const PORTAL_GRID_POSITION: [number, number] = [39, 11];
 const REQUIRED_CHESTS = 3;
 
 type TrainingPrototype = {
