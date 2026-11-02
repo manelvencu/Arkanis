@@ -58,7 +58,7 @@ const MIN_INSIDE_MS = 5000;
 const NPC_EXIT_GAP_MS = 9000;
 
 const CABIN_DOORS = [
-  new Phaser.Math.Vector2(144, 590),
+  new Phaser.Math.Vector2(208, 590),
   new Phaser.Math.Vector2(176, 334),
   new Phaser.Math.Vector2(368, 206),
   new Phaser.Math.Vector2(688, 622),
@@ -67,7 +67,8 @@ const CABIN_DOORS = [
 
 // Recorridos ortogonales que siguen los caminos dibujados en AldeaScene.
 const CABIN_ROUTES: Phaser.Math.Vector2[][] = [
-  [new Phaser.Math.Vector2(144, 610), new Phaser.Math.Vector2(144, 640), new Phaser.Math.Vector2(352, 640), new Phaser.Math.Vector2(352, 448)],
+  // Cabaña 1 desplazada a C7: salida por F20, evitando F21 bloqueada.
+  [new Phaser.Math.Vector2(208, 610), new Phaser.Math.Vector2(352, 610), new Phaser.Math.Vector2(352, 448)],
   [new Phaser.Math.Vector2(176, 350), new Phaser.Math.Vector2(176, 400), new Phaser.Math.Vector2(352, 400)],
   [new Phaser.Math.Vector2(368, 220), new Phaser.Math.Vector2(368, 224)],
   [new Phaser.Math.Vector2(688, 640), new Phaser.Math.Vector2(688, 672), new Phaser.Math.Vector2(560, 672), new Phaser.Math.Vector2(560, 448)],
@@ -180,6 +181,9 @@ function startNpcJourney(npc: VillageNpc): void {
   npc.stoppedByPlayer = false;
   npc.sprite.setPosition(CABIN_DOORS[npc.cabinIndex].x, CABIN_DOORS[npc.cabinIndex].y);
   npc.sprite.setVisible(true).setActive(true);
+  const body = npc.sprite.body as Phaser.Physics.Arcade.Body;
+  body.enable = true;
+  body.reset(npc.sprite.x, npc.sprite.y);
 }
 
 function createVillageNpcs(scene: AldeaRuntime): void {
@@ -199,7 +203,12 @@ function createVillageNpcs(scene: AldeaRuntime): void {
       .setDepth(25)
       .setVisible(false)
       .setActive(false);
-    (sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setSize(26, 22).setOffset(19, 38);
+    // Colisión pequeña en los pies: el jugador deberá rodear al NPC.
+    // Los NPC se desplazan por rutas programadas y no deben ser empujados.
+    const body = sprite.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false).setSize(26, 22).setOffset(19, 38).setImmovable(true);
+    body.enable = false; // Un NPC dentro de la cabaña no bloquea el camino.
+    scene.physics.add.collider(scene.player, sprite);
     return {
       id,
       kind,
@@ -295,6 +304,7 @@ function updateVillageNpcs(scene: AldeaRuntime, time: number, delta: number): vo
     if (!target) {
       npc.cabinIndex = npc.destinationIndex;
       npc.sprite.setVisible(false).setActive(false);
+      (npc.sprite.body as Phaser.Physics.Arcade.Body).enable = false;
       npc.waitingUntil = time + Phaser.Math.Between(MIN_INSIDE_MS, 11000);
       npc.route = [];
       return;
@@ -350,7 +360,7 @@ function checkVillageCabinEntrance(scene: AldeaRuntime): void {
         characterId: scene.characterId,
         kind: cabin.kind,
         returnX: door.x,
-        returnY: door.y + 58
+        returnY: cabin.index === 0 ? 610 : door.y + 58
       });
     });
     return;
