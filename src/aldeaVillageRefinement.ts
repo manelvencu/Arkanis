@@ -33,6 +33,7 @@ type AldeaRuntime = Phaser.Scene & {
     updateEnergy: (energy: number) => void;
     updateCoins: (coins: number) => void;
     ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => void;
+    showOnUiCamera: (object: Phaser.GameObjects.GameObject) => void;
   };
   characterId: CharacterId;
   lastWalkablePosition: Phaser.Math.Vector2;
@@ -236,40 +237,54 @@ function showNpcMessage(scene: AldeaRuntime, npc: VillageNpc): void {
   scene.__villageDialogueOpen = true;
   setNpcIdle(npc);
 
-  // Los diálogos son UI contextual: siempre aparecen centrados en la pantalla
-  // visible, independientemente de dónde estén el jugador o el NPC en el mundo.
-  const center = scene.cameras.main.midPoint;
-  const box = scene.add.rectangle(center.x, center.y, 760, 170, 0x17100c, 0.97)
+  // Dibujamos el diálogo en la cámara fija de la interfaz (zoom 1).
+  // Así se centra en la pantalla REAL, con independencia del scroll y zoom
+  // de la cámara que sigue al personaje por La Aldea.
+  const viewportWidth = scene.scale.width;
+  const viewportHeight = scene.scale.height;
+  const centerX = viewportWidth / 2;
+  const centerY = viewportHeight / 2;
+  const boxWidth = Math.min(viewportWidth * 0.73, 1400);
+  const boxHeight = Math.min(viewportHeight * 0.25, 270);
+
+  const box = scene.add.rectangle(centerX, centerY, boxWidth, boxHeight, 0x17100c, 0.97)
     .setStrokeStyle(4, 0xd6a84b, 1)
-    .setDepth(500);
-  const text = scene.add.text(center.x, center.y - 22, next.message, {
+    .setScrollFactor(0)
+    .setDepth(20000);
+  const text = scene.add.text(centerX, centerY - 34, next.message, {
     fontFamily: 'Georgia, Times New Roman, serif',
-    fontSize: '24px',
+    fontSize: `${Math.round(viewportHeight * 0.034)}px`,
     color: '#fff0c7',
     align: 'center',
-    wordWrap: { width: 700 }
-  }).setOrigin(0.5).setDepth(501);
-  const close = scene.add.text(center.x, center.y + 55, 'Pulsa ESPACIO, ENTER o toca para continuar', {
-    fontFamily: 'Arial', fontSize: '16px', color: '#d6a84b'
-  }).setOrigin(0.5).setDepth(501);
+    wordWrap: { width: boxWidth - 100 }
+  }).setOrigin(0.5).setScrollFactor(0).setDepth(20001);
+  const close = scene.add.text(
+    centerX,
+    centerY + boxHeight / 2 - 44,
+    'Pulsa ESPACIO, ENTER o toca para continuar',
+    { fontFamily: 'Arial', fontSize: `${Math.round(viewportHeight * 0.021)}px`, color: '#d6a84b' }
+  ).setOrigin(0.5).setScrollFactor(0).setDepth(20001);
 
-  // El HUD usa una segunda cámara. Si estos objetos no se excluyen de ella,
-  // aparecen clonados a escala pequeña en la esquina superior izquierda.
-  scene.ui.ignoreWorldObject(box);
-  scene.ui.ignoreWorldObject(text);
-  scene.ui.ignoreWorldObject(close);
+  // Estos objetos se crean después del HUD y se muestran solo en su cámara;
+  // no se renderizan desplazados ni duplicados en la cámara del mundo.
+  scene.ui.showOnUiCamera(box);
+  scene.ui.showOnUiCamera(text);
+  scene.ui.showOnUiCamera(close);
 
   const dismiss = (): void => {
     if (!box.active) return;
+    scene.input.off('pointerdown', dismiss);
+    scene.input.keyboard?.off('keydown-SPACE', dismiss);
+    scene.input.keyboard?.off('keydown-ENTER', dismiss);
     box.destroy();
     text.destroy();
     close.destroy();
     scene.__villageDialogueOpen = false;
   };
 
-  scene.input.once('pointerdown', dismiss);
-  scene.input.keyboard?.once('keydown-SPACE', dismiss);
-  scene.input.keyboard?.once('keydown-ENTER', dismiss);
+  scene.input.on('pointerdown', dismiss);
+  scene.input.keyboard?.on('keydown-SPACE', dismiss);
+  scene.input.keyboard?.on('keydown-ENTER', dismiss);
 }
 
 function releaseNextNpcIfDue(scene: AldeaRuntime, time: number): void {
