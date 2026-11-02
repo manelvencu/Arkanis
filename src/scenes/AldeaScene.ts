@@ -23,21 +23,9 @@ const WORLD_WIDTH = WORLD_COLUMNS * GRID;
 const WORLD_HEIGHT = WORLD_ROWS * GRID;
 const PLAYER_SIZE = 64;
 const PLAYER_START = { x: 92, y: WORLD_HEIGHT - 86 };
-const ROAD_WIDTH = 105;
-const CABIN_PATH_WIDTH = GRID * 2;
-const CABIN_PATH_OVERLAP = 48;
 const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
-
-const PLAZA = {
-  left: (11 - 1) * GRID,
-  top: (8 - 1) * GRID,
-  width: 11 * GRID,
-  height: 7 * GRID
-} as const;
-const PLAZA_RIGHT = PLAZA.left + PLAZA.width;
-const PLAZA_BOTTOM = PLAZA.top + PLAZA.height;
 
 const GRASS_CLEARING = new Phaser.Geom.Rectangle(
   (7 - 1) * GRID,
@@ -100,38 +88,13 @@ const CHURCH = {
   height: 224
 } as const;
 
-const FOREST_TREES = [
-  { x: 42, y: 118, width: 118, height: 152 },
-  { x: 108, y: 82, width: 126, height: 162 },
-  { x: 178, y: 112, width: 116, height: 150 },
-  { x: 246, y: 74, width: 128, height: 166 },
-  { x: 70, y: 206, width: 132, height: 170 },
-  { x: 160, y: 214, width: 122, height: 160 }
-] as const;
-
-const PATH_BORDER_DECORATIONS = [
-  { x: 44, y: 590, texture: 'aldea-rock', size: 34 },
-  { x: 210, y: 600, texture: 'aldea-bush', size: 40 },
-  { x: 300, y: 612, texture: 'aldea-rock', size: 30 },
-  { x: 305, y: 500, texture: 'aldea-bush', size: 38 },
-  { x: 728, y: 470, texture: 'aldea-rock', size: 32 },
-  { x: 742, y: 300, texture: 'aldea-bush', size: 38 },
-  { x: 820, y: 205, texture: 'aldea-rock', size: 30 },
-  { x: 905, y: 166, texture: 'aldea-bush', size: 38 },
-  { x: 560, y: 618, texture: 'aldea-rock', size: 30 },
-  { x: 735, y: 626, texture: 'aldea-bush', size: 40 }
-] as const;
+const VILLAGE_BACKGROUND_KEY = 'aldea-world-background';
+const VILLAGE_BACKGROUND_PATH = './assets/world/aldea-world-01.png';
 
 const ENVIRONMENT_ASSETS = {
-  grass: './assets/environment/grass-tile-01.png',
-  dirt: './assets/environment/dirt-ground-01.png',
-  stoneFloor: './assets/environment/stone-floor-tile-01.png',
   cabin: './assets/environment/cabin-stone-thatch-01.png',
   cabinIvory: './assets/environment/cabin-ivory-redtile-01.png',
-  church: './assets/environment/church-stone-belltower-01.png',
-  tree: './assets/environment/tree-large-01.png',
-  bush: './assets/environment/bush-small-01.png',
-  rock: './assets/environment/rock-small-01.png'
+  church: './assets/environment/church-stone-belltower-01.png'
 } as const;
 
 const CHARACTER_ASSETS = {
@@ -189,10 +152,9 @@ export class AldeaScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.image(VILLAGE_BACKGROUND_KEY, VILLAGE_BACKGROUND_PATH);
     Object.entries(ENVIRONMENT_ASSETS).forEach(([key, path]) => {
-      let textureKey = `aldea-${key}`;
-      if (key === 'cabinIvory') textureKey = 'aldea-cabin-ivory';
-      if (key === 'stoneFloor') textureKey = 'aldea-stoneFloor';
+      const textureKey = key === 'cabinIvory' ? 'aldea-cabin-ivory' : `aldea-${key}`;
       this.load.image(textureKey, path);
     });
     preloadPlayableUiAssets(this);
@@ -208,9 +170,11 @@ export class AldeaScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBackgroundColor('#6e934a');
 
-    this.createTerrain();
-    this.createForestEdge();
-    this.createPathBorderDecorations();
+    // Fondo orgánico único: ya incluye hierba, caminos, plaza, árboles y arbustos.
+    // Las construcciones y la fuente se siguen dibujando como objetos independientes.
+    this.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, VILLAGE_BACKGROUND_KEY)
+      .setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT)
+      .setDepth(0);
     this.createBuildings();
     this.createPlayer();
     this.createWorldCollisions();
@@ -283,172 +247,6 @@ export class AldeaScene extends Phaser.Scene {
       this.shootMagicRay();
       this.lastShotAt = time;
     }
-  }
-
-  private createTerrain(): void {
-    const grass = this.add.tileSprite(
-      WORLD_WIDTH / 2,
-      WORLD_HEIGHT / 2,
-      WORLD_WIDTH,
-      WORLD_HEIGHT,
-      'aldea-grass'
-    ).setDepth(0);
-    const grassSource = grass.texture.getSourceImage() as { width: number; height: number };
-    const grassScaleX = 128 / grassSource.width;
-    const grassScaleY = 128 / grassSource.height;
-    grass.setTileScale(grassScaleX, grassScaleY);
-
-    const dirtSource = this.textures.get('aldea-dirt').getSourceImage() as { width: number; height: number };
-    const dirtScaleX = 128 / dirtSource.width;
-    const dirtScaleY = 128 / dirtSource.height;
-
-    const addDirtSegment = (a: Phaser.Math.Vector2, b: Phaser.Math.Vector2, width: number): void => {
-      const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
-      const segmentWidth = horizontal ? Math.abs(b.x - a.x) + width : width;
-      const segmentHeight = horizontal ? width : Math.abs(b.y - a.y) + width;
-      const centerX = (a.x + b.x) / 2;
-      const centerY = (a.y + b.y) / 2;
-      this.add.tileSprite(centerX, centerY, segmentWidth, segmentHeight, 'aldea-dirt')
-        .setDepth(1)
-        .setTileScale(dirtScaleX, dirtScaleY);
-      this.walkableAreas.push(new Phaser.Geom.Rectangle(
-        centerX - segmentWidth / 2,
-        centerY - segmentHeight / 2,
-        segmentWidth,
-        segmentHeight
-      ));
-    };
-
-    const addRoundedDirtJoint = (point: Phaser.Math.Vector2, width: number): void => {
-      const joint = this.add.tileSprite(point.x, point.y, width, width, 'aldea-dirt')
-        .setDepth(1)
-        .setTileScale(dirtScaleX, dirtScaleY);
-      const maskShape = this.make.graphics({ x: 0, y: 0 });
-      maskShape.fillStyle(0xffffff, 1);
-      maskShape.fillCircle(point.x, point.y, width / 2);
-      joint.setMask(maskShape.createGeometryMask());
-      this.walkableAreas.push(new Phaser.Geom.Rectangle(
-        point.x - width / 2,
-        point.y - width / 2,
-        width,
-        width
-      ));
-    };
-
-    const drawTexturedPath = (points: Phaser.Math.Vector2[], width: number): void => {
-      for (let i = 1; i < points.length; i += 1) addDirtSegment(points[i - 1], points[i], width);
-      points.forEach((point) => addRoundedDirtJoint(point, width));
-    };
-
-    // Entrada principal inferior: se desplaza a C11/C12 para liberar de tierra C7-C10 entre F14-F19.
-    drawTexturedPath([
-      new Phaser.Math.Vector2(-ROAD_WIDTH / 2, 656),
-      new Phaser.Math.Vector2(352, 656),
-      new Phaser.Math.Vector2(352, PLAZA_BOTTOM)
-    ], ROAD_WIDTH);
-
-    // Salida principal superior derecha, terminando en C30 entre F2 y F5.
-    drawTexturedPath([
-      new Phaser.Math.Vector2(PLAZA_RIGHT, 256),
-      new Phaser.Math.Vector2(864, 256),
-      new Phaser.Math.Vector2(864, 96),
-      new Phaser.Math.Vector2(WORLD_WIDTH + ROAD_WIDTH / 2, 96)
-    ], ROAD_WIDTH);
-
-    // Cabaña 1: baja dos filas, gira a C11/C12 y sube hasta C11/F15-C12/F15.
-    drawTexturedPath([
-      new Phaser.Math.Vector2(CABIN_ONE.x, CABIN_ONE.baseY - CABIN_PATH_OVERLAP),
-      new Phaser.Math.Vector2(CABIN_ONE.x, CABIN_ONE.baseY + GRID * 2),
-      new Phaser.Math.Vector2(352, CABIN_ONE.baseY + GRID * 2),
-      new Phaser.Math.Vector2(352, PLAZA_BOTTOM)
-    ], CABIN_PATH_WIDTH);
-
-    // Cabaña 2: baja hasta la franja F12/F13 y gira a la derecha hacia la plaza.
-    drawTexturedPath([
-      new Phaser.Math.Vector2(CABIN_TWO.x, CABIN_TWO.baseY - CABIN_PATH_OVERLAP),
-      new Phaser.Math.Vector2(CABIN_TWO.x, 400),
-      new Phaser.Math.Vector2(PLAZA.left, 400)
-    ], CABIN_PATH_WIDTH);
-
-    // Cabaña 3: acceso vertical directo al borde superior de la plaza.
-    drawTexturedPath([
-      new Phaser.Math.Vector2(CABIN_THREE.x, CABIN_THREE.baseY - CABIN_PATH_OVERLAP),
-      new Phaser.Math.Vector2(CABIN_THREE.x, PLAZA.top)
-    ], CABIN_PATH_WIDTH);
-
-    // Cabaña 4: baja a F21/F22, gira a C17/C18 y sube hasta la plaza.
-    drawTexturedPath([
-      new Phaser.Math.Vector2(CABIN_FOUR.x, CABIN_FOUR.baseY - CABIN_PATH_OVERLAP),
-      new Phaser.Math.Vector2(CABIN_FOUR.x, 672),
-      new Phaser.Math.Vector2(560, 672),
-      new Phaser.Math.Vector2(560, PLAZA_BOTTOM)
-    ], CABIN_PATH_WIDTH);
-
-    // Cabaña 5: salida ortogonal hacia el lateral derecho de la plaza.
-    drawTexturedPath([
-      new Phaser.Math.Vector2(CABIN_FIVE.x, CABIN_FIVE.baseY - CABIN_PATH_OVERLAP),
-      new Phaser.Math.Vector2(CABIN_FIVE.x, 432),
-      new Phaser.Math.Vector2(PLAZA_RIGHT, 432)
-    ], CABIN_PATH_WIDTH);
-
-    // Tierra horizontal frente a la iglesia: C16/F7 a C21/F7.
-    const churchApproach = this.add.tileSprite(
-      (15 * GRID + 21 * GRID) / 2,
-      (7 - 0.5) * GRID,
-      6 * GRID,
-      GRID,
-      'aldea-dirt'
-    ).setDepth(1).setTileScale(dirtScaleX, dirtScaleY);
-    void churchApproach;
-    this.walkableAreas.push(new Phaser.Geom.Rectangle(15 * GRID, 6 * GRID, 6 * GRID, GRID));
-
-    // Forzamos la zona C7-C10 / F14-F19 a hierba limpia por encima de cualquier solape de tierra.
-    this.add.tileSprite(
-      GRASS_CLEARING.centerX,
-      GRASS_CLEARING.centerY,
-      GRASS_CLEARING.width,
-      GRASS_CLEARING.height,
-      'aldea-grass'
-    ).setDepth(2).setTileScale(grassScaleX, grassScaleY);
-
-    const plaza = this.add.tileSprite(
-      PLAZA.left,
-      PLAZA.top,
-      PLAZA.width,
-      PLAZA.height,
-      'aldea-stoneFloor'
-    ).setOrigin(0, 0).setDepth(3);
-    const stoneSource = plaza.texture.getSourceImage() as { width: number; height: number };
-    plaza.setTileScale(128 / stoneSource.width, 128 / stoneSource.height);
-    this.walkableAreas.push(new Phaser.Geom.Rectangle(PLAZA.left, PLAZA.top, PLAZA.width, PLAZA.height));
-  }
-
-  private createForestEdge(): void {
-    FOREST_TREES.forEach((treeConfig, index) => {
-      this.add.image(treeConfig.x, treeConfig.y, 'aldea-tree')
-        .setOrigin(0.5, 1)
-        .setDisplaySize(treeConfig.width, treeConfig.height)
-        .setDepth(8 + index * 0.01);
-
-      const blocker = this.add.rectangle(
-        treeConfig.x,
-        treeConfig.y - 18,
-        Math.max(34, treeConfig.width * 0.36),
-        36,
-        0x000000,
-        0
-      );
-      this.physics.add.existing(blocker, true);
-      this.worldColliders.push(blocker);
-    });
-  }
-
-  private createPathBorderDecorations(): void {
-    PATH_BORDER_DECORATIONS.forEach((item) => {
-      this.add.image(item.x, item.y, item.texture)
-        .setDisplaySize(item.size, item.size)
-        .setDepth(7);
-    });
   }
 
   private createBuildings(): void {
