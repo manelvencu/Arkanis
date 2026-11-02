@@ -58,7 +58,12 @@ const FIRE_WALKABLE_RANGES: readonly FireCellRange[] = [
   [25, 69, 27, 69],
   [27, 68, 29, 68],
   [29, 67, 31, 67],
-  [30, 66, 58, 66]
+  [30, 66, 58, 66],
+
+  // Ampliación del recorrido: casillas individuales, fila F88 y gran plataforma norte.
+  [20, 83, 21, 83],
+  [28, 88, 30, 88],
+  [30, 59, 57, 65]
 ];
 
 const FIRE_WALKABLE_CELLS = new Set<string>();
@@ -70,14 +75,21 @@ for (const [c1, f1, c2, f2] of FIRE_WALKABLE_RANGES) {
   }
 }
 
-// Amarillo = transitable, pero causa daño. Estas tres casillas también
-// pertenecen al conjunto verde anterior y por eso se puede entrar en ellas.
+// Amarillo = transitable con daño. Las tres casillas originales restan 20
+// puntos; las nuevas restan 10 puntos (10 % de la energía máxima de 100).
+const FIRE_DAMAGE_10_PERCENT_CELLS: ReadonlySet<string> = new Set([
+  '36:65',
+  '36:64',
+  '37:64'
+]);
 const FIRE_DAMAGE_CELLS: ReadonlySet<string> = new Set([
   '21:84',
   '36:66',
-  '53:66'
+  '53:66',
+  ...FIRE_DAMAGE_10_PERCENT_CELLS
 ]);
 const FIRE_DAMAGE_AMOUNT = 20;
+const FIRE_DAMAGE_10_PERCENT_AMOUNT = 10;
 const FIRE_DAMAGE_COOLDOWN_MS = 1200;
 const FOOT_OFFSET_Y = 20;
 
@@ -267,7 +279,11 @@ export class FireLandsScene extends Phaser.Scene {
     if (time - this.lastDamageAt < FIRE_DAMAGE_COOLDOWN_MS) return;
     this.lastDamageAt = time;
 
-    const nextEnergy = Math.max(0, getVillageProgress().energy - FIRE_DAMAGE_AMOUNT);
+    const cellKey = `${foot.column}:${foot.row}`;
+    const damage = FIRE_DAMAGE_10_PERCENT_CELLS.has(cellKey)
+      ? FIRE_DAMAGE_10_PERCENT_AMOUNT
+      : FIRE_DAMAGE_AMOUNT;
+    const nextEnergy = Math.max(0, getVillageProgress().energy - damage);
     setVillageEnergy(nextEnergy);
     this.registry.set('arkanis.player.energy', nextEnergy);
     this.ui.updateEnergy(nextEnergy);
