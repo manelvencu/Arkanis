@@ -1,6 +1,9 @@
 import * as Phaser from 'phaser';
 import { AldeaScene } from './scenes/AldeaScene';
-import { isAldeaEntranceCell, isAldeaWalkableFootPoint, type AldeaEntranceKey } from './aldeaWalkableGrid';
+import {
+  ALDEA_GRID_SIZE, ALDEA_GRID_COLUMNS, ALDEA_GRID_ROWS, ALDEA_WALKABLE_CELLS,
+  isAldeaEntranceCell, isAldeaWalkableFootPoint, type AldeaEntranceKey
+} from './aldeaWalkableGrid';
 import type { CharacterId } from './gameData';
 
 type AldeaRuntime = Phaser.Scene & {
@@ -11,12 +14,15 @@ type AldeaRuntime = Phaser.Scene & {
   cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   ui?: {
     touchDirections: Record<'left' | 'right' | 'up' | 'down', boolean>;
+    ignoreWorldObject: (object: Phaser.GameObjects.GameObject) => void;
   };
   __villageDialogueOpen?: boolean;
   __villageCabinTransitioning?: boolean;
   __c26CabinTransitioning?: boolean;
   __churchTransitioning?: boolean;
   __aldeaGridTransitioning?: boolean;
+  __aldeaHelpGrid?: Phaser.GameObjects.Image;
+  __aldeaHelpGridKey?: Phaser.Input.Keyboard.Key;
 };
 
 type AldeaPrototype = {
@@ -31,6 +37,57 @@ type VillageEntranceKind = 'coins' | 'wine' | 'blessing';
 type EntranceSpec =
   | { key: 'church'; scene: 'church' }
   | { key: Exclude<AldeaEntranceKey, 'church'>; scene: 'village'; kind: VillageEntranceKind; returnX: number; returnY: number };
+
+const GRID_PREVIEW_TEXTURE = 'aldea-help-walkability-grid';
+
+function createWalkabilityHelpGrid(scene: AldeaRuntime): void {
+  const width = ALDEA_GRID_COLUMNS * ALDEA_GRID_SIZE;
+  const height = ALDEA_GRID_ROWS * ALDEA_GRID_SIZE;
+
+  // Una sola textura de 960x704: no creamos centenares de textos/rectángulos individuales.
+  // El conjunto usado para pintar es el MISMO que decide si los pies pueden pisar una celda.
+  if (scene.textures.exists(GRID_PREVIEW_TEXTURE)) scene.textures.remove(GRID_PREVIEW_TEXTURE);
+  const texture = scene.textures.createCanvas(GRID_PREVIEW_TEXTURE, width, height);
+  if (!texture) return;
+
+  const ctx = texture.context;
+  ctx.clearRect(0, 0, width, height);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 9px Arial';
+
+  for (let f = 1; f <= ALDEA_GRID_ROWS; f += 1) {
+    for (let c = 1; c <= ALDEA_GRID_COLUMNS; c += 1) {
+      const x = (c - 1) * ALDEA_GRID_SIZE;
+      const y = (f - 1) * ALDEA_GRID_SIZE;
+      const walkable = ALDEA_WALKABLE_CELLS.has(`${c}:${f}`);
+
+      ctx.fillStyle = walkable ? 'rgba(16, 185, 76, 0.30)' : 'rgba(228, 35, 35, 0.30)';
+      ctx.fillRect(x, y, ALDEA_GRID_SIZE, ALDEA_GRID_SIZE);
+      ctx.strokeStyle = 'rgba(17, 21, 16, 0.75)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, ALDEA_GRID_SIZE - 1, ALDEA_GRID_SIZE - 1);
+
+      // Dos líneas legibles con zoom x2. Ejemplo: C12 / F15.
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeText(`C${c}`, x + 16, y + 11);
+      ctx.fillText(`C${c}`, x + 16, y + 11);
+      ctx.strokeText(`F${f}`, x + 16, y + 22);
+      ctx.fillText(`F${f}`, x + 16, y + 22);
+    }
+  }
+
+  texture.refresh();
+  const overlay = scene.add.image(width / 2, height / 2, GRID_PREVIEW_TEXTURE)
+    .setDepth(100)
+    .setVisible(true);
+  scene.__aldeaHelpGrid = overlay;
+  // El HUD utiliza una cámara adicional: la cuadrícula debe verse solo en el mundo.
+  scene.ui?.ignoreWorldObject?.(overlay);
+  scene.__aldeaHelpGridKey = scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.G);
+}
 
 const ENTRANCE_SPECS: EntranceSpec[] = [
   { key: 'church', scene: 'church' },
@@ -129,6 +186,8 @@ export function installAldeaWalkableGridRefinement(): void {
       if (blocker.active) blocker.destroy();
     });
     this.worldColliders = [];
+
+    createWalkabilityHelpGrid(this);
   };
 
   prototype.isWalkablePoint = function isWalkablePointFromGrid(x: number, y: number): boolean {
@@ -152,6 +211,11 @@ export function installAldeaWalkableGridRefinement(): void {
       this.__villageCabinTransitioning = villageWasTransitioning;
       this.__c26CabinTransitioning = c26WasTransitioning;
       this.__churchTransitioning = churchWasTransitioning;
+    }
+
+    // G alterna la vista de depuración sin modificar las colisiones.
+    if (this.__aldeaHelpGridKey && Phaser.Input.Keyboard.JustDown(this.__aldeaHelpGridKey)) {
+      this.__aldeaHelpGrid?.setVisible(!this.__aldeaHelpGrid.visible);
     }
 
     if (this.exitStarted || this.__aldeaGridTransitioning || this.__villageDialogueOpen || !this.scene.isActive()) return;
