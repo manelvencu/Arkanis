@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { AldeaScene } from './scenes/AldeaScene';
-import { getVillageProgress, setVillageProgressFromTraining } from './villageProgress';
+import { getVillageProgress } from './villageProgress';
 
 type AldeaRuntime = Phaser.Scene & {
   ui: {
@@ -27,14 +27,12 @@ export function installPlayerProgressBridge(): void {
   prototype.create = function createWithGlobalPlayerProgress(this: AldeaRuntime): void {
     originalCreate.call(this);
 
-    const storedEnergy = this.registry.get(REGISTRY_ENERGY_KEY);
-    const storedCoins = this.registry.get(REGISTRY_COINS_KEY);
-
-    if (typeof storedEnergy === 'number' && typeof storedCoins === 'number') {
-      setVillageProgressFromTraining(storedEnergy, storedCoins);
-    }
-
+    // villageProgress es el estado de la partida. El Registry puede contener
+    // datos desactualizados (p. ej. tras recoger monedas en las cabañas).
+    // Nunca debe sobrescribir el progreso al volver a La Aldea.
     const progress = getVillageProgress();
+    this.registry.set(REGISTRY_ENERGY_KEY, progress.energy);
+    this.registry.set(REGISTRY_COINS_KEY, progress.coins);
     this.ui.updateEnergy(progress.energy);
     this.ui.updateCoins(progress.coins);
   };
