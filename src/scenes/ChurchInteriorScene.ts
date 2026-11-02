@@ -226,7 +226,9 @@ export class ChurchInteriorScene extends Phaser.Scene {
       && this.player.y <= PRIEST_REACH_Y;
   }
 
-  private readonly handlePriestInteraction = (): void => {
+  private readonly handlePriestInteraction = (event?: KeyboardEvent | Phaser.Input.Pointer): void => {
+    // Mantener pulsada ESPACIO no debe saltar las etapas del diálogo.
+    if (event && 'repeat' in event && event.repeat) return;
     if (this.exiting || !this.scene.isActive()) return;
     // Evita que una misma pulsación táctil avance dos pantallas o el autorepeat.
     if (this.time.now - this.lastDialogueActionAt < 330) return;
