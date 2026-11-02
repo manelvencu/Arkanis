@@ -102,7 +102,24 @@ const BLOCKED_RANGES: AldeaCellRange[] = [
   range(11, 6, 11, 6),
   range(11, 8, 11, 8),
   range(18, 15, 18, 18),
-  range(19, 15, 19, 18)
+  range(19, 15, 19, 18),
+
+  // Segunda revisión: bloques completos que pasan de verdes a rojos.
+  range(17, 21, 27, 22),
+  range(27, 14, 27, 20),
+  range(21, 13, 24, 14),
+  range(21, 8, 29, 9),
+  range(27, 2, 30, 5)
+];
+
+// Segunda revisión: celdas que pasan expresamente de rojo a verde.
+const ADDED_WALKABLE_RANGES: AldeaCellRange[] = [
+  range(29, 6, 30, 6),
+  range(22, 7, 26, 7),
+  range(22, 11, 23, 12),
+  range(8, 11, 10, 11),
+  range(20, 20, 24, 20),
+  range(8, 19, 10, 19)
 ];
 
 const walkableCells = new Set(buildCellSet(WALKABLE_RANGES));
@@ -110,6 +127,7 @@ Object.values(ALDEA_ENTRANCE_CELLS).forEach((entranceCells) => {
   entranceCells.forEach((cell) => walkableCells.add(cell));
 });
 buildCellSet(BLOCKED_RANGES).forEach((cell) => walkableCells.delete(cell));
+buildCellSet(ADDED_WALKABLE_RANGES).forEach((cell) => walkableCells.add(cell));
 
 export const ALDEA_WALKABLE_CELLS: ReadonlySet<string> = walkableCells;
 
