@@ -37,7 +37,7 @@ export function takeNextNpcMessage(): { message: string; deliveredHolder: boolea
   const messages = [
     'Hay ocho mundos que deberás ir visitando. En cada uno deberás conseguir un fragmento de la Joya de Arkanis.',
     'Cuando reúnas los ocho fragmentos de la Joya de Arkanis, los tienes que llevar a la torre más alta del Castillo de Arkanis.',
-    '¡Toma explorador! Aquí debes colocar todos los fragmentos de la Joya de Arkanis.'
+    'Visita la Vinería explorador, nuestro vino te dará energía'
   ] as const;
 
   if (progress.npcMessageIndex >= messages.length) return null;
