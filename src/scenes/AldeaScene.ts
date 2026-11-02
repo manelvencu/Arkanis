@@ -34,11 +34,12 @@ const GRASS_CLEARING = new Phaser.Geom.Rectangle(
   6 * GRID
 );
 
+// La salida lateral está ahora en C30F6 (C27–C30/F2–F5 está bloqueado).
 const EXIT_ZONE = new Phaser.Geom.Rectangle(
   (30 - 1) * GRID,
-  (2 - 1) * GRID,
+  (6 - 1) * GRID,
   GRID,
-  4 * GRID
+  GRID
 );
 
 const CABIN_ONE: CabinConfig = {
@@ -203,7 +204,7 @@ export class AldeaScene extends Phaser.Scene {
         this.player.setPosition(this.lastWalkablePosition.x, this.lastWalkablePosition.y);
       }
 
-      if (Phaser.Geom.Rectangle.Contains(EXIT_ZONE, this.player.x, this.player.y)) {
+      if (Phaser.Geom.Rectangle.Contains(EXIT_ZONE, this.player.x, footY)) {
         this.beginExitTransition();
         return;
       }
