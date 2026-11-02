@@ -42,7 +42,8 @@ const EXIT_ZONE = new Phaser.Geom.Rectangle(
 );
 
 const CABIN_ONE: CabinConfig = {
-  x: (5 - 0.5) * GRID,
+  // Dos columnas a la derecha (64 px); no cambia la cota vertical.
+  x: (7 - 0.5) * GRID,
   baseY: 18 * GRID,
   width: 192,
   height: 144,
