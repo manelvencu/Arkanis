@@ -109,7 +109,11 @@ const BLOCKED_RANGES: AldeaCellRange[] = [
   range(27, 14, 27, 20),
   range(21, 13, 24, 14),
   range(21, 8, 29, 9),
-  range(27, 2, 30, 5)
+  range(27, 2, 30, 5),
+
+  // Tercera revisión: bloquear accesos puntuales.
+  range(11, 7, 11, 7),
+  range(13, 6, 13, 6)
 ];
 
 // Segunda revisión: celdas que pasan expresamente de rojo a verde.
@@ -119,7 +123,11 @@ const ADDED_WALKABLE_RANGES: AldeaCellRange[] = [
   range(22, 11, 23, 12),
   range(8, 11, 10, 11),
   range(20, 20, 24, 20),
-  range(8, 19, 10, 19)
+  range(8, 19, 10, 19),
+
+  // Tercera revisión: accesos permitidos (prevalecen sobre bloqueos previos).
+  range(21, 7, 21, 8),
+  range(30, 5, 30, 5)
 ];
 
 const walkableCells = new Set(buildCellSet(WALKABLE_RANGES));
