@@ -3,28 +3,6 @@ import { TrainingScene } from './scenes/TrainingScene';
 import { getTrainingReadChestCount } from './trainingProgress';
 
 const GRID_SIZE = 32;
-const TERRAIN_TILE_CELLS = 4;
-const TERRAIN_TILE_SIZE = GRID_SIZE * TERRAIN_TILE_CELLS;
-const WORLD_COLUMNS = 45;
-const WORLD_ROWS = 28;
-const WORLD_WIDTH = WORLD_COLUMNS * GRID_SIZE;
-const WORLD_HEIGHT = WORLD_ROWS * GRID_SIZE;
-const TERRAIN_DEPTH = 3;
-
-const TOP_GRASS_ROWS = 5;
-const LEFT_GRASS_COLUMNS = 4;
-const BOTTOM_GRASS_START_ROW = 25;
-const RIGHT_GRASS_START_COLUMN = 38;
-
-const TOP_GRASS_HEIGHT = TOP_GRASS_ROWS * GRID_SIZE;
-const LEFT_GRASS_WIDTH = LEFT_GRASS_COLUMNS * GRID_SIZE;
-const BOTTOM_GRASS_Y = (BOTTOM_GRASS_START_ROW - 1) * GRID_SIZE;
-const RIGHT_GRASS_X = (RIGHT_GRASS_START_COLUMN - 1) * GRID_SIZE;
-
-const INTERIOR_X = LEFT_GRASS_WIDTH;
-const INTERIOR_Y = TOP_GRASS_HEIGHT;
-const INTERIOR_WIDTH = RIGHT_GRASS_X - INTERIOR_X;
-const INTERIOR_HEIGHT = BOTTOM_GRASS_Y - INTERIOR_Y;
 
 const CABIN_DISPLAY_WIDTH = 270;
 const CABIN_DISPLAY_HEIGHT = 205;
@@ -36,22 +14,24 @@ const CABIN_SUPPORT_POINTS: Array<[number, number]> = [
   [1008, 272] // C32/F09
 ];
 
+// Distribución nueva, variada y estable: se mezcla la colocación sin
+// mover objetos aleatoriamente cada vez que se entra a la ZE.
+// Todos los puntos se sitúan dentro del rectángulo transitable de tierra.
 const SPIKE_GRID_POSITIONS: Array<[number, number]> = [
-  [11, 21], [13, 21], [16, 21], [18, 21], [20, 21], [22, 21], [24, 21], [26, 21], [34, 21],
-  [11, 22], [34, 22],
-  [18, 24], [20, 24], [22, 24], [24, 24], [26, 24], [28, 24], [30, 24], [32, 24],
-  [11, 25], [33, 26]
+  [17, 18], [14, 22], [17, 11], [12, 18], [14, 14], [21, 19], [6, 16],
+  [7, 22], [19, 22], [15, 17], [16, 20], [9, 17], [36, 22], [19, 20],
+  [33, 23], [7, 19], [10, 12], [11, 14], [25, 17], [22, 23], [33, 20]
 ];
 
 const COIN_GRID_POSITIONS: Array<[number, number]> = [
-  [12, 20], [15, 20], [19, 20], [22, 20], [26, 20], [29, 20],
-  [31, 23], [29, 23], [26, 23], [22, 23], [19, 23], [15, 23],
-  [13, 25], [17, 26], [21, 26], [25, 26], [29, 26]
+  [26, 15], [6, 13], [32, 13], [28, 11], [8, 14], [25, 23],
+  [32, 17], [25, 12], [14, 19], [27, 18], [34, 18],
+  [10, 20], [29, 16], [11, 22], [24, 20], [19, 12], [23, 15]
 ];
 
 const POT_GRID_POSITIONS: Array<[number, number]> = [
-  [8, 13], [14, 16], [19, 13], [25, 16], [30, 14],
-  [34, 17], [10, 18], [31, 19], [36, 22], [38, 11]
+  [9, 23], [29, 19], [7, 11], [27, 13], [11, 16],
+  [35, 12], [35, 20], [18, 15], [21, 21], [17, 22]
 ];
 
 const PORTAL_GRID_POSITION: [number, number] = [35, 15];
@@ -120,7 +100,6 @@ export function installTrainingTerrainRefinement(): void {
   prototype.create = function createWithTerrainRefinement(this: TrainingScene): void {
     originalCreate.call(this);
 
-    addTerrainGrid(this);
     alignCabinsToGrid(this);
     alignZigzagToGrid(this);
     alignPotsToGrid(this);
@@ -221,64 +200,3 @@ function gridCellCenter(column: number, row: number): [number, number] {
   ];
 }
 
-function addTerrainGrid(scene: Phaser.Scene): void {
-  addScaledTerrain(
-    scene,
-    'training-dirt',
-    INTERIOR_X,
-    INTERIOR_Y,
-    INTERIOR_WIDTH,
-    INTERIOR_HEIGHT
-  );
-
-  addScaledTerrain(scene, 'training-grass', 0, 0, WORLD_WIDTH, TOP_GRASS_HEIGHT);
-  addScaledTerrain(
-    scene,
-    'training-grass',
-    0,
-    TOP_GRASS_HEIGHT,
-    LEFT_GRASS_WIDTH,
-    WORLD_HEIGHT - TOP_GRASS_HEIGHT
-  );
-  addScaledTerrain(
-    scene,
-    'training-grass',
-    LEFT_GRASS_WIDTH,
-    BOTTOM_GRASS_Y,
-    WORLD_WIDTH - LEFT_GRASS_WIDTH,
-    WORLD_HEIGHT - BOTTOM_GRASS_Y
-  );
-  addScaledTerrain(
-    scene,
-    'training-grass',
-    RIGHT_GRASS_X,
-    TOP_GRASS_HEIGHT,
-    WORLD_WIDTH - RIGHT_GRASS_X,
-    BOTTOM_GRASS_Y - TOP_GRASS_HEIGHT
-  );
-}
-
-function addScaledTerrain(
-  scene: Phaser.Scene,
-  textureKey: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number
-): Phaser.GameObjects.TileSprite {
-  const source = scene.textures.get(textureKey).getSourceImage() as { width: number; height: number };
-  const terrain = scene.add.tileSprite(
-    x + width / 2,
-    y + height / 2,
-    width,
-    height,
-    textureKey
-  ).setDepth(TERRAIN_DEPTH);
-
-  terrain.setTileScale(
-    TERRAIN_TILE_SIZE / source.width,
-    TERRAIN_TILE_SIZE / source.height
-  );
-
-  return terrain;
-}
