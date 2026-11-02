@@ -38,7 +38,7 @@ export const ALDEA_ENTRANCE_CELLS = {
   church: buildCellSet([range(18, 7, 19, 7)]),
   blessing: buildCellSet([range(26, 13, 26, 13)]),
   wine: buildCellSet([range(22, 19, 22, 20)]),
-  coins: buildCellSet([range(5, 18, 5, 19)])
+  coins: buildCellSet([range(7, 18, 7, 19)])
 } as const;
 
 export type AldeaEntranceKey = keyof typeof ALDEA_ENTRANCE_CELLS;
@@ -89,10 +89,27 @@ const WALKABLE_RANGES: AldeaCellRange[] = [
   range(5, 18, 5, 19)
 ];
 
+// Correcciones de la revisión visual. Estos bloques tienen prioridad sobre
+// el trazado histórico: se pintan rojos y no admiten el punto entre los pies.
+const BLOCKED_RANGES: AldeaCellRange[] = [
+  range(2, 22, 13, 22),
+  range(5, 21, 13, 21),
+  range(4, 19, 4, 19),
+  range(5, 18, 5, 18),
+  range(13, 15, 13, 20),
+  range(5, 12, 10, 12),
+  range(5, 13, 10, 13),
+  range(11, 6, 11, 6),
+  range(11, 8, 11, 8),
+  range(18, 15, 18, 18),
+  range(19, 15, 19, 18)
+];
+
 const walkableCells = new Set(buildCellSet(WALKABLE_RANGES));
 Object.values(ALDEA_ENTRANCE_CELLS).forEach((entranceCells) => {
   entranceCells.forEach((cell) => walkableCells.add(cell));
 });
+buildCellSet(BLOCKED_RANGES).forEach((cell) => walkableCells.delete(cell));
 
 export const ALDEA_WALKABLE_CELLS: ReadonlySet<string> = walkableCells;
 
