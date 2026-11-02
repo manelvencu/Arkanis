@@ -93,7 +93,7 @@ const ENTRANCE_SPECS: EntranceSpec[] = [
   { key: 'church', scene: 'church' },
   { key: 'blessing', scene: 'village', kind: 'blessing', returnX: 816, returnY: 498 },
   { key: 'wine', scene: 'village', kind: 'wine', returnX: 688, returnY: 680 },
-  { key: 'coins', scene: 'village', kind: 'coins', returnX: 144, returnY: 648 }
+  { key: 'coins', scene: 'village', kind: 'coins', returnX: 208, returnY: 610 }
 ];
 
 function startVillageInterior(
