@@ -63,7 +63,19 @@ const FIRE_WALKABLE_RANGES: readonly FireCellRange[] = [
   // Ampliación del recorrido: casillas individuales, fila F88 y gran plataforma norte.
   [20, 83, 21, 83],
   [28, 88, 30, 88],
-  [30, 59, 57, 65]
+  [30, 59, 57, 65],
+  [26, 58, 29, 59],
+  [30, 57, 56, 58],
+  [31, 55, 55, 55],
+  [35, 53, 51, 53],
+  [34, 67, 54, 68],
+  [34, 69, 52, 70],
+  [58, 59, 59, 62],
+  [60, 62, 60, 63],
+  [61, 63, 62, 63],
+  [62, 64, 64, 64],
+  [64, 65, 66, 65],
+  [66, 66, 68, 66]
 ];
 
 const FIRE_WALKABLE_CELLS = new Set<string>();
@@ -82,6 +94,11 @@ const FIRE_DAMAGE_10_PERCENT_CELLS: ReadonlySet<string> = new Set([
   '36:64',
   '37:64'
 ]);
+for (let row = 58; row <= 59; row += 1) {
+  for (let column = 26; column <= 29; column += 1) {
+    FIRE_DAMAGE_10_PERCENT_CELLS.add(`${column}:${row}`);
+  }
+}
 const FIRE_DAMAGE_CELLS: ReadonlySet<string> = new Set([
   '21:84',
   '36:66',
