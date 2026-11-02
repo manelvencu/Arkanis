@@ -13,7 +13,7 @@ const WORLD_HEIGHT = 900;
 // El rectángulo de tierra está situado entre C5-C37 y F6-F24 (32 px/celda).
 const PLAYABLE_X = 128;
 const PLAYABLE_Y = 160;
-const PLAYABLE_WIDTH = 1056;
+const PLAYABLE_WIDTH = 1152;
 const PLAYABLE_HEIGHT = 608;
 const TRAINING_BACKGROUND_KEY = 'training-world-background';
 const PLAYER_START = { x: 650, y: 455 };
