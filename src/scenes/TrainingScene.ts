@@ -10,18 +10,18 @@ type Facing = 'down' | 'up' | 'side';
 
 const WORLD_WIDTH = 1440;
 const WORLD_HEIGHT = 900;
+// El rectángulo de tierra está situado entre C5-C37 y F6-F24 (32 px/celda).
+const PLAYABLE_X = 128;
+const PLAYABLE_Y = 160;
+const PLAYABLE_WIDTH = 1056;
+const PLAYABLE_HEIGHT = 608;
+const TRAINING_BACKGROUND_KEY = 'training-world-background';
 const PLAYER_START = { x: 650, y: 455 };
 const MAGIC_RAY_SPEED = 430;
 const MAGIC_RAY_SPAWN_OFFSET = 36;
 const MAGIC_RAY_LIFETIME = 900;
 
 const ENVIRONMENT_ASSETS = {
-  grass: './assets/environment/grass-tile-01.png',
-  dirt: './assets/environment/dirt-ground-01.png',
-  path: './assets/environment/dirt-path-tile-01.png',
-  tree: './assets/environment/tree-large-01.png',
-  bush: './assets/environment/bush-small-01.png',
-  rock: './assets/environment/rock-small-01.png',
   cabin: './assets/environment/cabin-stone-thatch-01.png',
   potIntact: './assets/environment/pot-intact-01.png',
   potBroken: './assets/environment/pot-broken-01.png',
@@ -96,6 +96,7 @@ export class TrainingScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.image(TRAINING_BACKGROUND_KEY, './assets/world/training-world-01.png');
     Object.entries(ENVIRONMENT_ASSETS).forEach(([key, path]) => {
       this.load.image(`training-${key}`, path);
     });
@@ -111,7 +112,9 @@ export class TrainingScene extends Phaser.Scene {
   create(): void {
     const character = characters.find((item) => item.id === this.characterId) ?? characters[0];
 
-    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    // La hierba queda fuera del terreno jugable: limitamos los pies del personaje
+    // a la explanada mediante la física, sin bloquear las cabañas ni el portal.
+    this.physics.world.setBounds(PLAYABLE_X, PLAYABLE_Y, PLAYABLE_WIDTH, PLAYABLE_HEIGHT);
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.createMap();
     this.createPlayer(character.placeholderColor);
@@ -195,9 +198,10 @@ export class TrainingScene extends Phaser.Scene {
   }
 
   private createMap(): void {
-    this.add.tileSprite(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, WORLD_WIDTH, WORLD_HEIGHT, 'training-grass');
-    this.add.tileSprite(680, 475, 1050, 620, 'training-dirt').setDepth(1);
-    this.add.tileSprite(1160, 280, 150, 360, 'training-path').setDepth(2);
+    // Un único fondo, sin tiles ni decoraciones físicas duplicadas.
+    this.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, TRAINING_BACKGROUND_KEY)
+      .setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT)
+      .setDepth(0);
 
     this.solids = this.physics.add.staticGroup();
     this.pots = this.physics.add.staticGroup();
@@ -205,39 +209,10 @@ export class TrainingScene extends Phaser.Scene {
     this.coins = this.physics.add.staticGroup();
     this.projectiles = this.physics.add.group({ allowGravity: false });
 
-    this.createNaturalBorders();
     this.createCabins();
     this.createZigzagCourse();
     this.createPots();
     this.createExit();
-  }
-
-  private createNaturalBorders(): void {
-    const trees = [
-      [144, 144], [400, 144], [656, 144], [912, 144], [1168, 144]
-    ];
-    const treeDisplayHeight = 160;
-    const treeBodyHeight = 40;
-    trees.forEach(([supportX, supportY]) => {
-      const visualCenterY = supportY - (treeDisplayHeight - treeBodyHeight) / 2;
-      this.addSolidImage(
-        supportX,
-        visualCenterY,
-        'training-tree',
-        144,
-        treeDisplayHeight,
-        56,
-        treeBodyHeight,
-        0,
-        treeDisplayHeight - treeBodyHeight
-      );
-    });
-
-    const bushes = [[165, 170], [310, 165], [1010, 135], [1290, 185], [155, 705], [1100, 730], [1280, 690]];
-    bushes.forEach(([x, y]) => this.addSolidImage(x, y, 'training-bush', 68, 48, 50, 24, 0, 10));
-
-    const rocks = [[170, 300], [1250, 390], [250, 625], [1040, 650], [1300, 565], [460, 735]];
-    rocks.forEach(([x, y]) => this.addSolidImage(x, y, 'training-rock', 52, 40, 42, 28, 0, 5));
   }
 
   private createCabins(): void {
