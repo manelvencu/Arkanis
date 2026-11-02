@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import { characters, type CharacterId } from '../gameData';
-import { getVillageProgress } from '../villageProgress';
+import { getVillageProgress, setVillageEnergy } from '../villageProgress';
 import { createPlayableUi, preloadPlayableUiAssets, type PlayableUiController } from '../playableSceneUi';
 
 interface FireLandsSceneData {
@@ -19,11 +19,67 @@ const BACKGROUND_TEXTURE_KEY = 'fire-lands-world-bg';
 
 const PLAYER_SIZE = 64;
 const PLAYER_SPEED = 180;
-const PLAYER_START_CELL = { column: 10, row: 85 } as const;
+const PLAYER_START_CELL = { column: 2, row: 68 } as const;
 const PLAYER_START = {
   x: (PLAYER_START_CELL.column - 0.5) * GRID_SIZE,
   y: (PLAYER_START_CELL.row - 0.5) * GRID_SIZE - 20
 } as const;
+
+
+// Revisión de recorrido 02-11-2026. Toda celda fuera de estos rangos está bloqueada.
+// Cada rango es inclusivo y usa columnas C y filas F (ambas comienzan en 1).
+type FireCellRange = readonly [c1: number, f1: number, c2: number, f2: number];
+const FIRE_WALKABLE_RANGES: readonly FireCellRange[] = [
+  [1, 66, 3, 66],
+  [1, 67, 6, 67],
+  [1, 68, 5, 68],
+  [3, 69, 8, 69],
+  [6, 70, 14, 70],
+  [6, 71, 22, 71],
+  [7, 72, 21, 72],
+  [7, 73, 21, 73],
+  [7, 74, 21, 74],
+  [7, 75, 20, 75],
+  [8, 76, 20, 76],
+  [10, 77, 22, 77],
+  [15, 78, 23, 78],
+  [16, 79, 25, 79],
+  [17, 80, 27, 80],
+  [20, 81, 26, 81],
+  [21, 82, 28, 82],
+  [27, 83, 30, 83],
+  [21, 84, 21, 84],
+  [26, 84, 31, 84],
+  [27, 85, 31, 85],
+  [28, 86, 31, 86],
+  [28, 87, 30, 87],
+  [32, 88, 32, 88],
+  [22, 70, 25, 70],
+  [25, 69, 27, 69],
+  [27, 68, 29, 68],
+  [29, 67, 31, 67],
+  [30, 66, 58, 66]
+];
+
+const FIRE_WALKABLE_CELLS = new Set<string>();
+for (const [c1, f1, c2, f2] of FIRE_WALKABLE_RANGES) {
+  for (let f = f1; f <= f2; f += 1) {
+    for (let col = c1; col <= c2; col += 1) {
+      FIRE_WALKABLE_CELLS.add(`${col}:${f}`);
+    }
+  }
+}
+
+// Amarillo = transitable, pero causa daño. Estas tres casillas también
+// pertenecen al conjunto verde anterior y por eso se puede entrar en ellas.
+const FIRE_DAMAGE_CELLS: ReadonlySet<string> = new Set([
+  '21:84',
+  '36:66',
+  '53:66'
+]);
+const FIRE_DAMAGE_AMOUNT = 20;
+const FIRE_DAMAGE_COOLDOWN_MS = 1200;
+const FOOT_OFFSET_Y = 20;
 
 const CHARACTER_ASSETS = {
   tiana: {
@@ -62,6 +118,8 @@ export class FireLandsScene extends Phaser.Scene {
   private lastStatusCell = '';
   private mapKey!: Phaser.Input.Keyboard.Key;
   private overviewEnabled = false;
+  private lastDamageAt = -FIRE_DAMAGE_COOLDOWN_MS;
+  private gameOver = false;
 
   constructor() {
     super('FireLandsScene');
@@ -72,6 +130,8 @@ export class FireLandsScene extends Phaser.Scene {
     this.facing = 'side';
     this.lastStatusCell = '';
     this.overviewEnabled = false;
+    this.lastDamageAt = -FIRE_DAMAGE_COOLDOWN_MS;
+    this.gameOver = false;
   }
 
   preload(): void {
@@ -112,7 +172,8 @@ export class FireLandsScene extends Phaser.Scene {
     this.updateCellStatus();
   }
 
-  update(_time: number, delta: number): void {
+  update(time: number, delta: number): void {
+    if (this.gameOver) return;
     if (Phaser.Input.Keyboard.JustDown(this.mapKey)) this.toggleOverview();
     (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
     let x = 0;
@@ -125,6 +186,7 @@ export class FireLandsScene extends Phaser.Scene {
     if (x === 0 && y === 0) {
       this.player.anims.stop();
       this.player.setTexture('fire-lands-player-' + (this.facing === 'side' ? 'side' : this.facing));
+      this.checkDamageTile(time);
       return;
     }
 
@@ -154,6 +216,7 @@ export class FireLandsScene extends Phaser.Scene {
     this.player.anims.play('fire-lands-walk-' + this.facing, true);
     this.player.setDepth(this.player.y + 20);
     this.updateCellStatus();
+    this.checkDamageTile(time);
   }
 
   private toggleOverview(): void {
@@ -171,25 +234,60 @@ export class FireLandsScene extends Phaser.Scene {
     this.updateCellStatus();
   }
 
+  private getFootCell(spriteX: number, spriteY: number): { column: number; row: number } | null {
+    const footY = spriteY + FOOT_OFFSET_Y;
+    if (spriteX < 0 || spriteX >= WORLD_WIDTH || footY < 0 || footY >= WORLD_HEIGHT) return null;
+    return {
+      column: Math.floor(spriteX / GRID_SIZE) + 1,
+      row: Math.floor(footY / GRID_SIZE) + 1
+    };
+  }
+
   private updateCellStatus(): void {
-    const footX = this.player.x;
-    const footY = this.player.y + 20;
-    const column = Math.floor(footX / GRID_SIZE) + 1;
-    const row = Math.floor(footY / GRID_SIZE) + 1;
-    const cell = column + ':' + row;
+    const foot = this.getFootCell(this.player.x, this.player.y);
+    if (!foot) return;
+    const cell = `${foot.column}:${foot.row}`;
     if (cell === this.lastStatusCell) return;
     this.lastStatusCell = cell;
-    // Mientras diseñamos el mundo, todas las celdas son transitables.
-    this.ui.updateStatus('FUEGO · C' + column + 'F' + row
-      + (this.overviewEnabled ? ' · M: VOLVER' : ' · M: VER MAPA'));
+    const zone = FIRE_DAMAGE_CELLS.has(cell) ? ' · DAÑO' : ' · TRANSITABLE';
+    this.ui.updateStatus(
+      `FUEGO · C${foot.column}F${foot.row}${zone}`
+      + (this.overviewEnabled ? ' · M: VOLVER' : ' · M: VER MAPA')
+    );
   }
 
   private isWalkableFootPoint(spriteX: number, spriteY: number): boolean {
-    const footY = spriteY + 20;
-    // Prototipo de exploración: lava, puentes e islas sin colisiones.
-    // Únicamente se impide abandonar los límites del mundo.
-    return spriteX >= 14 && spriteX < WORLD_WIDTH - 14
-      && footY >= 14 && footY < WORLD_HEIGHT - 14;
+    const foot = this.getFootCell(spriteX, spriteY);
+    return !!foot && FIRE_WALKABLE_CELLS.has(`${foot.column}:${foot.row}`);
+  }
+
+  private checkDamageTile(time: number): void {
+    const foot = this.getFootCell(this.player.x, this.player.y);
+    if (!foot || !FIRE_DAMAGE_CELLS.has(`${foot.column}:${foot.row}`)) return;
+    if (time - this.lastDamageAt < FIRE_DAMAGE_COOLDOWN_MS) return;
+    this.lastDamageAt = time;
+
+    const nextEnergy = Math.max(0, getVillageProgress().energy - FIRE_DAMAGE_AMOUNT);
+    setVillageEnergy(nextEnergy);
+    this.registry.set('arkanis.player.energy', nextEnergy);
+    this.ui.updateEnergy(nextEnergy);
+    this.cameras.main.shake(180, 0.007);
+    this.player.setTint(0xff5544);
+    this.time.delayedCall(180, () => {
+      if (this.player.active) this.player.clearTint();
+    });
+
+    if (nextEnergy === 0) {
+      this.gameOver = true;
+      this.player.anims.stop();
+      this.time.delayedCall(220, () => {
+        this.scene.launch('GameOverScene', {
+          characterId: this.characterId,
+          sourceSceneKey: 'FireLandsScene'
+        });
+        this.scene.pause();
+      });
+    }
   }
 
   private createPlayer(): void {
@@ -231,68 +329,75 @@ export class FireLandsScene extends Phaser.Scene {
   }
 
   private createGridGuide(): void {
-    if (this.textures.exists(GRID_TEXTURE_KEY)) {
-      this.textures.remove(GRID_TEXTURE_KEY);
+    if (this.textures.exists(GRID_TEXTURE_KEY)) this.textures.remove(GRID_TEXTURE_KEY);
+    const texture = this.textures.createCanvas(GRID_TEXTURE_KEY, WORLD_WIDTH, WORLD_HEIGHT);
+    if (!texture) return;
+    const ctx = texture.context;
+
+    // El mapa entero está bloqueado por defecto: rojo.
+    ctx.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    ctx.fillStyle = 'rgba(220, 39, 45, 0.34)';
+    ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+    // Abrimos únicamente las casillas solicitadas y les damos fondo verde.
+    for (const key of FIRE_WALKABLE_CELLS) {
+      const [column, row] = key.split(':').map(Number);
+      const x = (column - 1) * GRID_SIZE;
+      const y = (row - 1) * GRID_SIZE;
+      ctx.clearRect(x, y, GRID_SIZE, GRID_SIZE);
+      ctx.fillStyle = 'rgba(21, 190, 84, 0.45)';
+      ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
     }
 
-    const texture = this.textures.createCanvas(
-      GRID_TEXTURE_KEY,
-      WORLD_WIDTH,
-      WORLD_HEIGHT
-    );
-    if (!texture) return;
+    // El amarillo tiene prioridad visual sobre el verde, sin impedir el paso.
+    for (const key of FIRE_DAMAGE_CELLS) {
+      const [column, row] = key.split(':').map(Number);
+      const x = (column - 1) * GRID_SIZE;
+      const y = (row - 1) * GRID_SIZE;
+      ctx.clearRect(x, y, GRID_SIZE, GRID_SIZE);
+      ctx.fillStyle = 'rgba(255, 214, 26, 0.65)';
+      ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
+    }
 
-    const context = texture.context;
-    context.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    context.textBaseline = 'top';
-    context.font = '6px Arial';
-
+    ctx.strokeStyle = 'rgba(21, 16, 16, 0.76)';
+    ctx.lineWidth = 1;
     for (let column = 0; column <= WORLD_COLUMNS; column += 1) {
       const x = column * GRID_SIZE + 0.5;
-      context.beginPath();
-      context.strokeStyle = column % 5 === 0
-        ? 'rgba(255,214,158,0.70)'
-        : 'rgba(255,240,225,0.30)';
-      context.lineWidth = column % 5 === 0 ? 1.5 : 1;
-      context.moveTo(x, 0);
-      context.lineTo(x, WORLD_HEIGHT);
-      context.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, WORLD_HEIGHT);
+      ctx.stroke();
     }
-
     for (let row = 0; row <= WORLD_ROWS; row += 1) {
       const y = row * GRID_SIZE + 0.5;
-      context.beginPath();
-      context.strokeStyle = row % 5 === 0
-        ? 'rgba(255,214,158,0.70)'
-        : 'rgba(255,240,225,0.30)';
-      context.lineWidth = row % 5 === 0 ? 1.5 : 1;
-      context.moveTo(0, y);
-      context.lineTo(WORLD_WIDTH, y);
-      context.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(WORLD_WIDTH, y);
+      ctx.stroke();
     }
 
+    // Coordenadas visibles a zoom 2: C2 / F68, etc.
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 8px Arial';
     for (let row = 1; row <= WORLD_ROWS; row += 1) {
-      for (let column = 1; column <= WORLD_COLUMNS; column += 1) {
-        const x = (column - 1) * GRID_SIZE + 2;
-        const y = (row - 1) * GRID_SIZE + 2;
-        const label = `C${column}F${row}`;
-
-        context.lineWidth = 2;
-        context.strokeStyle = 'rgba(54,10,7,0.82)';
-        context.strokeText(label, x, y);
-        context.fillStyle = 'rgba(255,225,188,0.92)';
-        context.fillText(label, x, y);
+      for (let col = 1; col <= WORLD_COLUMNS; col += 1) {
+        const x = (col - 0.5) * GRID_SIZE;
+        const y = (row - 1) * GRID_SIZE;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeText(`C${col}`, x, y + 11);
+        ctx.fillText(`C${col}`, x, y + 11);
+        ctx.strokeText(`F${row}`, x, y + 23);
+        ctx.fillText(`F${row}`, x, y + 23);
       }
     }
 
     texture.refresh();
-
-    this.add.image(
-      WORLD_WIDTH / 2,
-      WORLD_HEIGHT / 2,
-      GRID_TEXTURE_KEY
-    )
+    this.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, GRID_TEXTURE_KEY)
       .setDepth(8)
-      .setAlpha(0.65);
+      .setAlpha(0.92);
   }
+
 }
