@@ -59,9 +59,9 @@ const NPC_EXIT_GAP_MS = 9000;
 
 const CABIN_DOORS = [
   new Phaser.Math.Vector2(208, 590),
-  new Phaser.Math.Vector2(176, 334),
+  new Phaser.Math.Vector2(176, 320),
   new Phaser.Math.Vector2(368, 206),
-  new Phaser.Math.Vector2(688, 622),
+  new Phaser.Math.Vector2(688, 610),
   new Phaser.Math.Vector2(816, 430)
 ] as const;
 
@@ -69,20 +69,21 @@ const CABIN_DOORS = [
 const CABIN_ROUTES: Phaser.Math.Vector2[][] = [
   // Cabaña 1 desplazada a C7: salida por F20, evitando F21 bloqueada.
   [new Phaser.Math.Vector2(208, 610), new Phaser.Math.Vector2(352, 610), new Phaser.Math.Vector2(352, 448)],
-  [new Phaser.Math.Vector2(176, 350), new Phaser.Math.Vector2(176, 400), new Phaser.Math.Vector2(352, 400)],
+  // La fila F11 comunica la cabaña izquierda con la plaza tras abrir C8-C10.
+  [new Phaser.Math.Vector2(176, 320), new Phaser.Math.Vector2(352, 320), new Phaser.Math.Vector2(352, 400)],
   [new Phaser.Math.Vector2(368, 220), new Phaser.Math.Vector2(368, 224)],
-  [new Phaser.Math.Vector2(688, 640), new Phaser.Math.Vector2(688, 672), new Phaser.Math.Vector2(560, 672), new Phaser.Math.Vector2(560, 448)],
-  // Cabaña C26/F13: baja por el nuevo camino C25-C27 hasta F21/F22,
-  // gira a la izquierda y enlaza con el acceso sur existente de la plaza.
-  [new Phaser.Math.Vector2(816, 446), new Phaser.Math.Vector2(816, 672), new Phaser.Math.Vector2(560, 672), new Phaser.Math.Vector2(560, 432)]
+  // La fila F21-F22 está bloqueada; los NPC cruzan por F20 hasta C17.
+  [new Phaser.Math.Vector2(688, 610), new Phaser.Math.Vector2(528, 610), new Phaser.Math.Vector2(528, 400)],
+  // Cabaña C26/F13: baja por C26 hasta F20, cruza por C20-C24 y sube por C17.
+  [new Phaser.Math.Vector2(816, 446), new Phaser.Math.Vector2(816, 610), new Phaser.Math.Vector2(528, 610), new Phaser.Math.Vector2(528, 400)]
 ];
 
 const PLAZA_ENTRIES = [
   new Phaser.Math.Vector2(352, 432),
   new Phaser.Math.Vector2(352, 400),
   new Phaser.Math.Vector2(368, 240),
-  new Phaser.Math.Vector2(560, 432),
-  new Phaser.Math.Vector2(560, 432)
+  new Phaser.Math.Vector2(528, 400),
+  new Phaser.Math.Vector2(528, 400)
 ] as const;
 
 const PLAZA_CENTER = new Phaser.Math.Vector2(496, 352);
@@ -360,7 +361,7 @@ function checkVillageCabinEntrance(scene: AldeaRuntime): void {
         characterId: scene.characterId,
         kind: cabin.kind,
         returnX: door.x,
-        returnY: cabin.index === 0 ? 610 : door.y + 58
+        returnY: cabin.index === 0 || cabin.index === 3 ? 610 : door.y + 58
       });
     });
     return;
